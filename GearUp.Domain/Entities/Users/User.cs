@@ -2,7 +2,6 @@
 using GearUp.Domain.Entities.Chats;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Domain.Entities.RealTime;
-using GearUp.Domain.Entities.Tokens;
 using GearUp.Domain.Enums;
 
 
@@ -24,39 +23,25 @@ namespace GearUp.Domain.Entities.Users
         public string AvatarUrl { get; private set; }
         public bool IsEmailVerified { get; private set; }
         public bool IsProfileCompleted { get; private set; }
-        private readonly List<RefreshToken> _refreshTokens = new List<RefreshToken>();
-        private readonly List<EmailVerificationToken> _emailVerificationTokens = new List<EmailVerificationToken>();
-        private readonly List<PasswordResetToken> _passwordResetTokens = new List<PasswordResetToken>();
+       
         private readonly List<Post> _posts = new List<Post>();
-        private readonly List<PostComment> _comments = new List<PostComment>();
-        private readonly List<PostLike> _likes = new List<PostLike>();
-        private readonly List<PostView> _views = new List<PostView>();
-        private readonly List<UserReview> _reviews = new List<UserReview>();
         private readonly List<CarRental> _ownedRentals = new List<CarRental>();
         private readonly List<CarRental> _bookedRentals = new List<CarRental>();
         private readonly List<Appointment> _receivedAppointments = new List<Appointment>();
         private readonly List<Appointment> _sentAppointments = new List<Appointment>();
-        private readonly List<Conversation> _conversations = new List<Conversation>();
-        private readonly List<Message> _sentMessages = new List<Message>();
-        private readonly List<Message> _receivedMessages = new List<Message>();
         private readonly List<Notification> _notifications = new List<Notification>();
+        private readonly List<Car> _cars = new List<Car>();
+        private readonly List<ConversationParticipant> _conversationParticipants = new();
+        public IReadOnlyCollection<ConversationParticipant> ConversationParticipants => _conversationParticipants.AsReadOnly();
 
-        public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
-        public IReadOnlyCollection<EmailVerificationToken> EmailVerificationTokens => _emailVerificationTokens.AsReadOnly();
-        public IReadOnlyCollection<PasswordResetToken> PasswordResetTokens => _passwordResetTokens.AsReadOnly();
         public IReadOnlyCollection<Post> Posts => _posts.AsReadOnly();
-        public IReadOnlyCollection<PostComment> Comments => _comments.AsReadOnly();
-        public IReadOnlyCollection<PostLike> Likes => _likes.AsReadOnly();
-        public IReadOnlyCollection<PostView> Views => _views.AsReadOnly();
-        public IReadOnlyCollection<UserReview> Reviews => _reviews.AsReadOnly();
         public IReadOnlyCollection<CarRental> OwnedRentals => _ownedRentals.AsReadOnly();
         public IReadOnlyCollection<CarRental> BookedRentals => _bookedRentals.AsReadOnly();
         public IReadOnlyCollection<Appointment> ReceivedAppointments => _receivedAppointments.AsReadOnly();
         public IReadOnlyCollection<Appointment> SentAppointments => _sentAppointments.AsReadOnly();
-        public IReadOnlyCollection<Conversation> Conversations => _conversations.AsReadOnly();
-        public IReadOnlyCollection<Message> SentMessages => _sentMessages.AsReadOnly();
-        public IReadOnlyCollection<Message> ReceivedMessages => _receivedMessages.AsReadOnly();
         public IReadOnlyCollection<Notification> Notifications => _notifications.AsReadOnly();
+        public IReadOnlyCollection<Car> Cars => _cars.AsReadOnly();
+        
 
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
@@ -67,16 +52,15 @@ namespace GearUp.Domain.Entities.Users
             _bookedRentals = new List<CarRental>();
             _ownedRentals = new List<CarRental>();
             _receivedAppointments = new List<Appointment>();
+            _cars = new List<Car>();
             _sentAppointments = new List<Appointment>();
-            _conversations = new List<Conversation>();
-            _sentMessages = new List<Message>();
-            _receivedMessages = new List<Message>();
+            _conversationParticipants = new List<ConversationParticipant>();
             _notifications = new List<Notification>();
             CreatedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;    
         }
 
-        public static User CreateLocalUser(string username, string email, string name, string passwordHash, UserRole role)
+        public static User CreateLocalUser(string username, string email, string name, string passwordHash)
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentException("Username cannot be null or empty.", nameof(username));
@@ -94,14 +78,13 @@ namespace GearUp.Domain.Entities.Users
                 Email = email,
                 Name = name,
                 PasswordHash = passwordHash,
-                Role = role,
                 IsProfileCompleted = false,
                 IsEmailVerified = false,
               
             };
         }
 
-        public static User CreateSocialUser(string provider, string providerUserId, UserRole role)
+        public static User CreateSocialUser(string provider, string providerUserId)
         {
             if (string.IsNullOrWhiteSpace(provider))
                 throw new ArgumentException("Provider cannot be null or empty.", nameof(provider));
@@ -112,7 +95,6 @@ namespace GearUp.Domain.Entities.Users
                
                 Provider = provider,
                 ProviderUserId = providerUserId,
-                Role = role,
                 IsProfileCompleted = false,
                 IsEmailVerified = false,
                 

@@ -21,8 +21,6 @@ namespace GearUp.Domain.Entities.Posts
         public IReadOnlyCollection<PostComment> Comments => _comments.AsReadOnly();
         public IReadOnlyCollection<PostView> Views => _views.AsReadOnly();
 
-
-
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
 

@@ -1,6 +1,4 @@
-﻿
-
-using GearUp.Domain.Entities.Users;
+﻿using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Enums;
 
 namespace GearUp.Domain.Entities.Cars
