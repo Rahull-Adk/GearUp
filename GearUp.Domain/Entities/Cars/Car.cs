@@ -16,7 +16,7 @@ namespace GearUp.Domain.Entities.Cars
         public int Mileage { get; private set; }
         public int SeatingCapacity { get; private set; }
         public int EngineCapacity { get; private set; }
-        public ICollection<string>? ImageUrls { get; private set; }
+        public ICollection<CarImage>? ImageUrls { get; private set; }
         public FuelType FuelType { get; private set; }
         public CarCondition Condition { get; private set; }
         public TransmissionType Transmission { get; private set; }
@@ -31,6 +31,9 @@ namespace GearUp.Domain.Entities.Cars
         public User Dealer { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
+
+        private readonly ICollection<CarImage> _images = new List<CarImage>();
+        public IReadOnlyCollection<CarImage> Images => _images.ToList().AsReadOnly();
 
         private Car()
         {
@@ -47,7 +50,7 @@ namespace GearUp.Domain.Entities.Cars
     int mileage,
     int seatingCapacity,
     int engineCapacity,
-    ICollection<string>? imageUrls,
+    ICollection<CarImage>? imageUrls,
     FuelType fuelType,
     CarCondition condition,
     TransmissionType transmission,

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace GearUp.Infrastructure.Persistence.Configurations
-
+{
         public class CarConfiguration : IEntityTypeConfiguration<Car>
         {
             public void Configure(EntityTypeBuilder<Car> builder)
@@ -11,7 +11,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 builder.HasKey(c => c.Id);
 
                 builder.Property(c => c.Title).IsRequired().HasMaxLength(200);
-                builder.Property(c => c.Description).IsRequired().HasMaxLength(1000);
+                builder.Property(c => c.Description).IsRequired(false).HasMaxLength(1000);
                 builder.Property(c => c.Make).IsRequired().HasMaxLength(100);
                 builder.Property(c => c.Model).IsRequired().HasMaxLength(100);
                 builder.Property(c => c.Color).IsRequired().HasMaxLength(50);
@@ -23,10 +23,13 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                     .HasForeignKey(c => c.DealerId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                builder.Property(c => c.CreatedAt).IsRequired();
+                builder.HasMany(c => c.ImageUrls)
+                    .WithOne(ci => ci.Car)
+                    .HasForeignKey(ci => ci.CarId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Property(c => c.CreatedAt).IsRequired();
                 builder.Property(c => c.UpdatedAt).IsRequired();
             }
         }
-    }
-
 }

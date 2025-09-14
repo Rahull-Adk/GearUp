@@ -1,27 +1,27 @@
-
-using DotNetEnv;
-using GearUp.Infrastructure;
-using Microsoft.EntityFrameworkCore;
-
+using GearUp.Presentation.Extensions;
+using GearUp.Presentation.Middlewares;
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-Env.Load();
-builder.Configuration.AddEnvironmentVariables();
-
-var connectionString = builder.Configuration["Connection_String"];
-
+builder.Configuration.AddUserSecrets<Program>();
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddDbContext<GearUpDbContext>(options => options.UseMySQL(connectionString!));
+builder.Services.AddServices(builder.Configuration);
+
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-}
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+        options.RoutePrefix = string.Empty;
+    });
 
+}
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();

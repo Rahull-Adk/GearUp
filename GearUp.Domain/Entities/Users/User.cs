@@ -3,6 +3,7 @@ using GearUp.Domain.Entities.Chats;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
+using static System.Net.WebRequestMethods;
 
 
 
@@ -11,8 +12,8 @@ namespace GearUp.Domain.Entities.Users
     public class User
     {
         public Guid Id { get; private set; }
-        public string Provider { get; private set; }
-        public string ProviderUserId { get; private set; }
+        public string? Provider { get; private set; }
+        public string? ProviderUserId { get; private set; }
         public string Username { get; private set; }
         public string Email { get; private set; }
         public string Name { get; private set; }
@@ -20,7 +21,7 @@ namespace GearUp.Domain.Entities.Users
         public UserRole Role { get; private set; }
         public DateOnly DateOfBirth { get; private set; }
         public string? PhoneNumber { get; private set; }
-        public string AvatarUrl { get; private set; }
+        public string AvatarUrl { get; private set; } = "https://i.pravatar.cc/300";
         public bool IsEmailVerified { get; private set; }
         public bool IsProfileCompleted { get; private set; }
        
@@ -60,7 +61,7 @@ namespace GearUp.Domain.Entities.Users
             UpdatedAt = DateTime.UtcNow;    
         }
 
-        public static User CreateLocalUser(string username, string email, string name, string passwordHash)
+        public static User CreateLocalUser(string username, string email, string name)
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentException("Username cannot be null or empty.", nameof(username));
@@ -68,19 +69,16 @@ namespace GearUp.Domain.Entities.Users
                 throw new ArgumentException("Email cannot be null or empty.", nameof(email));
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Name cannot be null or empty.", nameof(name));
-            if (string.IsNullOrWhiteSpace(passwordHash))
-                throw new ArgumentException("Password hash cannot be null or empty.", nameof(passwordHash));
 
             return new User
             {
-               
-                Username = username,
-                Email = email,
+                Username = username.ToLower(),
+                Email = email.ToLower(),
                 Name = name,
-                PasswordHash = passwordHash,
+                Role = UserRole.Customer,
+                AvatarUrl = "https://i.pravatar.cc/300",
                 IsProfileCompleted = false,
                 IsEmailVerified = false,
-              
             };
         }
 
@@ -95,6 +93,8 @@ namespace GearUp.Domain.Entities.Users
                
                 Provider = provider,
                 ProviderUserId = providerUserId,
+                Role = UserRole.Customer,
+                AvatarUrl = "https://i.pravatar.cc/300",
                 IsProfileCompleted = false,
                 IsEmailVerified = false,
                 
@@ -115,7 +115,7 @@ namespace GearUp.Domain.Entities.Users
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public void ResetPassword(string newPasswordHash)
+        public void SetPassword(string newPasswordHash)
         {
             if (string.IsNullOrWhiteSpace(newPasswordHash))
                 throw new ArgumentException("New password hash cannot be null or empty.", nameof(newPasswordHash));
