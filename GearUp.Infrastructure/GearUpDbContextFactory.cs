@@ -9,6 +9,7 @@ namespace GearUp.Infrastructure
         {
             var optionsBuilder = new DbContextOptionsBuilder<GearUpDbContext>();
             var connectionString = Environment.GetEnvironmentVariable("DefaultConnection");
+            Console.WriteLine("Connection String: " + connectionString);
             if (string.IsNullOrEmpty(connectionString))
             {
                 throw new InvalidOperationException("Please setup your connection string.");

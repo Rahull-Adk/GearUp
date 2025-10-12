@@ -6,7 +6,6 @@
         public ExceptionMiddleware(RequestDelegate next)
         {
             _next = next;
-
         }
         public async Task InvokeAsync(HttpContext context)
         {

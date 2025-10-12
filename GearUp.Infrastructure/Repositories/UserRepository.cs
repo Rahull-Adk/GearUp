@@ -1,6 +1,7 @@
 ﻿using GearUp.Application.Interfaces.Repositories;
 using GearUp.Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 
 namespace GearUp.Infrastructure.Repositories
 {
@@ -16,7 +17,11 @@ namespace GearUp.Infrastructure.Repositories
         {
             await _db.Users.AddAsync(user);
         }
+        public async Task<User?> GetUserByUsernameOrEmailAsync(string usernameOrEmail)
+        {
+            return await _db.Users.SingleOrDefaultAsync(u => u.Username == usernameOrEmail || u.Email == usernameOrEmail);
 
+        }
         public async Task<User?> GetUserByEmailAsync(string email)
         {
             return await _db.Users.SingleOrDefaultAsync(u => u.Email == email);

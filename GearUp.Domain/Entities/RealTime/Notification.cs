@@ -14,6 +14,7 @@ namespace GearUp.Domain.Entities.RealTime
         public User User { get; private set; }
         public DateTime CreatedAt { get; private set; }
 
+        private Notification() { }
 
         public Notification(Guid id, string title, string content, Guid userId, bool isRead, User user)
         {

@@ -17,6 +17,7 @@ namespace GearUp.Domain.Entities.Chats
         public Conversation Conversation { get; private set; }
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
+        private Message() { }
         public Message(Guid conversationId, Guid senderId, Guid receiverId, string content)
         {
             Id = Guid.NewGuid();
