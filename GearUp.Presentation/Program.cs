@@ -12,7 +12,7 @@ builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("AllowFrontend", builder =>
     {
-        builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        builder.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
     });
 });
 

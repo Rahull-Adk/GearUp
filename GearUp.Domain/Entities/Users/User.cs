@@ -1,9 +1,7 @@
 ﻿using GearUp.Domain.Entities.Cars;
-using GearUp.Domain.Entities.Chats;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
-using static System.Net.WebRequestMethods;
 
 
 
@@ -24,7 +22,7 @@ namespace GearUp.Domain.Entities.Users
         public string AvatarUrl { get; private set; } = "https://i.pravatar.cc/300";
         public bool IsEmailVerified { get; private set; }
         public bool IsProfileCompleted { get; private set; }
-       
+
         private readonly List<Post> _posts = new List<Post>();
         private readonly List<CarRental> _ownedRentals = new List<CarRental>();
         private readonly List<CarRental> _bookedRentals = new List<CarRental>();
@@ -42,7 +40,7 @@ namespace GearUp.Domain.Entities.Users
         public IReadOnlyCollection<Appointment> SentAppointments => _sentAppointments.AsReadOnly();
         public IReadOnlyCollection<Notification> Notifications => _notifications.AsReadOnly();
         public IReadOnlyCollection<Car> Cars => _cars.AsReadOnly();
-        
+
 
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
@@ -58,7 +56,7 @@ namespace GearUp.Domain.Entities.Users
             _conversationParticipants = new List<ConversationParticipant>();
             _notifications = new List<Notification>();
             CreatedAt = DateTime.UtcNow;
-            UpdatedAt = DateTime.UtcNow;    
+            UpdatedAt = DateTime.UtcNow;
         }
 
         public static User CreateLocalUser(string username, string email, string name)
@@ -90,14 +88,14 @@ namespace GearUp.Domain.Entities.Users
                 throw new ArgumentException("Provider user ID cannot be null or empty.", nameof(providerUserId));
             return new User
             {
-               
+
                 Provider = provider,
                 ProviderUserId = providerUserId,
                 Role = UserRole.Customer,
                 AvatarUrl = "https://i.pravatar.cc/300",
                 IsProfileCompleted = false,
                 IsEmailVerified = false,
-                
+
             };
         }
 
@@ -109,7 +107,7 @@ namespace GearUp.Domain.Entities.Users
                 PhoneNumber = phoneNumber;
             if (!string.IsNullOrWhiteSpace(avatarUrl))
                 AvatarUrl = avatarUrl;
-            if(dateOfBirth.HasValue)
+            if (dateOfBirth.HasValue)
                 DateOfBirth = dateOfBirth.Value;
             IsProfileCompleted = true;
             UpdatedAt = DateTime.UtcNow;
@@ -123,7 +121,12 @@ namespace GearUp.Domain.Entities.Users
             UpdatedAt = DateTime.UtcNow;
         }
 
-   
+        public static void VerifyEmail(User user)
+        {
+            user.IsEmailVerified = true;
+            user.UpdatedAt = DateTime.UtcNow;
+        }
+
 
     }
 }

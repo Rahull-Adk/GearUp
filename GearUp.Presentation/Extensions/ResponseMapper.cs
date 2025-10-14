@@ -7,11 +7,13 @@ namespace GearUp.Presentation.Extensions
     {
         public static ApiResponse<T> ToApiResponse<T>(this Result<T> result)
         {
+            string message = string.IsNullOrEmpty(result.SuccessMessage) ? result.ErrorMessage : result.SuccessMessage;
             return new ApiResponse<T>
             {
                 IsSuccess = result.IsSuccess,
-                Message = result.IsSuccess ? "Success" : result.ErrorMessage ?? "An error occurred",
-                Data = result.Data
+                Message = message,
+                Data = result.Data,
+                Status = result.Status
             };
         }   
     }

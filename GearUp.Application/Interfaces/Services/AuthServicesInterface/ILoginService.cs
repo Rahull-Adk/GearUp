@@ -1,10 +1,12 @@
 ﻿
 using GearUp.Application.Common;
+using GearUp.Application.ServiceDtos.Auth;
 
 namespace GearUp.Application.Interfaces.Services.AuthServicesInterface
 {
     public interface ILoginService
     {
-        Task<Result<string>> LoginUser(string email, string password);
+        Task<Result<LoginResponseDto>> LoginUser(LoginRequestDto req);
+        Task<Result<LoginResponseDto>> RotateRefreshToken(string refreshToken);
     }
 }

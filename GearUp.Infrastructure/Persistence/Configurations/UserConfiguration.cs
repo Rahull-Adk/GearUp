@@ -31,18 +31,12 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasMany<EmailVerificationToken>()
-                .WithOne(e => e.User)
-                .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
             builder.HasMany<PasswordResetToken>()
                 .WithOne(p => p.User)
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Rentals
-
             builder.HasMany(u => u.OwnedRentals)
                 .WithOne(r => r.Tenant)
                 .HasForeignKey(r => r.TenantId)

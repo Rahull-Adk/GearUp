@@ -17,7 +17,6 @@ using GearUp.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Net.Mail;
 using System.Text;
@@ -40,14 +39,18 @@ namespace GearUp.Presentation.Extensions
 
             // Service Injections
             services.AddSingleton<ITokenGenerator, TokenGenerator>();
+            services.AddSingleton<ITokenValidator, TokenValidator>();
             services.AddScoped<IRegisterService, RegisterService>();
             services.AddScoped<ILoginService, LoginService>();
+            services.AddScoped<ILogoutService, LogoutService>();
+            services.AddScoped<IEmailVerificationService, EmailVerificationService>();
            
             services.Configure<JwtSetting>(config.GetSection("Jwt"));
             var jwt = config.GetSection("Jwt").Get<JwtSetting>();
 
             // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
             // Validator Injections
             services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestDtoValidator>();
@@ -63,7 +66,7 @@ namespace GearUp.Presentation.Extensions
                         partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                         factory: key => new FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 2,
+                            PermitLimit = 60,
                             Window = TimeSpan.FromMinutes(1),
                             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                             QueueLimit = 2
@@ -90,11 +93,11 @@ namespace GearUp.Presentation.Extensions
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = jwt!.Issuer,
                 ValidAudience = jwt!.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt!.AcessToken_SecretKey))
+                RoleClaimType = "role",
+                NameClaimType = "id",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt!.AccessToken_SecretKey))
             });
-
-
-            
+           
         }
     }
 }

@@ -36,33 +36,34 @@ namespace GearUp.Application.Services.Auth
                 if(!validationResult.IsValid)
                 {
                     var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                    return Result<RegisterResponseDto>.Failure(errors);
+                    return Result<RegisterResponseDto>.Failure(errors, 400);
                 }
 
                 var isEmailExists = await _userRepo.GetUserByEmailAsync(data.Email);
                 if(isEmailExists != null)
                 {
-                    return Result<RegisterResponseDto>.Failure("Account with this email already exists. Please login");
+                    return Result<RegisterResponseDto>.Failure("Account with this email already exists. Please login", 400);
                 }
                 var isUsernameExists = await _userRepo.GetUserByUsernameAsync(data.Username);
                 if(isUsernameExists != null)
                 {
-                    return Result<RegisterResponseDto>.Failure("Account with this username already exists. Please choose another username");
+                    return Result<RegisterResponseDto>.Failure("Account with this username already exists. Please choose another username", 400);
                 }
-                
-               
-                var newUser = User.CreateLocalUser(data.Username, data.Email, data.FirstName + " " + data.LastName);
+
+
+            var newUser = User.CreateLocalUser(data.Username, data.Email, data.FirstName + " " + data.LastName);
                 var hashedPassword = _passwordHasher.HashPassword(newUser, data.Password);
                 newUser.SetPassword(hashedPassword);
                 await _userRepo.AddUserAsync(newUser);
                 await _userRepo.SaveChangesAsync();
 
-            var claims = new Claim[]
-            {
-                new Claim("id", newUser.Id.ToString()),
-                new Claim("email", newUser.Email),
-                new Claim("username", newUser.Username)
-            };
+            var claims = new[]
+                {
+                   new Claim("id", newUser.Id.ToString()),
+                   new Claim("email", newUser.Email),
+                   new Claim("role", newUser.Role.ToString()),
+                   new Claim("purpose", "email_verification")
+                };
 
             var emailVerificationToken = _tokenGenerator.GenerateEmailVerificationToken(claims);
 
@@ -74,8 +75,9 @@ namespace GearUp.Application.Services.Auth
                     Email = newUser.Email,
                     Username = newUser.Username,
                     Name = newUser.Name,
+                    Role = newUser.Role.ToString(),
                     AvartarUrl = newUser.AvatarUrl
-                });
+                }, "User created Successfully!", 201);
         }
     }
 }

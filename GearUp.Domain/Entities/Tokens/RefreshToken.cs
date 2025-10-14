@@ -1,10 +1,4 @@
 ﻿using GearUp.Domain.Entities.Users;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace GearUp.Domain.Entities.Tokens
 {
     public class RefreshToken
@@ -12,7 +6,7 @@ namespace GearUp.Domain.Entities.Tokens
         public Guid Id { get; private set; }
         public string Token { get; private set; }
         public DateTime ExpiresAt { get; private set; }
-        public DateTime? RevokedAt { get; private set; }
+        public bool IsRevoked { get; private set; }
         public Guid UserId { get; private set; }
         public User User { get; private set; }
         public DateTime CreatedAt { get; private set; }
@@ -30,8 +24,14 @@ namespace GearUp.Domain.Entities.Tokens
                 Token = token,
                 ExpiresAt = expiresAt,
                 UserId = userId,
+                IsRevoked = false,
                 CreatedAt = DateTime.UtcNow
             };
+        }
+
+        public static void Revoke(RefreshToken rt)
+        {
+            rt.IsRevoked = true;
         }
     }
 }
