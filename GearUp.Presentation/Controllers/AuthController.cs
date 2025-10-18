@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Cryptography.Pkcs;
+using System.Threading.Tasks;
 
 
 namespace GearUp.Presentation.Controllers
@@ -56,7 +57,7 @@ namespace GearUp.Presentation.Controllers
                 Expires = DateTime.UtcNow.AddDays(7)
             });
 
-            return StatusCode(result.Status, new { message = "Login Successful" });
+            return StatusCode(result.Status, result.ToApiResponse());
         }
 
         [Authorize]
@@ -69,10 +70,17 @@ namespace GearUp.Presentation.Controllers
             return StatusCode(200, new {message = "Logged out successfully"});
         }
 
-        [HttpPost("verify")]
+        [HttpPost("verify-email")]
         public async Task<IActionResult> VerifyEmail([FromQuery] string token)
         {
             var result = await _emailVerificationService.VerifyEmail(token);
+            return StatusCode(result.Status, result.ToApiResponse());
+        }
+
+        [HttpPost("resend-verification-email")]
+        public async Task<IActionResult> ResendVerificationEmail([FromQuery] string email)
+        {
+            var result = await _emailVerificationService.ResendVerificationEmail(email);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -101,5 +109,22 @@ namespace GearUp.Presentation.Controllers
                 });
                 return StatusCode(result.Status, new { message = "Token refreshed successfully" });
             }
+
+        [Authorize]
+        [HttpPost("send-password-reset-token")]
+        public async Task<IActionResult> ResetPassword([FromQuery] string email )
+        {
+            var result = await _loginService.SendPasswordResetToken(email);
+            return StatusCode(result.Status, result.ToApiResponse());
+        }
+
+        [Authorize]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromQuery] string token, [FromBody] PasswordResetReqDto req)
+        {
+            var result = await _loginService.ResetPassword(token, req);
+            return StatusCode(result.Status, result.ToApiResponse());
+        }
     }
+
 }

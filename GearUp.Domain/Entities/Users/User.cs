@@ -121,7 +121,7 @@ namespace GearUp.Domain.Entities.Users
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public static void VerifyEmail(User user)
+        public void VerifyEmail(User user)
         {
             user.IsEmailVerified = true;
             user.UpdatedAt = DateTime.UtcNow;

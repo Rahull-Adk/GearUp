@@ -1,7 +1,6 @@
 ﻿
 using FluentValidation;
 using GearUp.Application.ServiceDtos.Auth;
-using System.Net.Mail;
 
 namespace GearUp.Application.Validators
 {

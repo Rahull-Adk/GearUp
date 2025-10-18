@@ -6,5 +6,6 @@ namespace GearUp.Application.Interfaces.Services.AuthServicesInterface
     public interface IEmailVerificationService
     {
         Task<Result<string>> VerifyEmail(string token);
+        Task<Result<string>> ResendVerificationEmail(string email);
     }
 }

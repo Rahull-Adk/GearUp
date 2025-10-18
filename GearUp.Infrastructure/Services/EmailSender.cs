@@ -1,25 +1,64 @@
-﻿using Email.Net;
-using GearUp.Application.Interfaces.Services.EmailServiceInterface;
+﻿using GearUp.Application.Interfaces.Services.EmailServiceInterface;
+using Email.Net;
 
 namespace GearUp.Infrastructure.Services
 {
     public class EmailSender : IEmailSender
     {
         private readonly IEmailService _emailService;
-        public EmailSender(IEmailService emailService)
+        private readonly string _fromEmail;
+        private readonly string _clientUrl;
+
+        public EmailSender(IEmailService emailService, string fromEmail, string clientUrl)
         {
             _emailService = emailService;
+            _fromEmail = fromEmail;
+            _clientUrl = clientUrl;
         }
 
         public async Task SendVerificationEmail(string toEmail, string verificationToken)
         {
-            var fromEmail = Environment.GetEnvironmentVariable("FromEmail");
+            var verifyLink = $"{_clientUrl}/verify?token={verificationToken}";
+            await SendEmailAsync(
+                toEmail,
+                "Verify Your Email — Welcome to GearUp!",
+                "Welcome to GearUp! Please verify your email by clicking the link below.",
+                "Verify Your Email Address",
+                "Welcome to GearUp! We’re excited to have you on board. Please confirm your email address to activate your account.",
+                "Verify Email",
+                verifyLink
+            );
+        }
+
+        public async Task SendPasswordResetEmail(string toEmail, string resetToken)
+        {
+            var resetLink = $"{_clientUrl}/reset-password?token={resetToken}";
+            await SendEmailAsync(
+                toEmail,
+                "Reset Your GearUp Password",
+                "We received a request to reset your GearUp password. Click the link below.",
+                "Reset Your Password",
+                "We received a request to reset your GearUp account password. Click the button below to set a new password.",
+                "Reset Password",
+                resetLink
+            );
+        }
+        private async Task SendEmailAsync(
+            string toEmail,
+            string subject,
+            string plainTextContent,
+            string heading,
+            string bodyText,
+            string buttonText,
+            string buttonLink
+        )
+        {
             var message = EmailMessage.Compose()
-         .From(fromEmail, "GearUp")
-         .To(toEmail)
-         .WithSubject("Verify Your Email — Welcome to GearUp!")
-         .WithPlainTextContent("Welcome to GearUp! Please verify your email by clicking the link below.")
-         .WithHtmlContent($@"
+                .From(_fromEmail, "GearUp Support")
+                .To(toEmail)
+                .WithSubject(subject)
+                .WithPlainTextContent(plainTextContent)
+                .WithHtmlContent($@"
 <html>
 <body style='margin:0; padding:0; background-color:#f4f6f8; font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif;'>
     <table role='presentation' cellpadding='0' cellspacing='0' width='100%'>
@@ -33,22 +72,15 @@ namespace GearUp.Infrastructure.Services
                     </tr>
                     <tr>
                         <td style='padding:40px; text-align:center;'>
-                            <h2 style='color:#222; font-size:22px; margin-bottom:16px;'>Verify Your Email Address</h2>
-                            <p style='color:#555; font-size:15px; line-height:1.6; margin:0 0 30px 0;'>
-                                Welcome to <strong>GearUp</strong>! We’re excited to have you on board.<br />
-                                Please confirm your email address to activate your account.
-                            </p>
-                            <a href='https://e61882394d53.ngrok-free.app/api/v1/auth/verify?token={verificationToken}'
+                            <h2 style='color:#222; font-size:22px; margin-bottom:16px;'>{heading}</h2>
+                            <p style='color:#555; font-size:15px; line-height:1.6; margin:0 0 30px 0;'>{bodyText}</p>
+                            <a href='{buttonLink}'
                                style='display:inline-block; background-color:#0078D7; color:#ffffff; text-decoration:none;
-                                      padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600;'>
-                                Verify Email
-                            </a>
-                            <p style='color:#888; font-size:13px; margin-top:32px;'>
-                                This link will expire in 24 hours for your security.
-                            </p>
+                                      padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600;'>{buttonText}</a>
+                            <p style='color:#888; font-size:13px; margin-top:32px;'>This link will expire in 24 hours for your security.</p>
                             <hr style='border:none; border-top:1px solid #eee; margin:40px 0;' />
                             <p style='color:#777; font-size:13px; line-height:1.6;'>
-                                If you didn’t create an account, please ignore this message or contact our support team.
+                                If you didn’t request this, please ignore this email or contact our support team.
                             </p>
                         </td>
                     </tr>
@@ -66,9 +98,8 @@ namespace GearUp.Infrastructure.Services
     </table>
 </body>
 </html>")
-         .WithNormalPriority()
-         .Build();
-
+                .WithNormalPriority()
+                .Build();
 
             await _emailService.SendAsync(message);
         }

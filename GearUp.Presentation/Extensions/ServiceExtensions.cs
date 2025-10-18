@@ -4,16 +4,12 @@ using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
-using GearUp.Application.Interfaces.Services.EmailServiceInterface;
-using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.Services.Auth;
 using GearUp.Application.Validators;
 using GearUp.Domain.Entities.Users;
 using GearUp.Infrastructure;
-using GearUp.Infrastructure.JwtServices;
 using GearUp.Infrastructure.Repositories;
-using GearUp.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -28,36 +24,50 @@ namespace GearUp.Presentation.Extensions
     {
         public static void AddServices(this IServiceCollection services, IConfiguration config)
         {
-            
+
             // DbContext Injection
             var connectionString = config.GetConnectionString("DefaultConnection");
-            services.AddDbContext<GearUpDbContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+            var audience = config["Jwt:Audience"];
+            var issuer = config["Jwt:Issuer"];
+            var accessToken_SecretKey = config["Jwt:AccessToken_SecretKey"];
+            var emailVerificationToken_SecretKey = config["Jwt:EmailVerificationToken_SecretKey"];
+            var sendGridKey = config["SendGridApiKey"];
+            var fromEmail = config["FromEmail"];
+            var clientUrl = config["ClientUrl"];
+
+            if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(audience) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(accessToken_SecretKey) || string.IsNullOrEmpty(sendGridKey) || string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(emailVerificationToken_SecretKey) || string.IsNullOrEmpty(clientUrl))
+            {
+                throw new InvalidOperationException("Secret keys not found");
+            }
+            services.AddInfrastructure(connectionString, audience, issuer, accessToken_SecretKey, sendGridKey, fromEmail, emailVerificationToken_SecretKey, clientUrl);
+
 
             // Swagger Injection
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
 
             // Service Injections
-            services.AddSingleton<ITokenGenerator, TokenGenerator>();
-            services.AddSingleton<ITokenValidator, TokenValidator>();
+
             services.AddScoped<IRegisterService, RegisterService>();
             services.AddScoped<ILoginService, LoginService>();
             services.AddScoped<ILogoutService, LogoutService>();
             services.AddScoped<IEmailVerificationService, EmailVerificationService>();
-           
-            services.Configure<JwtSetting>(config.GetSection("Jwt"));
-            var jwt = config.GetSection("Jwt").Get<JwtSetting>();
 
             // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();
-            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<ITokenRepository, TokenRepository>();
 
             // Validator Injections
             services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestDtoValidator>();
+            services.AddScoped<IValidator<LoginRequestDto>, LoginRequestDtoValidator>();
+            services.AddScoped<IValidator<PasswordResetReqDto>, PasswordResetValidator>();
 
             // Password Hasher Injection
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-
+            services.Configure<Settings>(option =>
+            {
+                option.EmailVerificationToken_SecretKey = emailVerificationToken_SecretKey;
+            });
             //Rate Limiting
             services.AddRateLimiter(options =>
             {
@@ -75,9 +85,6 @@ namespace GearUp.Presentation.Extensions
 
             // Email Service Injection
 
-            services.AddScoped<IEmailSender, EmailSender>();    
-            var sendGridKey = Environment.GetEnvironmentVariable("SendGridApi");
-            var fromEmail = Environment.GetEnvironmentVariable("FromEmail");
             services.AddEmailNet(options =>
             {
                 options.PauseSending = false;
@@ -91,12 +98,13 @@ namespace GearUp.Presentation.Extensions
                 ValidateAudience = true,
                 ValidateIssuer = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = jwt!.Issuer,
-                ValidAudience = jwt!.Audience,
+                ValidIssuer = issuer,
+                ValidAudience = audience,
                 RoleClaimType = "role",
                 NameClaimType = "id",
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt!.AccessToken_SecretKey))
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(accessToken_SecretKey))
             });
+            
            
         }
     }

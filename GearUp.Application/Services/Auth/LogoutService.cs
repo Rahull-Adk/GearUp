@@ -7,15 +7,15 @@ namespace GearUp.Application.Services.Auth
 {
     public class LogoutService : ILogoutService
     {
-        private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly ITokenRepository _tokenRepository;
         private readonly IUserRepository _userRepository;
-        public LogoutService(IRefreshTokenRepository refreshTokenRepository, IUserRepository userRepository)
+        public LogoutService(ITokenRepository tokenRepository, IUserRepository userRepository)
         {
-            _refreshTokenRepository = refreshTokenRepository;
+            _tokenRepository = tokenRepository;
             _userRepository = userRepository;
         }
         public async Task Logout(string refreshToken) { 
-            var token = await _refreshTokenRepository.GetRefreshTokenAsync(refreshToken);
+            var token = await _tokenRepository.GetRefreshTokenAsync(refreshToken);
             RefreshToken.Revoke(token!);
             await _userRepository.SaveChangesAsync();
             

@@ -10,11 +10,15 @@ namespace GearUp.Infrastructure.Services
 {
     public class TokenValidator : ITokenValidator
     {
-        private readonly IOptions<JwtSetting> _jwtSetting;
-        public TokenValidator(IOptions<JwtSetting> jwtSetting)
+        private readonly string _audience;
+        private readonly string _issuer;
+        public TokenValidator(string audience, string issuer)
         {
-            _jwtSetting = jwtSetting;
+       
+            _audience = audience;
+            _issuer = issuer;
         }
+
         public async Task<TokenValidationResultModel> ValidateToken(
     string token,
     string secretKey,
@@ -28,8 +32,8 @@ namespace GearUp.Infrastructure.Services
                 ValidateIssuer = true,
                 ValidateIssuerSigningKey = true,
                 ValidateLifetime = true,
-                ValidAudience = _jwtSetting.Value.Audience,
-                ValidIssuer = _jwtSetting.Value.Issuer,
+                ValidAudience = _audience,
+                ValidIssuer = _issuer,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
                 ClockSkew = TimeSpan.Zero
             });
