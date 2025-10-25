@@ -1,7 +1,9 @@
-﻿namespace GearUp.Application.Interfaces.Services.AuthServicesInterface
+﻿using GearUp.Application.Common;
+
+namespace GearUp.Application.Interfaces.Services.AuthServicesInterface
 {
     public interface ILogoutService
     {
-        Task Logout(string refreshToken);
+        Task<Result<string>> Logout(string refreshToken);
     }
 }

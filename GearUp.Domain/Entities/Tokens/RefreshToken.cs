@@ -29,9 +29,9 @@ namespace GearUp.Domain.Entities.Tokens
             };
         }
 
-        public static void Revoke(RefreshToken rt)
+        public void Revoke()
         {
-            rt.IsRevoked = true;
+            this.IsRevoked = true;
         }
     }
 }

@@ -18,9 +18,10 @@ namespace GearUp.Infrastructure.Persistence.Configurations
             builder.Property(u => u.PasswordHash).IsRequired();
             builder.Property(u => u.Role).IsRequired();
             builder.Property(u => u.PhoneNumber).HasMaxLength(15);
+            builder.Property(u => u.PendingEmail).HasMaxLength(100);
             builder.Property(u => u.AvatarUrl).IsRequired().HasMaxLength(200);
             builder.Property(u => u.IsEmailVerified).IsRequired();
-            builder.Property(u => u.IsProfileCompleted).IsRequired();
+            builder.Property(u => u.IsPendingEmailVerified).IsRequired().HasDefaultValue(false);
             builder.HasIndex(u => u.Email).IsUnique();
             builder.HasIndex(u => u.Username).IsUnique();
 

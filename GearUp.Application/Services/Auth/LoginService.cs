@@ -8,13 +8,12 @@ using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Domain.Entities.Tokens;
 using GearUp.Domain.Entities.Users;
 using Microsoft.AspNetCore.Identity;
-using System.Net;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 
 namespace GearUp.Application.Services.Auth
 {
-    public class LoginService : ILoginService
+    public sealed class LoginService : ILoginService
     {
         private readonly IUserRepository _userRepository;
         private readonly ITokenRepository _tokenRepository;
@@ -101,13 +100,14 @@ namespace GearUp.Application.Services.Auth
                {
                    new Claim("id", user.Id.ToString()),
                    new Claim("email", user.Email),
-                   new Claim("role", user.Role.ToString()),
+                   new Claim(ClaimTypes.Role, user.Role.ToString()),
                    new Claim("purpose", "access_token")
             };
             var newAccessToken = _tokenGenerator.GenerateAccessToken(accessClaims);
             var newRefreshToken = _tokenGenerator.GenerateRefreshToken();
-            RefreshToken.CreateRefreshToken(newRefreshToken, DateTime.UtcNow.AddDays(7), user.Id);
-            RefreshToken.Revoke(storedToken);
+            var refreshTokenEntity = RefreshToken.CreateRefreshToken(newRefreshToken, DateTime.UtcNow.AddDays(7), user.Id);
+            await _tokenRepository.AddRefreshTokenAsync(refreshTokenEntity);
+            storedToken.Revoke();
             await _userRepository.SaveChangesAsync();
             return Result<LoginResponseDto>.Success(new LoginResponseDto { AccessToken = newAccessToken, RefreshToken = newRefreshToken }, "Token Rotated Successfully", 200);
         }

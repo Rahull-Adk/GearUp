@@ -1,4 +1,5 @@
 using DotNetEnv;
+using GearUp.Domain.Enums;
 using GearUp.Infrastructure;
 using GearUp.Presentation.Extensions;
 using GearUp.Presentation.Middlewares;
@@ -20,13 +21,6 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddServices(builder.Configuration);
-builder.Services.AddCors(opt =>
-{
-    opt.AddPolicy("AllowFrontend", builder =>
-    {
-        builder.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
-    });
-});
 
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())

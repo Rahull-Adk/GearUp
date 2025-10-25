@@ -4,9 +4,7 @@ using GearUp.Presentation.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using System.Security.Cryptography.Pkcs;
-using System.Threading.Tasks;
-
+using System.Security.Claims;
 
 namespace GearUp.Presentation.Controllers
 {
@@ -32,7 +30,7 @@ namespace GearUp.Presentation.Controllers
             var result = await _registerService.RegisterUser(registerRequestDto);
             return StatusCode(result.Status, result.ToApiResponse());
         }
-        
+
         [HttpPost("login")]
         public async Task<IActionResult> LoginUser(LoginRequestDto req)
         {
@@ -67,7 +65,7 @@ namespace GearUp.Presentation.Controllers
             var refreshToken = Request.Cookies["refresh_token"];
             await _logoutService.Logout(refreshToken!);
             Response.Cookies.Delete("access_token");
-            return StatusCode(200, new {message = "Logged out successfully"});
+            return StatusCode(200, new { message = "Logged out successfully" });
         }
 
         [HttpPost("verify-email")]
@@ -75,6 +73,7 @@ namespace GearUp.Presentation.Controllers
         {
             var result = await _emailVerificationService.VerifyEmail(token);
             return StatusCode(result.Status, result.ToApiResponse());
+
         }
 
         [HttpPost("resend-verification-email")]
@@ -89,42 +88,39 @@ namespace GearUp.Presentation.Controllers
         {
             var refreshToken = Request.Cookies["refresh_token"];
             var result = await _loginService.RotateRefreshToken(refreshToken!);
-                if (!result.IsSuccess || result.Data.AccessToken == null || result.Data.RefreshToken == null)
-                {
-                    return StatusCode(result.Status, result.ToApiResponse());
-                }
-                Response.Cookies.Append("access_token", result.Data?.AccessToken!, new CookieOptions
-                {
-                    HttpOnly = false,
-                    Secure = true,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTime.UtcNow.AddMinutes(15)
-                });
-                Response.Cookies.Append("refresh_token", result.Data?.RefreshToken!, new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTime.UtcNow.AddDays(7)
-                });
-                return StatusCode(result.Status, new { message = "Token refreshed successfully" });
+            if (!result.IsSuccess || result.Data.AccessToken == null || result.Data.RefreshToken == null)
+            {
+                return StatusCode(result.Status, result.ToApiResponse());
             }
+            Response.Cookies.Append("access_token", result.Data?.AccessToken!, new CookieOptions
+            {
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddMinutes(15)
+            });
+            Response.Cookies.Append("refresh_token", result.Data?.RefreshToken!, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddDays(7)
+            });
+            return StatusCode(result.Status, new { message = "Token refreshed successfully" });
+        }
 
-        [Authorize]
         [HttpPost("send-password-reset-token")]
-        public async Task<IActionResult> ResetPassword([FromQuery] string email )
+        public async Task<IActionResult> ResentPasswordResetEmail([FromQuery] string email)
         {
             var result = await _loginService.SendPasswordResetToken(email);
             return StatusCode(result.Status, result.ToApiResponse());
         }
-
-        [Authorize]
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromQuery] string token, [FromBody] PasswordResetReqDto req)
         {
             var result = await _loginService.ResetPassword(token, req);
             return StatusCode(result.Status, result.ToApiResponse());
         }
-    }
 
+    }
 }

@@ -43,6 +43,23 @@ namespace GearUp.Infrastructure.Services
                 resetLink
             );
         }
+
+        public async Task SendEmailReset(string toEmail, string resetToken)
+        {
+            var resetLink = $"{_clientUrl}/reset-email?token={resetToken}";
+
+            await SendEmailAsync(
+                toEmail,
+                "Verify Your New Email Address - GearUp",
+                "We’ve received a request to update your email address on GearUp.", 
+                "Verify Your New Email Address",
+                @"You recently requested to change the email address associated with your GearUp account. 
+        To complete this update and keep your account secure, please verify your new email by clicking the button below.",
+                "Verify Email",
+                resetLink
+            );
+        }
+
         private async Task SendEmailAsync(
             string toEmail,
             string subject,

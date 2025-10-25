@@ -5,5 +5,6 @@ namespace GearUp.Application.Interfaces.Services.EmailServiceInterface
     {
         Task SendVerificationEmail(string toEmail, string verificationToken);
         Task SendPasswordResetEmail(string toEmail, string resetToken);
+        Task SendEmailReset(string toEmail, string resetToken);
     }
 }

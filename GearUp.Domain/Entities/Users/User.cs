@@ -21,7 +21,8 @@ namespace GearUp.Domain.Entities.Users
         public string? PhoneNumber { get; private set; }
         public string AvatarUrl { get; private set; } = "https://i.pravatar.cc/300";
         public bool IsEmailVerified { get; private set; }
-        public bool IsProfileCompleted { get; private set; }
+        public string? PendingEmail { get; private set; }
+        public bool IsPendingEmailVerified { get; private set; }
 
         private readonly List<Post> _posts = new List<Post>();
         private readonly List<CarRental> _ownedRentals = new List<CarRental>();
@@ -40,8 +41,6 @@ namespace GearUp.Domain.Entities.Users
         public IReadOnlyCollection<Appointment> SentAppointments => _sentAppointments.AsReadOnly();
         public IReadOnlyCollection<Notification> Notifications => _notifications.AsReadOnly();
         public IReadOnlyCollection<Car> Cars => _cars.AsReadOnly();
-
-
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
 
@@ -75,7 +74,6 @@ namespace GearUp.Domain.Entities.Users
                 Name = name,
                 Role = UserRole.Customer,
                 AvatarUrl = "https://i.pravatar.cc/300",
-                IsProfileCompleted = false,
                 IsEmailVerified = false,
             };
         }
@@ -93,25 +91,36 @@ namespace GearUp.Domain.Entities.Users
                 ProviderUserId = providerUserId,
                 Role = UserRole.Customer,
                 AvatarUrl = "https://i.pravatar.cc/300",
-                IsProfileCompleted = false,
                 IsEmailVerified = false,
 
             };
         }
 
-        public void UpdateProfile(string name, string? phoneNumber, string avatarUrl, DateOnly? dateOfBirth)
+        public void UpdateProfile(
+    string? name,
+    string? phoneNumber,
+    string? avatarUrl,
+    DateOnly? dateOfBirth,
+    string? newHashedPassword = null)
         {
             if (!string.IsNullOrWhiteSpace(name))
-                Name = name;
+                Name = name.Trim();
+
             if (!string.IsNullOrWhiteSpace(phoneNumber))
-                PhoneNumber = phoneNumber;
+                PhoneNumber = phoneNumber.Trim();
+
             if (!string.IsNullOrWhiteSpace(avatarUrl))
-                AvatarUrl = avatarUrl;
+                AvatarUrl = avatarUrl.Trim();
+
             if (dateOfBirth.HasValue)
                 DateOfBirth = dateOfBirth.Value;
-            IsProfileCompleted = true;
+
+            if (!string.IsNullOrEmpty(newHashedPassword))
+                PasswordHash = newHashedPassword;
+
             UpdatedAt = DateTime.UtcNow;
         }
+
 
         public void SetPassword(string newPasswordHash)
         {
@@ -121,10 +130,36 @@ namespace GearUp.Domain.Entities.Users
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public void VerifyEmail(User user)
+        public void VerifyEmail()
         {
-            user.IsEmailVerified = true;
-            user.UpdatedAt = DateTime.UtcNow;
+
+            IsEmailVerified = true;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void VerifyPendingEmail()
+        {
+            if (string.IsNullOrEmpty(PendingEmail))
+                return;
+
+            Email = PendingEmail.ToLower();
+            PendingEmail = null;
+            IsPendingEmailVerified = true;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+
+        public void SetPendingEmail(string newEmail)
+        {
+            PendingEmail = newEmail?.ToLower();
+            IsPendingEmailVerified = false;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void SetIsPendingEmailVerified(bool isVerified)
+        {
+            IsPendingEmailVerified = isVerified;
+            UpdatedAt = DateTime.UtcNow;
         }
 
 

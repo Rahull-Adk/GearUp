@@ -1,18 +1,25 @@
-﻿using Email.Net;
+﻿using AutoMapper;
+using Email.Net;
 using Email.Net.Channel.SendGrid;
 using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
+using GearUp.Application.Interfaces.Services.UserServiceInterface;
+using GearUp.Application.Mappings;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.Services.Auth;
+using GearUp.Application.Services.Users;
 using GearUp.Application.Validators;
 using GearUp.Domain.Entities.Users;
+using GearUp.Domain.Enums;
 using GearUp.Infrastructure;
 using GearUp.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using System.Net.Mail;
 using System.Text;
@@ -35,6 +42,8 @@ namespace GearUp.Presentation.Extensions
             var fromEmail = config["FromEmail"];
             var clientUrl = config["ClientUrl"];
 
+
+
             if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(audience) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(accessToken_SecretKey) || string.IsNullOrEmpty(sendGridKey) || string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(emailVerificationToken_SecretKey) || string.IsNullOrEmpty(clientUrl))
             {
                 throw new InvalidOperationException("Secret keys not found");
@@ -46,12 +55,23 @@ namespace GearUp.Presentation.Extensions
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
 
-            // Service Injections
 
+            var mapperConfig = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile(new UserMappingProfile());
+            }, NullLoggerFactory.Instance);
+
+            mapperConfig.AssertConfigurationIsValid();
+
+            var mapper = mapperConfig.CreateMapper();
+            services.AddSingleton(mapper);
+
+            // Service Injection
             services.AddScoped<IRegisterService, RegisterService>();
             services.AddScoped<ILoginService, LoginService>();
             services.AddScoped<ILogoutService, LogoutService>();
             services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+            services.AddScoped<IUserService, UserService>();
 
             // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();
@@ -68,23 +88,56 @@ namespace GearUp.Presentation.Extensions
             {
                 option.EmailVerificationToken_SecretKey = emailVerificationToken_SecretKey;
             });
+
             //Rate Limiting
             services.AddRateLimiter(options =>
             {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
                 options.AddPolicy("Fixed", httpContext =>
                     RateLimitPartition.GetFixedWindowLimiter(
                         partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                         factory: key => new FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 60,
+                            PermitLimit = 100,
                             Window = TimeSpan.FromMinutes(1),
                             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                            QueueLimit = 2
+                            QueueLimit = 0
                         }));
             });
 
-            // Email Service Injection
+            //Role Base Policies
+            services.AddAuthorizationBuilder()
+            .AddPolicy("CustomerOnly", policy => policy.RequireRole(UserRole.Customer.ToString()));
+            services.AddAuthorizationBuilder()
+                 .AddPolicy("AdminOnly", policy => policy.RequireRole(UserRole.Admin.ToString()));
+            services.AddAuthorizationBuilder()
+                .AddPolicy("SameUser", policy =>
+                {
+                    policy.RequireAssertion(context =>
+                    {
+                        if (context.Resource is not HttpContext httpContext) return false;
+                        var routeUserId = httpContext.Request.RouteValues["id"]?.ToString();
+                        if (string.IsNullOrEmpty(routeUserId)) return false;
 
+                        var userId = context.User.FindFirst("id")?.Value;
+                        if (string.IsNullOrEmpty(userId)) return false;
+
+                        // Compare claim with route parameter
+                        return userId == routeUserId;
+                    });
+                });
+
+            // CORS Policy
+            services.AddCors(opt =>
+            {
+                opt.AddPolicy("AllowFrontend", builder =>
+                {
+                    builder.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+                });
+            });
+
+
+            // Email Service Injection
             services.AddEmailNet(options =>
             {
                 options.PauseSending = false;
@@ -100,12 +153,12 @@ namespace GearUp.Presentation.Extensions
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = issuer,
                 ValidAudience = audience,
-                RoleClaimType = "role",
+                RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
                 NameClaimType = "id",
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(accessToken_SecretKey))
             });
-            
-           
+
+
         }
     }
 }
