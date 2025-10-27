@@ -1,8 +1,8 @@
 ﻿using Email.Net;
+using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
-using GearUp.Infrastructure.JwtServices;
-using GearUp.Infrastructure.Services;
+using GearUp.Infrastructure.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +17,7 @@ namespace GearUp.Infrastructure
             services.AddSingleton<ITokenGenerator>(new TokenGenerator(accessToken_SecretKey, audience, issuer, emailVerificationToken_SecretKey));
 
             services.AddSingleton<ITokenValidator>(new TokenValidator(audience, issuer));
+
             services.AddScoped<IEmailSender>(provider => new EmailSender(provider.GetRequiredService<IEmailService>(), fromEmail, clientUrl));
 
             return services;

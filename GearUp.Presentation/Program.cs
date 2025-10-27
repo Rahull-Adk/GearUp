@@ -1,5 +1,4 @@
 using DotNetEnv;
-using GearUp.Domain.Enums;
 using GearUp.Infrastructure;
 using GearUp.Presentation.Extensions;
 using GearUp.Presentation.Middlewares;

@@ -9,13 +9,13 @@ namespace GearUp.Domain.Entities.Users
 {
     public class User
     {
-        public Guid Id { get; private set; }
+        public Guid Id { get; private set; } = default!;
         public string? Provider { get; private set; }
-        public string? ProviderUserId { get; private set; }
-        public string Username { get; private set; }
-        public string Email { get; private set; }
-        public string Name { get; private set; }
-        public string PasswordHash { get; private set; }
+        public string? ProviderUserId { get; private set; } 
+        public string Username { get; private set; } = default!;
+        public string Email { get; private set; } = default!;
+        public string Name { get; private set; } = default!;
+        public string PasswordHash { get; private set; } = default!;
         public UserRole Role { get; private set; }
         public DateOnly DateOfBirth { get; private set; }
         public string? PhoneNumber { get; private set; }
@@ -32,8 +32,8 @@ namespace GearUp.Domain.Entities.Users
         private readonly List<Notification> _notifications = new List<Notification>();
         private readonly List<Car> _cars = new List<Car>();
         private readonly List<ConversationParticipant> _conversationParticipants = new();
+      
         public IReadOnlyCollection<ConversationParticipant> ConversationParticipants => _conversationParticipants.AsReadOnly();
-
         public IReadOnlyCollection<Post> Posts => _posts.AsReadOnly();
         public IReadOnlyCollection<CarRental> OwnedRentals => _ownedRentals.AsReadOnly();
         public IReadOnlyCollection<CarRental> BookedRentals => _bookedRentals.AsReadOnly();

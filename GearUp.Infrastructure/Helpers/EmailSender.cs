@@ -1,7 +1,7 @@
 ﻿using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using Email.Net;
 
-namespace GearUp.Infrastructure.Services
+namespace GearUp.Infrastructure.Helpers
 {
     public class EmailSender : IEmailSender
     {

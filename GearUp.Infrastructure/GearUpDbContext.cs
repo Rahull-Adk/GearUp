@@ -31,6 +31,7 @@ namespace GearUp.Infrastructure
         public DbSet<Message> Messages { get; set; }
         public DbSet<ConversationParticipant> ConversationParticipants { get; set; }
 
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

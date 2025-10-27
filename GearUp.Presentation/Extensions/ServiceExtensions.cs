@@ -7,6 +7,7 @@ using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.Mappings;
+using GearUp.Application.ServiceDtos;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.Services.Auth;
 using GearUp.Application.Services.Users;
@@ -15,15 +16,18 @@ using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Enums;
 using GearUp.Infrastructure;
 using GearUp.Infrastructure.Repositories;
+using GearUp.Infrastructure.Helpers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using System.Net.Mail;
 using System.Text;
 using System.Threading.RateLimiting;
+using CloudinaryDotNet;
+using GearUp.Application.Interfaces.Services;
+
 
 namespace GearUp.Presentation.Extensions
 {
@@ -41,6 +45,7 @@ namespace GearUp.Presentation.Extensions
             var sendGridKey = config["SendGridApiKey"];
             var fromEmail = config["FromEmail"];
             var clientUrl = config["ClientUrl"];
+            var cloudinary_secret = config["CLOUDINARY_URL"];
 
 
 
@@ -71,7 +76,9 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<ILoginService, LoginService>();
             services.AddScoped<ILogoutService, LogoutService>();
             services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+            services.AddSingleton<ICloudinaryImageUploader, CloudinaryImageUploader>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IImageProcessor, ImageProcessor>();
 
             // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();
@@ -88,6 +95,11 @@ namespace GearUp.Presentation.Extensions
             {
                 option.EmailVerificationToken_SecretKey = emailVerificationToken_SecretKey;
             });
+
+            // Cloudinary Injection
+            Cloudinary cloudinary = new Cloudinary(cloudinary_secret);
+            cloudinary.Api.Secure = true;
+            services.AddSingleton(cloudinary);
 
             //Rate Limiting
             services.AddRateLimiter(options =>
@@ -110,23 +122,7 @@ namespace GearUp.Presentation.Extensions
             .AddPolicy("CustomerOnly", policy => policy.RequireRole(UserRole.Customer.ToString()));
             services.AddAuthorizationBuilder()
                  .AddPolicy("AdminOnly", policy => policy.RequireRole(UserRole.Admin.ToString()));
-            services.AddAuthorizationBuilder()
-                .AddPolicy("SameUser", policy =>
-                {
-                    policy.RequireAssertion(context =>
-                    {
-                        if (context.Resource is not HttpContext httpContext) return false;
-                        var routeUserId = httpContext.Request.RouteValues["id"]?.ToString();
-                        if (string.IsNullOrEmpty(routeUserId)) return false;
-
-                        var userId = context.User.FindFirst("id")?.Value;
-                        if (string.IsNullOrEmpty(userId)) return false;
-
-                        // Compare claim with route parameter
-                        return userId == routeUserId;
-                    });
-                });
-
+         
             // CORS Policy
             services.AddCors(opt =>
             {

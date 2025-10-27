@@ -33,6 +33,7 @@
       FromEmail: ${FromEmail}
       ClientUrl: ${ClientUrl}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      CLOUDINARY_URL: ${CLOUDINARY_URL}
     depends_on:
       - db
     networks:

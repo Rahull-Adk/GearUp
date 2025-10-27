@@ -4,6 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	  <UseImageSharp>true</UseImageSharp>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CloudinaryDotNet" Version="1.27.8" />
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="Email.Net" Version="2.0.0" />
     <PackageReference Include="Email.Net.SendGrid" Version="2.0.0" />
@@ -29,6 +31,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9" />
     <PackageReference Include="MySql.EntityFrameworkCore" Version="9" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
   </ItemGroup>
 
 </Project>

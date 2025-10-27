@@ -2,6 +2,7 @@
 {
     public record RegisterResponseDto(
     Guid Id,
+    string? Provider,
     string Username,
     string Email,
     string Name,

@@ -27,12 +27,31 @@ namespace GearUp.Presentation.Controllers
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
+        [Authorize]
+        [HttpGet("{username}")]
+        public async Task<IActionResult> GetUserProfile(string username)
+        {
+            var result = await _userService.GetUserProfile(username);
+            return StatusCode(result.Status, result.ToApiResponse());
+        }
+
+        [Authorize]
         [HttpPut]
-        public async Task<IActionResult> UpdateUser([FromBody] UpdateUserRequestDto updateUserDto)
+        public async Task<IActionResult> UpdateUser([FromForm] UpdateUserRequestDto updateUserDto)
         {
             var id = User.FindFirst(c => c.Type == "id")?.Value;
             var result = await _userService.UpdateUserProfileService(id!, updateUserDto);
             return StatusCode(result.Status, result.ToApiResponse());
         }
+
+        //[Authorize]
+        //[HttpPost("kyc")]
+        //public async Task<IActionResult> SubmitKycDocuments([FromForm] KycDocumentRequestDto kycDocumentDto)
+        //{
+        //    var userId = User.FindFirst(c => c.Type == "id")?.Value;
+        //    var result = await _userService.SubmitKycDocumentsService(userId!, kycDocumentDto);
+        //    return StatusCode(result.Status, result.ToApiResponse());
+        //}
+
     }
 }
