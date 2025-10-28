@@ -12,24 +12,46 @@ namespace GearUp.Infrastructure.Helpers
         public CloudinaryImageUploader(Cloudinary cloudinary)
         {
             _cloudinary = cloudinary;
-          
+
         }
-        public async Task<Uri?> UploadImageAsync(MemoryStream imageStream, string path)
+        public async Task<List<Uri>> UploadImageListAsync(List<MemoryStream> imageStreams, string path)
         {
+            var imageUrls = new List<Uri>();
+            foreach (var stream in imageStreams)
+            {
+                var uploadParams = new ImageUploadParams()
+                {
+                    File = new FileDescription($"{Guid.NewGuid()}.jpeg", stream),
+                    Folder = path,
+                    UniqueFilename = true,
+                    Overwrite = true
+                };
 
-            var uploadParams = new ImageUploadParams() {
-                File = new FileDescription($"{Guid.NewGuid()}.jpeg", imageStream),
-                Folder = path,
-                UniqueFilename = true,
-                Overwrite = true
-            };
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
 
-            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                var imageUrl = uploadResult.SecureUrl;
+                imageUrls.Add(imageUrl);
+            }
 
-            var imageUrl = uploadResult.SecureUrl;
+            return imageUrls;
+        }
 
-            return imageUrl;
-            
+        public async Task<List<Uri>> UploadPdfAsync(List<MemoryStream> pdfStreams, string path)
+        {
+            var pdfUrl = new List<Uri>();
+            foreach (var pdf in pdfStreams)
+            {
+                var uploadParams = new RawUploadParams()
+                {
+                    File = new FileDescription($"{Guid.NewGuid()}.pdf", pdf),
+                    Folder = path,
+                    UniqueFilename = true,
+                    Overwrite = true
+                };
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                pdfUrl.Add(uploadResult.SecureUrl);
+            }
+            return pdfUrl;
         }
 
         public async Task DeleteImageAsync(string publicId)

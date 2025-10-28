@@ -1,4 +1,5 @@
-﻿using GearUp.Domain.Entities.Cars;
+﻿using GearUp.Domain.Entities;
+using GearUp.Domain.Entities.Cars;
 using GearUp.Domain.Entities.Chats;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Domain.Entities.RealTime;
@@ -18,6 +19,7 @@ namespace GearUp.Infrastructure
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
+        public DbSet<KycSubmissions> KycSubmissions { get; set; }
         public DbSet<Car> Cars { get; set; }
         public DbSet<CarRental> CarRentals { get; set; }
         public DbSet<Appointment> Appointments { get; set; }

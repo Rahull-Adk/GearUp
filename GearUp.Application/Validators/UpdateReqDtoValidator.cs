@@ -22,7 +22,7 @@ namespace GearUp.Application.Validators
                 .LessThan(DateOnly.FromDateTime(DateTime.Now)).WithMessage("Date of birth must be in the past.");
 
             RuleFor(x => x.AvatarImage)
-                .Must(file => file == null || file.Length <= 5 * 1024 * 1024).WithMessage("Avatar image size must be less than or equal to 5MB.")
+                .Must(file => file == null || file.Length <= 3 * 1024 * 1024).WithMessage("Avatar image size must be less than or equal to 3MB.")
                 .When(x => x.AvatarImage != null);
 
             RuleFor(x => x.CurrentPassword)

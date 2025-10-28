@@ -36,7 +36,7 @@ namespace GearUp.Presentation.Controllers
         }
 
         [Authorize]
-        [HttpPut]
+        [HttpPut("me")]
         public async Task<IActionResult> UpdateUser([FromForm] UpdateUserRequestDto updateUserDto)
         {
             var id = User.FindFirst(c => c.Type == "id")?.Value;
@@ -44,14 +44,14 @@ namespace GearUp.Presentation.Controllers
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
-        //[Authorize]
-        //[HttpPost("kyc")]
-        //public async Task<IActionResult> SubmitKycDocuments([FromForm] KycDocumentRequestDto kycDocumentDto)
-        //{
-        //    var userId = User.FindFirst(c => c.Type == "id")?.Value;
-        //    var result = await _userService.SubmitKycDocumentsService(userId!, kycDocumentDto);
-        //    return StatusCode(result.Status, result.ToApiResponse());
-        //}
+        [Authorize]
+        [HttpPost("kyc")]
+        public async Task<IActionResult> SubmitKycDocuments([FromForm] KycRequestDto kycDocumentDto)
+        {
+            var userId = User.FindFirst(c => c.Type == "id")?.Value;
+            var result = await _userService.KycService(userId!, kycDocumentDto);
+            return StatusCode(result.Status, result.ToApiResponse());
+        }
 
     }
 }

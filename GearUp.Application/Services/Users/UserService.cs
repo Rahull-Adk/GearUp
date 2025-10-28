@@ -5,9 +5,9 @@ using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
-using GearUp.Application.ServiceDtos;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.ServiceDtos.User;
+using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Users;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
@@ -22,16 +22,16 @@ namespace GearUp.Application.Services.Users
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IEmailSender _emailSender;
         private readonly ITokenGenerator _tokenGenerator;
-        private readonly IImageProcessor _imageProcessor;
+        private readonly IDocumentProcessor _documentProcessor;
         private readonly ICloudinaryImageUploader _cloudinaryImageUploader;
-        public UserService(IUserRepository userRepo, IMapper mapper, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IImageProcessor imageProcessor, ICloudinaryImageUploader cloudinaryImageUploader)
+        public UserService(IUserRepository userRepo, IMapper mapper, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader)
         {
             _userRepo = userRepo;
             _mapper = mapper;
             _passwordHasher = passwordHasher;
             _emailSender = emailSender;
+            _documentProcessor = documentProcessor;
             _tokenGenerator = tokenGenerator;
-            _imageProcessor = imageProcessor;
             _cloudinaryImageUploader = cloudinaryImageUploader;
         }
         public async Task<Result<RegisterResponseDto>> GetCurrentUserProfileService(string userId)
@@ -117,6 +117,56 @@ namespace GearUp.Application.Services.Users
         }
 
 
+        public async Task<Result<KycResponseDto>> KycService(string userId, KycRequestDto req)
+        {
+
+            if (string.IsNullOrEmpty(userId))
+                return Result<KycResponseDto>.Failure("Unauthorized", 401);
+
+            var user = await _userRepo.GetUserByIdAsync(Guid.Parse(userId));
+            if (user == null)
+                return Result<KycResponseDto>.Failure("User not found", 404);
+
+            if (req.DocumentType == KycDocumentType.Default)
+                return Result<KycResponseDto>.Failure("Invalid document type.", 400);
+
+           var processedDocuments = await _documentProcessor.ProcessDocuments(req.Kyc, 1200, 800);
+            if(!processedDocuments.IsSuccess)
+                return Result<KycResponseDto>.Failure(processedDocuments.ErrorMessage, processedDocuments.Status);
+
+            var docsPath = $"gearup/users/{user.Id}/kyc";
+            var (imageStreams, pdfStreams) = processedDocuments.Data;
+
+            var imageUrls = await _cloudinaryImageUploader.UploadImageListAsync(imageStreams, docsPath);
+
+            var pdfUrls = await _cloudinaryImageUploader.UploadImageListAsync(pdfStreams, docsPath);
+            if (imageUrls.Count == 0 && pdfUrls.Count == 0)
+                return Result<KycResponseDto>.Failure("Failed to upload KYC documents.", 500);
+
+            var documentUrls = imageUrls.Concat(pdfUrls).ToList();
+
+            if (documentUrls.Count == 0)
+                return Result<KycResponseDto>.Failure("Failed to upload KYC documents.", 500);
+
+            var selfiePath = $"gearup/users/{user.Id}/kyc/selfie";
+            var processedSelfie = await _documentProcessor.ProcessImage(req.SelfieImage, 800, 800, true);
+            if (!processedSelfie.IsSuccess)
+                return Result<KycResponseDto>.Failure(processedSelfie.ErrorMessage, processedSelfie.Status);
+
+            var selfieUrl = await _cloudinaryImageUploader.UploadImageListAsync(new List<MemoryStream> { processedSelfie.Data }, selfiePath);
+            if(selfieUrl.Count == 0)
+                return Result<KycResponseDto>.Failure("Failed to upload selfie image.", 500);
+
+
+            var kycSubmission = KycSubmissions.CreateKycSubmissions(user.Id, req.DocumentType, documentUrls, selfieUrl.First().ToString());
+
+            await _userRepo.AddKycAsync(kycSubmission);
+            await _userRepo.SaveChangesAsync();
+
+           var responseData =  _mapper.Map<KycResponseDto>(kycSubmission);
+
+            return Result<KycResponseDto>.Success(responseData, "KYC submission successful.", 200);
+        }
 
 
         private static bool PasswordUpdateAttempted(UpdateUserRequestDto reqDto)
@@ -182,12 +232,12 @@ namespace GearUp.Application.Services.Users
                 await _cloudinaryImageUploader.DeleteImageAsync(publicId);
             }
 
-            var processedImage = await _imageProcessor.ProcessImage(reqDto.AvatarImage, 256, 256);
+            var processedImage = await _documentProcessor.ProcessImage(reqDto.AvatarImage, 256, 256, forcedSquare: true);
             if (!processedImage.IsSuccess)
                 throw new Exception(processedImage.ErrorMessage);
 
             var uploadPath = $"gearup/users/{user.Id}/avatar";
-            var imageUrl = await _cloudinaryImageUploader.UploadImageAsync(processedImage.Data, uploadPath);
+            var imageUrl = await _cloudinaryImageUploader.UploadImageListAsync(new List<MemoryStream> { processedImage.Data }, uploadPath);
 
             return imageUrl?.ToString() ?? defaultAvatarUrl;
         }
@@ -215,7 +265,7 @@ namespace GearUp.Application.Services.Users
             user.SetPendingEmail(reqDto.NewEmail);
             user.SetIsPendingEmailVerified(false);
             await _userRepo.SaveChangesAsync();
-
+           
             var token = _tokenGenerator.GenerateEmailVerificationToken(claims);
             await _emailSender.SendEmailReset(reqDto.NewEmail, token);
 

@@ -28,11 +28,14 @@ namespace GearUp.Domain.Entities.Users
         private readonly List<CarRental> _ownedRentals = new List<CarRental>();
         private readonly List<CarRental> _bookedRentals = new List<CarRental>();
         private readonly List<Appointment> _receivedAppointments = new List<Appointment>();
-        private readonly List<Appointment> _sentAppointments = new List<Appointment>();
+        private readonly List<Appointment> _sentAppointments = [];
         private readonly List<Notification> _notifications = new List<Notification>();
         private readonly List<Car> _cars = new List<Car>();
         private readonly List<ConversationParticipant> _conversationParticipants = new();
-      
+        private readonly List<KycSubmissions> _kycSubmitted = new List<KycSubmissions>();
+        private readonly List<KycSubmissions> _kycSubmissionsReviewed = new List<KycSubmissions>();
+
+
         public IReadOnlyCollection<ConversationParticipant> ConversationParticipants => _conversationParticipants.AsReadOnly();
         public IReadOnlyCollection<Post> Posts => _posts.AsReadOnly();
         public IReadOnlyCollection<CarRental> OwnedRentals => _ownedRentals.AsReadOnly();
@@ -41,6 +44,9 @@ namespace GearUp.Domain.Entities.Users
         public IReadOnlyCollection<Appointment> SentAppointments => _sentAppointments.AsReadOnly();
         public IReadOnlyCollection<Notification> Notifications => _notifications.AsReadOnly();
         public IReadOnlyCollection<Car> Cars => _cars.AsReadOnly();
+        public IReadOnlyCollection<KycSubmissions> KycSubmitted => _kycSubmitted.AsReadOnly();
+        public IReadOnlyCollection<KycSubmissions> KycSubmissionsReviewed => _kycSubmissionsReviewed.AsReadOnly();
+
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
 

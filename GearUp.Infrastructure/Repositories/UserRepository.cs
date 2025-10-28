@@ -1,4 +1,5 @@
 ﻿using GearUp.Application.Interfaces.Repositories;
+using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
@@ -17,6 +18,12 @@ namespace GearUp.Infrastructure.Repositories
         {
             await _db.Users.AddAsync(user);
         }
+
+        public async Task AddKycAsync(KycSubmissions kyc)
+        {
+            await  _db.KycSubmissions.AddAsync(kyc);
+        }
+
         public async Task<User?> GetUserByUsernameOrEmailAsync(string usernameOrEmail)
         {
             return await _db.Users.SingleOrDefaultAsync(u => u.Username == usernameOrEmail || u.Email == usernameOrEmail);

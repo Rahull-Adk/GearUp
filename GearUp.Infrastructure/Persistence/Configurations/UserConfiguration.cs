@@ -9,7 +9,11 @@ namespace GearUp.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<User> builder)
         {
-            builder.HasKey(u => u.Id);
+            builder.Property(u => u.Id)
+     .HasColumnType("char(36)")
+     .UseCollation("utf8mb4_0900_ai_ci")
+     .IsRequired();
+
             builder.Property(u => u.Provider).IsRequired(false).HasMaxLength(50);
             builder.Property(u => u.ProviderUserId).IsRequired(false).HasMaxLength(100);
             builder.Property(u => u.Username).IsRequired().HasMaxLength(50);
@@ -47,6 +51,20 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .WithOne(r => r.Renter)
                 .HasForeignKey(r => r.RenterId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+
+            // Submitted KYCs
+            builder.HasMany(u => u.KycSubmitted)
+                .WithOne(k => k.SubmittedBy)
+                .HasForeignKey(k => k.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Reviewed KYCs
+            builder.HasMany(u => u.KycSubmissionsReviewed)
+                .WithOne(k => k.ReviewedBy)
+                .HasForeignKey(k => k.ReviewerId)
+                .OnDelete(DeleteBehavior.Restrict); 
+
 
             // Appointments
 

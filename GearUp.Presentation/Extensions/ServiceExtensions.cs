@@ -7,7 +7,6 @@ using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.Mappings;
-using GearUp.Application.ServiceDtos;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.Services.Auth;
 using GearUp.Application.Services.Users;
@@ -78,7 +77,7 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IEmailVerificationService, EmailVerificationService>();
             services.AddSingleton<ICloudinaryImageUploader, CloudinaryImageUploader>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IImageProcessor, ImageProcessor>();
+            services.AddScoped<IDocumentProcessor, DocumentProcessor>();
 
             // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();
