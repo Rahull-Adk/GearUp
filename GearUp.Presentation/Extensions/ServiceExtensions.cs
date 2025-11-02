@@ -14,6 +14,7 @@ using GearUp.Application.Validators;
 using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Enums;
 using GearUp.Infrastructure;
+using GearUp.Infrastructure.Persistence;
 using GearUp.Infrastructure.Repositories;
 using GearUp.Infrastructure.Helpers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -90,13 +91,19 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IDocumentProcessor, DocumentProcessor>();
 
             // Redis Cache Injection
+            var redisConnection = config["Redis:ConnectionString"] ?? "localhost:6379";
             services.AddStackExchangeRedisCache(options =>
             {
-                options.Configuration = "localhost:6379";
+                options.Configuration = redisConnection;
                 options.InstanceName = "GearUpInstance";
             });
 
             services.AddScoped<ICacheService, CacheService>();
+
+            // Health Checks
+            services.AddHealthChecks()
+                .AddDbContextCheck<GearUpDbContext>("database")
+                .AddRedis(config["Redis:ConnectionString"] ?? "localhost:6379", name: "redis");
 
             // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();

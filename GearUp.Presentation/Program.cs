@@ -4,6 +4,7 @@ using GearUp.Infrastructure;
 using GearUp.Infrastructure.Persistence;
 using GearUp.Presentation.Extensions;
 using GearUp.Presentation.Middlewares;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -68,6 +69,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseCors("AllowFrontend");
 app.UseAuthorization();
+app.MapHealthChecks("/health");
 app.MapControllers();
 
 try
