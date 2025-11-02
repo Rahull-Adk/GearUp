@@ -8,6 +8,7 @@ using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Domain.Entities.Users;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Security.Claims;
 
@@ -21,7 +22,8 @@ namespace GearUp.Application.Services.Auth
         private readonly IEmailSender _emailSender;
         private readonly ITokenGenerator _tokenGenerator;
         private readonly IMapper _mapper;
-        public RegisterService(IValidator<RegisterRequestDto> validator, IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IMapper mapper)
+        private readonly ILogger<RegisterService> _logger;
+        public RegisterService(IValidator<RegisterRequestDto> validator, IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IMapper mapper, ILogger<RegisterService> logger)
         {
             _validator = validator;
             _userRepo = userRepo;
@@ -29,11 +31,12 @@ namespace GearUp.Application.Services.Auth
             _emailSender = emailSender;
             _tokenGenerator = tokenGenerator;
             _mapper = mapper;
+            _logger = logger;
         }
         public async Task<Result<RegisterResponseDto>> RegisterUser(RegisterRequestDto data)
         {
-          
-                var validationResult = await _validator.ValidateAsync(data);
+                _logger.LogInformation("Starting user registration for email: {Email}", data.Email);
+            var validationResult = await _validator.ValidateAsync(data);
 
                 if(!validationResult.IsValid)
                 {
@@ -72,7 +75,7 @@ namespace GearUp.Application.Services.Auth
             await _emailSender.SendVerificationEmail(newUser.Email, emailVerificationToken);
 
             var mappedRes = _mapper.Map<RegisterResponseDto>(newUser);
-
+            _logger.LogInformation("User registration successful for email: {Email}", data.Email);
             return Result<RegisterResponseDto>.Success(mappedRes, "User created Successfully!", 201);
         }
     }

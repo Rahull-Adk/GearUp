@@ -5,17 +5,15 @@ using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
-using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.ServiceDtos.User;
-using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Users;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
-
 
 namespace GearUp.Application.Services.Users
 {
-    public sealed class UserService : IUserService
+    public class ProfileUpdateService : IProfileUpdateService
     {
         private readonly IUserRepository _userRepo;
         private readonly IMapper _mapper;
@@ -24,7 +22,9 @@ namespace GearUp.Application.Services.Users
         private readonly ITokenGenerator _tokenGenerator;
         private readonly IDocumentProcessor _documentProcessor;
         private readonly ICloudinaryImageUploader _cloudinaryImageUploader;
-        public UserService(IUserRepository userRepo, IMapper mapper, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader)
+        private readonly ICacheService _cache;
+        private readonly ILogger<ProfileUpdateService> _logger;
+        public ProfileUpdateService(IUserRepository userRepo, IMapper mapper, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader, ICacheService cache, ILogger<ProfileUpdateService> logger)
         {
             _userRepo = userRepo;
             _mapper = mapper;
@@ -33,47 +33,12 @@ namespace GearUp.Application.Services.Users
             _documentProcessor = documentProcessor;
             _tokenGenerator = tokenGenerator;
             _cloudinaryImageUploader = cloudinaryImageUploader;
+            _cache = cache;
+            _logger = logger;
         }
-        public async Task<Result<RegisterResponseDto>> GetCurrentUserProfileService(string userId)
-        {
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Result<RegisterResponseDto>.Failure("User ID cannot be empty", 400);
-            }
-
-            var guidId = Guid.Parse(userId);
-
-            var user = await _userRepo.GetUserByIdAsync(guidId);
-            if (user == null)
-            {
-                return Result<RegisterResponseDto>.Failure("User not found", 404);
-            }
-
-            var mappedUser = _mapper.Map<RegisterResponseDto>(user);
-
-            return Result<RegisterResponseDto>.Success(mappedUser, "User fetched Successfully", 200);
-        }
-
-        public async Task<Result<RegisterResponseDto>> GetUserProfile(string username)
-        {
-            if (string.IsNullOrEmpty(username))
-            {
-                return Result<RegisterResponseDto>.Failure("Username cannot be empty", 400);
-            }
-
-            var user = await _userRepo.GetUserByUsernameAsync(username);
-            if (user == null)
-            {
-                return Result<RegisterResponseDto>.Failure("User not found", 404);
-            }
-
-            var mappedUser = _mapper.Map<RegisterResponseDto>(user);
-
-            return Result<RegisterResponseDto>.Success(mappedUser, "User fetched Successfully", 200);
-        }
-
         public async Task<Result<UpdateUserResponseDto>> UpdateUserProfileService(string userId, UpdateUserRequestDto reqDto)
         {
+            _logger.LogInformation("Updating profile for user ID: {UserId}", userId);
             if (string.IsNullOrEmpty(userId))
                 return Result<UpdateUserResponseDto>.Failure("Unauthorized", 401);
 
@@ -97,6 +62,7 @@ namespace GearUp.Application.Services.Users
             var emailUpdateResult = await HandleEmailUpdateAsync(user, reqDto);
             if (emailUpdateResult is not null)
                 return emailUpdateResult;
+            _logger.LogInformation("Email update handled for user ID: {UserId}", userId);
 
             user.UpdateProfile(
                 reqDto.Name,
@@ -113,68 +79,11 @@ namespace GearUp.Application.Services.Users
                 ? "Profile updated successfully"
                 : "Please verify your new email first.";
 
+            await _cache.RemoveAsync($"user:profile:{userId}");
+            _logger.LogInformation("Profile updated successfully for user ID: {UserId}", userId);
             return Result<UpdateUserResponseDto>.Success(mappedUser, message, 200);
         }
 
-
-        public async Task<Result<KycResponseDto>> KycService(string userId, KycRequestDto req)
-        {
-
-            if (string.IsNullOrEmpty(userId))
-                return Result<KycResponseDto>.Failure("Unauthorized", 401);
-
-            var user = await _userRepo.GetUserByIdAsync(Guid.Parse(userId));
-            if (user == null)
-                return Result<KycResponseDto>.Failure("User not found", 404);
-
-            if (req.DocumentType == KycDocumentType.Default)
-                return Result<KycResponseDto>.Failure("Invalid document type.", 400);
-
-           var processedDocuments = await _documentProcessor.ProcessDocuments(req.Kyc, 1200, 800);
-            if(!processedDocuments.IsSuccess)
-                return Result<KycResponseDto>.Failure(processedDocuments.ErrorMessage, processedDocuments.Status);
-
-            var docsPath = $"gearup/users/{user.Id}/kyc";
-            var (imageStreams, pdfStreams) = processedDocuments.Data;
-
-            var imageUrls = await _cloudinaryImageUploader.UploadImageListAsync(imageStreams, docsPath);
-
-            var pdfUrls = await _cloudinaryImageUploader.UploadImageListAsync(pdfStreams, docsPath);
-            if (imageUrls.Count == 0 && pdfUrls.Count == 0)
-                return Result<KycResponseDto>.Failure("Failed to upload KYC documents.", 500);
-
-            var documentUrls = imageUrls.Concat(pdfUrls).ToList();
-
-            if (documentUrls.Count == 0)
-                return Result<KycResponseDto>.Failure("Failed to upload KYC documents.", 500);
-
-            var selfiePath = $"gearup/users/{user.Id}/kyc/selfie";
-            var processedSelfie = await _documentProcessor.ProcessImage(req.SelfieImage, 800, 800, true);
-            if (!processedSelfie.IsSuccess)
-                return Result<KycResponseDto>.Failure(processedSelfie.ErrorMessage, processedSelfie.Status);
-
-            var selfieUrl = await _cloudinaryImageUploader.UploadImageListAsync(new List<MemoryStream> { processedSelfie.Data }, selfiePath);
-            if(selfieUrl.Count == 0)
-                return Result<KycResponseDto>.Failure("Failed to upload selfie image.", 500);
-
-
-            var kycSubmission = KycSubmissions.CreateKycSubmissions(user.Id, req.DocumentType, documentUrls, selfieUrl.First().ToString());
-
-            await _userRepo.AddKycAsync(kycSubmission);
-            await _userRepo.SaveChangesAsync();
-
-           var responseData =  _mapper.Map<KycResponseDto>(kycSubmission);
-
-            return Result<KycResponseDto>.Success(responseData, "KYC submission successful.", 200);
-        }
-
-
-        private static bool PasswordUpdateAttempted(UpdateUserRequestDto reqDto)
-        {
-            return reqDto.CurrentPassword != null ||
-                   reqDto.NewPassword != null ||
-                   reqDto.ConfirmedNewPassword != null;
-        }
 
         private static Result<UpdateUserResponseDto>? ValidateProfileChanges(User user, UpdateUserRequestDto reqDto)
         {
@@ -215,6 +124,7 @@ namespace GearUp.Application.Services.Users
                 return Result<string?>.Failure("New password cannot be the same as the current password.", 400);
 
             var newHashedPassword = _passwordHasher.HashPassword(user, reqDto.NewPassword);
+            _logger.LogInformation("Password updated successfully for user ID: {UserId}", user.Id);
             return Result<string?>.Success(newHashedPassword, "Password updated successfully", 200);
         }
 
@@ -238,7 +148,7 @@ namespace GearUp.Application.Services.Users
 
             var uploadPath = $"gearup/users/{user.Id}/avatar";
             var imageUrl = await _cloudinaryImageUploader.UploadImageListAsync(new List<MemoryStream> { processedImage.Data }, uploadPath);
-
+            _logger.LogInformation("Avatar updated successfully for user ID: {UserId}", user.Id);
             return imageUrl?.ToString() ?? defaultAvatarUrl;
         }
 
@@ -256,20 +166,27 @@ namespace GearUp.Application.Services.Users
 
             var claims = new[]
             {
-        new Claim("id", user.Id.ToString()),
-        new Claim("email", reqDto.NewEmail),
-        new Claim(ClaimTypes.Role, user.Role.ToString()),
-        new Claim("purpose", "email_reset_verification")
-    };
+                new Claim("id", user.Id.ToString()),
+                new Claim("email", reqDto.NewEmail),
+                new Claim(ClaimTypes.Role, user.Role.ToString()),
+                new Claim("purpose", "email_reset_verification")
+            };
 
             user.SetPendingEmail(reqDto.NewEmail);
             user.SetIsPendingEmailVerified(false);
             await _userRepo.SaveChangesAsync();
-           
+
             var token = _tokenGenerator.GenerateEmailVerificationToken(claims);
             await _emailSender.SendEmailReset(reqDto.NewEmail, token);
 
             return Result<UpdateUserResponseDto>.Success(null!, "Please verify your new email first.", 200);
+        }
+
+        private static bool PasswordUpdateAttempted(UpdateUserRequestDto reqDto)
+        {
+            return reqDto.CurrentPassword != null ||
+                   reqDto.NewPassword != null ||
+                   reqDto.ConfirmedNewPassword != null;
         }
 
     }

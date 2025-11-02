@@ -168,6 +168,12 @@ namespace GearUp.Domain.Entities.Users
             UpdatedAt = DateTime.UtcNow;
         }
 
+        public void SetRole(UserRole newRole)
+        {
+            Role = newRole;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
 
     }
 }

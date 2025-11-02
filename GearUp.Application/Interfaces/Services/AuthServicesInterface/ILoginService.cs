@@ -5,6 +5,7 @@ namespace GearUp.Application.Interfaces.Services.AuthServicesInterface
     public interface ILoginService
     {
         Task<Result<LoginResponseDto>> LoginUser(LoginRequestDto req);
+        Task<Result<LoginResponseDto>> LoginAdmin(AdminLoginRequestDto req);
         Task<Result<LoginResponseDto>> RotateRefreshToken(string refreshToken);
         Task<Result<string>> SendPasswordResetToken(string email);
         Task<Result<string>> ResetPassword(string token, PasswordResetReqDto req);

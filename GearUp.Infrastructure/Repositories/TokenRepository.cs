@@ -1,6 +1,7 @@
 ﻿
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Domain.Entities.Tokens;
+using GearUp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace GearUp.Infrastructure.Repositories

@@ -1,8 +1,6 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.Extensions.Configuration;
-namespace GearUp.Infrastructure
+namespace GearUp.Infrastructure.Persistence
 {
     public class GearUpDbContextFactory : IDesignTimeDbContextFactory<GearUpDbContext>
     {

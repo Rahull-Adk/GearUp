@@ -40,6 +40,14 @@
       - gearup_network
     restart: on-failure
 
+  redis:
+    image: redis:latest
+    container_name: gearup-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - gearup_network
+
 volumes:
   gearup_data:
 

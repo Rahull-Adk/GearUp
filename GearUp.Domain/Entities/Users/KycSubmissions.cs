@@ -47,6 +47,15 @@ namespace GearUp.Domain.Entities
             };
         }
 
+        public void UpdateStatus(KycStatus status, Guid reviewerId, string? rejectionReason = null)
+        {
+            if (status == KycStatus.Rejected && string.IsNullOrWhiteSpace(rejectionReason))
+                throw new ArgumentException("Rejection reason must be provided when status is rejected.", nameof(rejectionReason));
+            Status = status;
+            ReviewerId = reviewerId;
+            VerifiedAt = DateTime.UtcNow;
+            RejectionReason = rejectionReason;
+        }
 
     }
 
@@ -55,7 +64,7 @@ namespace GearUp.Domain.Entities
     {
         Pending = 1,
         Approved = 2,
-        rejected = 3
+        Rejected = 3
     }
     public enum KycDocumentType
     {

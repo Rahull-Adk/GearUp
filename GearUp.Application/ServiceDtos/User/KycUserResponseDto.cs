@@ -2,7 +2,7 @@
 
 namespace GearUp.Application.ServiceDtos.User
 {
-    public class KycResponseDto
+    public class KycUserResponseDto
     {
         public Guid Id { get; set; }
         public UserDto SubmittedBy { get; set; } = default!;

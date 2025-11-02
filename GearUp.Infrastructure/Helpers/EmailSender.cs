@@ -1,5 +1,7 @@
 ﻿using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using Email.Net;
+using Serilog.Core;
+using Microsoft.Extensions.Logging;
 
 namespace GearUp.Infrastructure.Helpers
 {
@@ -8,13 +10,15 @@ namespace GearUp.Infrastructure.Helpers
         private readonly IEmailService _emailService;
         private readonly string _fromEmail;
         private readonly string _clientUrl;
-
-        public EmailSender(IEmailService emailService, string fromEmail, string clientUrl)
+        private readonly ILogger<EmailSender> _logger;
+        public EmailSender(IEmailService emailService, string fromEmail, string clientUrl, ILogger<EmailSender> logger)
         {
             _emailService = emailService;
             _fromEmail = fromEmail;
             _clientUrl = clientUrl;
+            _logger = logger;
         }
+
 
         public async Task SendVerificationEmail(string toEmail, string verificationToken)
         {
@@ -117,7 +121,7 @@ namespace GearUp.Infrastructure.Helpers
 </html>")
                 .WithNormalPriority()
                 .Build();
-
+    
             await _emailService.SendAsync(message);
         }
     }

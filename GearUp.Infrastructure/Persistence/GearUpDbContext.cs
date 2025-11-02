@@ -7,7 +7,7 @@ using GearUp.Domain.Entities.Tokens;
 using GearUp.Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;
 
-namespace GearUp.Infrastructure
+namespace GearUp.Infrastructure.Persistence
 {
     public class GearUpDbContext : DbContext
     {

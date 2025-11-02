@@ -13,17 +13,21 @@ namespace GearUp.Presentation.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        private readonly IUserService _userService;
-        public UserController(IUserService userService)
+        private readonly IKycService _kycService;
+        private readonly IGeneralUserService _generalUserService;
+        private readonly IProfileUpdateService _profileUpdateService;
+        public UserController(IKycService kycService, IGeneralUserService generalUserService, IProfileUpdateService profileUpdateService)
         {
-            _userService = userService;
+            _kycService = kycService;
+            _generalUserService = generalUserService;
+            _profileUpdateService = profileUpdateService;
         }
         [Authorize]
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()
         {
             var userId = User.FindFirst(c => c.Type == "id")?.Value;
-            var result = await _userService.GetCurrentUserProfileService(userId!);
+            var result = await _generalUserService.GetCurrentUserProfileService(userId!);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -31,7 +35,7 @@ namespace GearUp.Presentation.Controllers
         [HttpGet("{username}")]
         public async Task<IActionResult> GetUserProfile(string username)
         {
-            var result = await _userService.GetUserProfile(username);
+            var result = await _generalUserService.GetUserProfile(username);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -40,16 +44,16 @@ namespace GearUp.Presentation.Controllers
         public async Task<IActionResult> UpdateUser([FromForm] UpdateUserRequestDto updateUserDto)
         {
             var id = User.FindFirst(c => c.Type == "id")?.Value;
-            var result = await _userService.UpdateUserProfileService(id!, updateUserDto);
+            var result = await _profileUpdateService.UpdateUserProfileService(id!, updateUserDto);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
-        [Authorize]
+        [Authorize(Policy = "CustomerOnly")]
         [HttpPost("kyc")]
         public async Task<IActionResult> SubmitKycDocuments([FromForm] KycRequestDto kycDocumentDto)
         {
             var userId = User.FindFirst(c => c.Type == "id")?.Value;
-            var result = await _userService.KycService(userId!, kycDocumentDto);
+            var result = await _kycService.SubmitKycService(userId!, kycDocumentDto);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 

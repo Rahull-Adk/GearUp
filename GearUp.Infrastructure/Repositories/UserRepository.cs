@@ -1,6 +1,7 @@
 ﻿using GearUp.Application.Interfaces.Repositories;
 using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Users;
+using GearUp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 

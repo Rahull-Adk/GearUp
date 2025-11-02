@@ -3,6 +3,7 @@ using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
 using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
@@ -15,17 +16,20 @@ namespace GearUp.Application.Services.Auth
         private readonly IUserRepository _userRepository;
         private readonly IEmailSender _emailSender;
         private readonly IOptions<Settings> _emailVerification_SecretKey;
-        public EmailVerificationService(ITokenValidator tokenValidator, ITokenGenerator tokenGenerator, IUserRepository userRepository, IEmailSender emailSender, IOptions<Settings> emailVerification_SecretKey)
+        private readonly ILogger<EmailVerificationService> _logger;
+        public EmailVerificationService(ITokenValidator tokenValidator, ITokenGenerator tokenGenerator, IUserRepository userRepository, IEmailSender emailSender, IOptions<Settings> emailVerification_SecretKey, ILogger<EmailVerificationService> logger)
         {
             _tokenValidator = tokenValidator;
             _tokenGenerator = tokenGenerator;
             _userRepository = userRepository;
             _emailSender = emailSender;
             _emailVerification_SecretKey = emailVerification_SecretKey;
+            _logger = logger;
         }
 
         public async Task<Result<string>> ResendVerificationEmail(string email)
         {
+            _logger.LogInformation("Resend verification email requested for {Email}", email);
             var user = await _userRepository.GetUserByEmailAsync(email);
             if (user == null)
             {
@@ -44,11 +48,13 @@ namespace GearUp.Application.Services.Auth
                 };
             var token = _tokenGenerator.GenerateEmailVerificationToken(claims);
             await _emailSender.SendVerificationEmail(email, token);
+            _logger.LogInformation("Verification email sent to {Email}", email);
             return Result<string>.Success(null, "Email sent successfully", 200);
         }
 
         public async Task<Result<string>> VerifyEmail(string token)
         {
+            _logger.LogInformation("Email verification attempt with token");
             var secretKey = _emailVerification_SecretKey.Value.EmailVerificationToken_SecretKey;
             if (string.IsNullOrEmpty(secretKey))
                 return Result<string>.Failure("Email verification secret key is not configured", 500);
@@ -67,7 +73,10 @@ namespace GearUp.Application.Services.Auth
 
             var purpose = validation.ClaimsPrincipal?.FindFirst("purpose")?.Value;
             if (string.IsNullOrEmpty(purpose))
+            {
+                _logger.LogWarning("Token purpose is missing for user ID: {UserId}", userId);
                 return Result<string>.Failure("Token purpose is missing", 400);
+            }
 
             switch (purpose)
             {
@@ -88,6 +97,7 @@ namespace GearUp.Application.Services.Auth
             }
 
             await _userRepository.SaveChangesAsync();
+            _logger.LogInformation("Email verified successfully for user ID: {UserId}", userId);
             return Result<string>.Success(null, "Email verified successfully", 200);
         }
 

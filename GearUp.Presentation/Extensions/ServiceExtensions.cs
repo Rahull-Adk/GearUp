@@ -26,6 +26,10 @@ using System.Text;
 using System.Threading.RateLimiting;
 using CloudinaryDotNet;
 using GearUp.Application.Interfaces.Services;
+using GearUp.Application.Services.Admin;
+using GearUp.Application.Interfaces.Services.AdminServiceInterface;
+using StackExchange.Redis;
+using GearUp.Application.Services;
 
 
 namespace GearUp.Presentation.Extensions
@@ -52,7 +56,9 @@ namespace GearUp.Presentation.Extensions
             {
                 throw new InvalidOperationException("Secret keys not found");
             }
-            services.AddInfrastructure(connectionString, audience, issuer, accessToken_SecretKey, sendGridKey, fromEmail, emailVerificationToken_SecretKey, clientUrl);
+            ILogger<EmailSender> logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<EmailSender>();
+
+            services.AddInfrastructure(connectionString, audience, issuer, accessToken_SecretKey, sendGridKey, fromEmail, emailVerificationToken_SecretKey, clientUrl, logger);
 
 
             // Swagger Injection
@@ -63,6 +69,7 @@ namespace GearUp.Presentation.Extensions
             var mapperConfig = new MapperConfiguration(cfg =>
             {
                 cfg.AddProfile(new UserMappingProfile());
+                cfg.AddProfile(new KycMappingProfile());
             }, NullLoggerFactory.Instance);
 
             mapperConfig.AssertConfigurationIsValid();
@@ -76,17 +83,31 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<ILogoutService, LogoutService>();
             services.AddScoped<IEmailVerificationService, EmailVerificationService>();
             services.AddSingleton<ICloudinaryImageUploader, CloudinaryImageUploader>();
-            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IGeneralUserService, GeneralUserService>();
+            services.AddScoped<IGeneralAdminService, GeneralAdminService>();
+            services.AddScoped<IKycService, KycService>();
+            services.AddScoped<IProfileUpdateService, ProfileUpdateService>();
             services.AddScoped<IDocumentProcessor, DocumentProcessor>();
+
+            // Redis Cache Injection
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = "localhost:6379";
+                options.InstanceName = "GearUpInstance";
+            });
+
+            services.AddScoped<ICacheService, CacheService>();
 
             // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<ITokenRepository, TokenRepository>();
+            services.AddScoped<IAdminRepository, AdminRepository>();
 
             // Validator Injections
             services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestDtoValidator>();
             services.AddScoped<IValidator<LoginRequestDto>, LoginRequestDtoValidator>();
             services.AddScoped<IValidator<PasswordResetReqDto>, PasswordResetValidator>();
+            services.AddScoped<IValidator<AdminLoginRequestDto>, AdminLoginRequestDtoValidator>();
 
             // Password Hasher Injection
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();

@@ -2,6 +2,8 @@
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
 using GearUp.Domain.Entities.Tokens;
+using Microsoft.AspNetCore.Http.Headers;
+using Microsoft.Extensions.Logging;
 
 
 namespace GearUp.Application.Services.Auth
@@ -10,12 +12,15 @@ namespace GearUp.Application.Services.Auth
     {
         private readonly ITokenRepository _tokenRepository;
         private readonly IUserRepository _userRepository;
-        public LogoutService(ITokenRepository tokenRepository, IUserRepository userRepository)
+        private readonly ILogger<LogoutService> _logger;
+        public LogoutService(ITokenRepository tokenRepository, IUserRepository userRepository, ILogger<LogoutService> logger)
         {
             _tokenRepository = tokenRepository;
             _userRepository = userRepository;
+            _logger = logger;
         }
-        public async Task<Result<string>> Logout(string refreshToken) { 
+        public async Task<Result<string>> Logout(string refreshToken) {
+            _logger.LogInformation("Attempting to logout");
             var token = await _tokenRepository.GetRefreshTokenAsync(refreshToken);
             if (token == null)
             {

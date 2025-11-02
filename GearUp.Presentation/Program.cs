@@ -1,8 +1,13 @@
 using DotNetEnv;
+using GearUp.Domain.Entities.Users;
 using GearUp.Infrastructure;
+using GearUp.Infrastructure.Persistence;
 using GearUp.Presentation.Extensions;
 using GearUp.Presentation.Middlewares;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+
 
 try
 {
@@ -16,18 +21,32 @@ catch (Exception ex)
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, configuration) =>
+{
+    configuration.ReadFrom.Configuration(context.Configuration);
+});
+
 builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
+
+
 builder.Services.AddOpenApi();
 builder.Services.AddServices(builder.Configuration);
+
+string adminUsername = builder.Configuration["ADMIN_USERNAME"]!;
+string adminEmail = builder.Configuration["ADMIN_EMAIL"]!;
+string adminPassword = builder.Configuration["ADMIN_PASSWORD"]!;
 
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
+    var hasher = new PasswordHasher<User>();
     var db = scope.ServiceProvider.GetRequiredService<GearUpDbContext>();
+    await AdminSeeder.SeedAdminAsync(db, hasher, adminUsername, adminEmail, adminPassword);
     db.Database.Migrate();
 }
 
@@ -42,6 +61,7 @@ if (app.Environment.IsDevelopment())
     });
 
 }
+app.UseSerilogRequestLogging();
 app.UseRateLimiter();
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
@@ -50,4 +70,18 @@ app.UseCors("AllowFrontend");
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run();
+try
+{
+    Log.Information("Starting up the application");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application start-up failed");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+
+
