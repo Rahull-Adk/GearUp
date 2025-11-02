@@ -100,6 +100,14 @@ namespace GearUp.Presentation.Extensions
 
             services.AddScoped<ICacheService, CacheService>();
 
+            // API Versioning
+            services.AddApiVersioning(options =>
+            {
+                options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+                options.AssumeDefaultVersionWhenUnspecified = true;
+                options.ReportApiVersions = true;
+            });
+
             // Health Checks
             services.AddHealthChecks()
                 .AddDbContextCheck<GearUpDbContext>("database")

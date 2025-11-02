@@ -121,6 +121,11 @@ GearUp
 ✅ Comprehensive error handling middleware
 ✅ Swagger API Documentation
 ✅ MySql with EF Core migrations
+✅ Health checks for database and Redis
+✅ API versioning support
+✅ Redis caching for improved performance
+✅ Rate limiting for API protection
+✅ Structured logging with Serilog
 
 ---
 
@@ -148,6 +153,7 @@ Create a `.env` file or use `appsettings.Development.json` with:
 
 ```env
 ConnectionStrings__DefaultConnection=your_connection_string
+Redis__ConnectionString=localhost:6379
 Jwt__Issuer=your_issuer_url
 Jwt__Audience=your_audience_url
 Jwt__AccessToken_SecretKey=super_strong_secret_key
@@ -160,6 +166,9 @@ ASPNETCORE_ENVIRONMENT=Development
 MYSQL_ROOT_PASSWORD=root_password
 MYSQL_DATABASE=database_name
 CLOUDINARY_URL=cloudinary_url
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your_secure_admin_password
 ```
 
 ### 4️⃣ Run the Application
@@ -233,7 +242,9 @@ https://res.cloudinary.com/<cloud_name>/image/upload/v128724/gearup/users/{userI
 ## ✅ Validation & Error Handling
 
 * **FluentValidation** for DTOs (e.g., `UserRegistrationValidator`)
-* **Global Error Middleware** catches and formats exceptions.
+* **Global Error Middleware** catches and formats exceptions
+* Sensitive error details are only exposed in Development environment
+* Production errors return generic messages to protect system information
 
 Example Error Response:
 
@@ -244,6 +255,46 @@ Example Error Response:
   "traceId": "00-6e112a590a..."
 }
 ```
+
+---
+
+## 🏥 Health Checks
+
+GearUp includes built-in health checks to monitor the application and its dependencies:
+
+**Health Check Endpoint:**
+```
+GET /health
+```
+
+**Monitored Components:**
+* Database connectivity (MySQL)
+* Redis cache availability
+
+Example Health Check Response:
+```json
+{
+  "status": "Healthy",
+  "totalDuration": "00:00:00.0123456",
+  "entries": {
+    "database": {
+      "status": "Healthy"
+    },
+    "redis": {
+      "status": "Healthy"
+    }
+  }
+}
+```
+
+---
+
+## 🔄 API Versioning
+
+API versioning is supported through URL versioning:
+* Default version: v1.0
+* Versions are reported in response headers
+* Example: `/api/v1/users`
 
 ---
 
