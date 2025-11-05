@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.ServiceDtos.User;
-using GearUp.Domain.Entities;
+
 using GearUp.Domain.Entities.Users;
 
 namespace GearUp.Application.Mappings

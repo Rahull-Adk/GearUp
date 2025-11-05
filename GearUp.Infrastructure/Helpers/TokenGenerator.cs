@@ -34,7 +34,7 @@ namespace GearUp.Infrastructure.Helpers
 
         public string GenerateEmailVerificationToken(IEnumerable<Claim> claims)
         {
-            var token = GenerateToken(claims, 1440, _emailVerificationToken_SecretKey);
+            var token = GenerateToken(claims, 60, _emailVerificationToken_SecretKey);
             return token;
         }
 

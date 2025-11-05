@@ -70,6 +70,7 @@ namespace GearUp.Infrastructure.Helpers
             {
                 IsValid = true,
                 ClaimsPrincipal = principal,
+                Error = null,
                 Status = 200
             };
         }

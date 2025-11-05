@@ -12,6 +12,8 @@ using Serilog;
 
 try
 {
+    Console.WriteLine(DateTime.UtcNow);
+    Console.WriteLine(DateTime.Now);
     var root = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName;
     Env.Load(Path.Combine(root!, ".env"));
 }

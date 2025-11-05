@@ -29,7 +29,6 @@ using CloudinaryDotNet;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Services.Admin;
 using GearUp.Application.Interfaces.Services.AdminServiceInterface;
-using StackExchange.Redis;
 using GearUp.Application.Services;
 
 

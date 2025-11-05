@@ -17,6 +17,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D
 		.gitignore = .gitignore
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{26E900B8-DD2F-435F-AFFC-DCF92705B041}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearUp.UnitTests", "GearUp.UnitTests\GearUp.UnitTests.csproj", "{7B3BCBE7-FABE-4A20-B486-2B15988AFDE4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +43,10 @@ Global
 		{E931AEB3-4DDA-4CC6-8ADA-B895A81EA7AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E931AEB3-4DDA-4CC6-8ADA-B895A81EA7AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E931AEB3-4DDA-4CC6-8ADA-B895A81EA7AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B3BCBE7-FABE-4A20-B486-2B15988AFDE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B3BCBE7-FABE-4A20-B486-2B15988AFDE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B3BCBE7-FABE-4A20-B486-2B15988AFDE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B3BCBE7-FABE-4A20-B486-2B15988AFDE4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -48,6 +56,7 @@ Global
 		{11FA360F-C4D4-421A-ABE0-8F929B1C3B5C} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{1208C7AF-F240-4DBF-853C-0F5BE949A12E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{E931AEB3-4DDA-4CC6-8ADA-B895A81EA7AD} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{7B3BCBE7-FABE-4A20-B486-2B15988AFDE4} = {26E900B8-DD2F-435F-AFFC-DCF92705B041}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {701993F6-3952-4CB4-AE8F-59EC887B2BF1}

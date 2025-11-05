@@ -13,7 +13,7 @@ namespace GearUp.Infrastructure.Helpers
 
         public async Task<Result<(List<MemoryStream> imageStreams, List<MemoryStream> pdfStreams)>> ProcessDocuments(List<IFormFile> documents, int targetWidth, int targetHeight)
         {
-            allowedExtensions = allowedExtensions.Append(".pdf").ToArray();
+            allowedExtensions = [.. allowedExtensions, ".pdf"];
             var imageStreams = new List<MemoryStream>();
             var pdfStreams = new List<MemoryStream>();
 

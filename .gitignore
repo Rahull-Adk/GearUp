@@ -19,7 +19,8 @@
 *.log
 logs/
 LogFiles/
-App_Data/Logs/
+
+
 
 # Build results
 [Dd]ebug/
