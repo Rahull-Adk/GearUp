@@ -25,6 +25,7 @@
     environment:
       KestrelCertificates__Development__Password: ${KestrelCertificates__Development__Password}
       ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection}
+      Redis__ConnectionString: ${Redis__ConnectionString:-redis:6379}
       Jwt__Issuer: ${Jwt__Issuer}
       Jwt__Audience: ${Jwt__Audience}
       Jwt__AccessToken_SecretKey: ${Jwt__AccessToken_SecretKey}
@@ -36,6 +37,7 @@
       CLOUDINARY_URL: ${CLOUDINARY_URL}
     depends_on:
       - db
+      - redis
     networks:
       - gearup_network
     restart: on-failure

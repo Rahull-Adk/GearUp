@@ -49,7 +49,7 @@ namespace GearUp.Infrastructure.Helpers
                issuer: _issuer,
                audience: _audience,
                claims: claims,
-               expires: DateTime.Now.AddMinutes(timeInMin),
+               expires: DateTime.UtcNow.AddMinutes(timeInMin),
                signingCredentials: new SigningCredentials(
                    new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(secretKey)),
                    SecurityAlgorithms.HmacSha256)
