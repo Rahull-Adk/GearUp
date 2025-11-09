@@ -25,10 +25,4 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Application\Auth\" />
-    <Folder Include="Application\Admin\" />
-    <Folder Include="Application\Users\" />
-  </ItemGroup>
-
 </Project>

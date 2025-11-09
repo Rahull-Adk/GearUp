@@ -1,4 +1,4 @@
-﻿using GearUp.Application.Interfaces.Services;
+using GearUp.Application.Interfaces.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
 

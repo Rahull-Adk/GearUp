@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Users;
+using GearUp.Domain.Entities.Users;
 using System.ComponentModel;
 
 namespace GearUp.Domain.Entities
@@ -25,7 +25,7 @@ namespace GearUp.Domain.Entities
 
         }
 
-        public static KycSubmissions CreateKycSubmissions(Guid userId, KycDocumentType documentType,List<Uri> DocumentUrls,  string selfieUrl) {
+        public static KycSubmissions CreateKycSubmissions(Guid userId, KycDocumentType documentType,List<Uri> DocumentUrls,  string selfieUrl, KycStatus status = KycStatus.Pending) {
             if(userId == Guid.Empty)
                 throw new ArgumentException("UserId cannot be empty", nameof(userId));
             if(documentType == KycDocumentType.Default)
@@ -41,7 +41,7 @@ namespace GearUp.Domain.Entities
                 DocumentType = documentType,
                 DocumentUrls = DocumentUrls,
                 SelfieUrl = selfieUrl,
-                Status = KycStatus.Pending,
+                Status = status,
                 SubmittedAt = DateTime.UtcNow
 
             };

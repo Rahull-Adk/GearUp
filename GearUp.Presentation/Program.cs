@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DotNetEnv;
 using GearUp.Domain.Entities.Users;
 using GearUp.Infrastructure;
@@ -12,8 +13,6 @@ using Serilog;
 
 try
 {
-    Console.WriteLine(DateTime.UtcNow);
-    Console.WriteLine(DateTime.Now);
     var root = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName;
     Env.Load(Path.Combine(root!, ".env"));
 }
@@ -64,6 +63,25 @@ if (app.Environment.IsDevelopment())
     });
 
 }
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            results = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description
+            })
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
 app.UseSerilogRequestLogging();
 app.UseRateLimiter();
 app.UseMiddleware<ExceptionMiddleware>();
@@ -71,7 +89,6 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseCors("AllowFrontend");
 app.UseAuthorization();
-app.MapHealthChecks("/health");
 app.MapControllers();
 
 try

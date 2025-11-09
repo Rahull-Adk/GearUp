@@ -1,4 +1,4 @@
-﻿
+
 using GearUp.Infrastructure.Helpers;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -7,11 +7,11 @@ using System.Security.Cryptography;
 
 namespace GearUp.UnitTests.Infrastructure.Helpers
 {
-    public class TokenGeneratorTest
+    public class TokenGeneratorTests
     {
         private readonly TokenGenerator _tokenGenerator;
 
-        public TokenGeneratorTest()
+        public TokenGeneratorTests()
         {
             var key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
             _tokenGenerator = new TokenGenerator(

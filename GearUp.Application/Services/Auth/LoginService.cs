@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;

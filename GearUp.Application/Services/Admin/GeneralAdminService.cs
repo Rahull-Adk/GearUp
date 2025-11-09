@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
@@ -105,18 +105,33 @@ namespace GearUp.Application.Services.Admin
 
         public async Task<Result<string>> UpdateKycStatus(Guid kycId, KycStatus status, Guid reviewerId, string?rejectionReason = null)
         {
+
             _logger.LogInformation("Updating KYC submission status for ID: {KycId}", kycId);
             if (reviewerId == Guid.Empty && status == KycStatus.Rejected)
             {
                 _logger.LogWarning("ReviewerId is empty while updating KYC submission");
                 return Result<string>.Failure("ReviewerId cannot be empty when rejecting a KYC", 400);
             }
+
+            if (status != KycStatus.Rejected && !string.IsNullOrEmpty(rejectionReason))
+            {
+                return Result<string>.Failure("No rejection reasons allowed!" +
+                    "");
+            }
+
             var kyc = await _adminRepository.GetKycSubmissionByIdAsync(kycId);
             if (kyc == null)
             {
                 return Result<string>.Failure("KYC submission not found", 404);
             }
-            if(reviewerId == Guid.Empty)
+            var userId = kyc.UserId;
+            var user = await _userRepository.GetUserByIdAsync(userId);
+
+            if (user == null) {
+                return Result<string>.Failure("User associated with KYC submission not found", 404);
+            }
+
+            if (reviewerId == Guid.Empty)
             {
                 return Result<string>.Failure("ReviewerId cannot be empty", 400);
             }
@@ -126,11 +141,17 @@ namespace GearUp.Application.Services.Admin
             }
 
             kyc.UpdateStatus(status, reviewerId, rejectionReason);
+            if(status == KycStatus.Approved)
+                user.SetRole(Domain.Enums.UserRole.Dealer);
+
             await _userRepository.SaveChangesAsync();
             var cachedKey = $"kyc:status:{status}";
             await _cache.RemoveAsync(cachedKey);
+            var cacheKey2 = $"user:profile:{user.Username}";
+            await _cache.RemoveAsync(cacheKey2);
             _logger.LogInformation("KYC submission status updated successfully");
             return Result<string>.Success(null!, "KYC status updated successfully", 200);
+
         }
     }
 }

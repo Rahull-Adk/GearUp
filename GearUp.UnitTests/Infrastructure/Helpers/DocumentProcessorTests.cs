@@ -1,4 +1,4 @@
-﻿using GearUp.Infrastructure.Helpers;
+using GearUp.Infrastructure.Helpers;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using SixLabors.ImageSharp;
@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace GearUp.UnitTests.Infrastructure.Helpers
 {
-    public class DocumentProcessorTest
+    public class DocumentProcessorTests
     {
         private readonly DocumentProcessor _documentProcessor;
 
-        public DocumentProcessorTest()
+        public DocumentProcessorTests()
         {
             _documentProcessor = new DocumentProcessor();
         }

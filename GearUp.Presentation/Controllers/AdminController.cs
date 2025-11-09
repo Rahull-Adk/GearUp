@@ -1,4 +1,4 @@
-﻿using GearUp.Application.Interfaces.Services.AdminServiceInterface;
+using GearUp.Application.Interfaces.Services.AdminServiceInterface;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
 using GearUp.Application.ServiceDtos.Admin;
 using GearUp.Application.ServiceDtos.Auth;
@@ -24,6 +24,26 @@ namespace GearUp.Presentation.Controllers
         public async Task<IActionResult> Login([FromBody] AdminLoginRequestDto request)
         {
             var result = await _loginService.LoginAdmin(request);
+            if (!result.IsSuccess || result.Data.AccessToken == null || result.Data.RefreshToken == null)
+            {
+                return StatusCode(result.Status, result.ToApiResponse());
+            }
+            Response.Cookies.Append("access_token", result.Data?.AccessToken!, new CookieOptions
+            {
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddMinutes(15)
+            });
+
+            Response.Cookies.Append("refresh_token", result.Data?.RefreshToken!, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddDays(7)
+            });
+
             return StatusCode(result.Status, result.ToApiResponse());
         }
         [Authorize(Policy = "AdminOnly")]

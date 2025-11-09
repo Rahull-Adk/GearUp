@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Email.Net;
 using Email.Net.Channel.SendGrid;
 using FluentValidation;
@@ -111,6 +111,8 @@ namespace GearUp.Presentation.Extensions
             services.AddHealthChecks()
                 .AddDbContextCheck<GearUpDbContext>("database")
                 .AddRedis(config["Redis:ConnectionString"] ?? "localhost:6379", name: "redis");
+
+
 
             // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();

@@ -1,16 +1,16 @@
-﻿using Email.Net;
+using Email.Net;
 using GearUp.Infrastructure.Helpers;
 using Moq;
 
 
 namespace GearUp.UnitTests.Infrastructure.Helpers
 {
-    public class EmailSenderTest
+    public class EmailSenderTests
     {
         private readonly Mock<IEmailService> _emailServiceMock;
         private const string ClientUrl = "http://localhost:3000";
         private readonly EmailSender _emailSender;
-        public EmailSenderTest()
+        public EmailSenderTests()
         {
             _emailServiceMock = new Mock<IEmailService>();
             _emailSender = new EmailSender(_emailServiceMock.Object, "text@gmail.com", "test", null);

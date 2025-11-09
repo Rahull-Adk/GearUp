@@ -1,15 +1,15 @@
-﻿using GearUp.Infrastructure.Helpers;
+using GearUp.Infrastructure.Helpers;
 using System.Security.Claims;
 using System.Security.Cryptography;
 
 namespace GearUp.UnitTests.Infrastructure.Helpers
 {
-    public class TokenValidatorTest
+    public class TokenValidatorTests
     {
         private readonly TokenValidator _tokenValidator;
         private readonly TokenGenerator _tokenGenerator;
         private readonly string _key;
-        public TokenValidatorTest()
+        public TokenValidatorTests()
         {
             _key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
             _tokenValidator = new TokenValidator("Audience", "Issuer");
