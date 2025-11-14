@@ -1,4 +1,4 @@
-﻿using CloudinaryDotNet;
+using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using GearUp.Application.Interfaces.Services;
 
@@ -78,7 +78,5 @@ namespace GearUp.Infrastructure.Helpers
 
             return publicId;
         }
-
-
     }
 }

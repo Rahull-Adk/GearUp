@@ -30,6 +30,9 @@ using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Services.Admin;
 using GearUp.Application.Interfaces.Services.AdminServiceInterface;
 using GearUp.Application.Services;
+using GearUp.Application.Interfaces.Services.CarServiceInterface;
+using GearUp.Application.Services.Cars;
+using GearUp.Application.ServiceDtos.Car;
 
 
 namespace GearUp.Presentation.Extensions
@@ -70,6 +73,7 @@ namespace GearUp.Presentation.Extensions
             {
                 cfg.AddProfile(new UserMappingProfile());
                 cfg.AddProfile(new KycMappingProfile());
+                cfg.AddProfile(new CarMappingProfile());
             }, NullLoggerFactory.Instance);
 
             mapperConfig.AssertConfigurationIsValid();
@@ -81,6 +85,8 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IRegisterService, RegisterService>();
             services.AddScoped<ILoginService, LoginService>();
             services.AddScoped<ILogoutService, LogoutService>();
+            services.AddScoped<ICarService, CarService>();
+            services.AddScoped<ICarImageService, CarImageService>();
             services.AddScoped<IEmailVerificationService, EmailVerificationService>();
             services.AddSingleton<ICloudinaryImageUploader, CloudinaryImageUploader>();
             services.AddScoped<IGeneralUserService, GeneralUserService>();
@@ -118,12 +124,16 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<ITokenRepository, TokenRepository>();
             services.AddScoped<IAdminRepository, AdminRepository>();
+            services.AddScoped<ICarRepository, CarRepository>();
+            services.AddScoped<ICommonRepository, CommonRepository>();
 
             // Validator Injections
             services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestDtoValidator>();
             services.AddScoped<IValidator<LoginRequestDto>, LoginRequestDtoValidator>();
             services.AddScoped<IValidator<PasswordResetReqDto>, PasswordResetValidator>();
             services.AddScoped<IValidator<AdminLoginRequestDto>, AdminLoginRequestDtoValidator>();
+            services.AddScoped<IValidator<CreateCarRequestDto>, CarRequestDtoValidator>();
+            services.AddScoped<IValidator<UpdateCarDto>, UpdateCarDtoValidator>();
 
             // Password Hasher Injection
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -155,10 +165,10 @@ namespace GearUp.Presentation.Extensions
 
             //Role Base Policies
             services.AddAuthorizationBuilder()
-            .AddPolicy("CustomerOnly", policy => policy.RequireRole(UserRole.Customer.ToString()));
-            services.AddAuthorizationBuilder()
-                 .AddPolicy("AdminOnly", policy => policy.RequireRole(UserRole.Admin.ToString()));
-         
+            .AddPolicy("CustomerOnly", policy => policy.RequireRole(UserRole.Customer.ToString()))
+            .AddPolicy("AdminOnly", policy => policy.RequireRole(UserRole.Admin.ToString()))
+            .AddPolicy("DealerOnly", policy => policy.RequireRole(UserRole.Dealer.ToString()));
+
             // CORS Policy
             services.AddCors(opt =>
             {

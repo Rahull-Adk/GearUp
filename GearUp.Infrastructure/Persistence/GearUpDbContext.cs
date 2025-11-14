@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities;
+using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Cars;
 using GearUp.Domain.Entities.Chats;
 using GearUp.Domain.Entities.Posts;
@@ -23,7 +23,7 @@ namespace GearUp.Infrastructure.Persistence
         public DbSet<Car> Cars { get; set; }
         public DbSet<CarRental> CarRentals { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
-
+        public DbSet<CarImage> CarImages { get; set; }
         public DbSet<Post> Posts { get; set; }
         public DbSet<PostLike> PostLikes { get; set; }
         public DbSet<PostComment> PostComments { get; set; }

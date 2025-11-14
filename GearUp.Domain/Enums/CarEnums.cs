@@ -1,4 +1,4 @@
-﻿
+
 namespace GearUp.Domain.Enums
 {
 
@@ -41,12 +41,6 @@ namespace GearUp.Domain.Enums
         Rejected = 3
     }
 
-    public enum CarPurpose
-    {
-        Default = 0,
-        ForSale = 1,
-        ForRent = 2,
-    }
 
     public enum CarRentalStatus
     {

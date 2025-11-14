@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Users;
+using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Enums;
 
 namespace GearUp.Domain.Entities.Cars
@@ -16,13 +16,11 @@ namespace GearUp.Domain.Entities.Cars
         public int Mileage { get; private set; }
         public int SeatingCapacity { get; private set; }
         public int EngineCapacity { get; private set; }
-        public ICollection<CarImage>? ImageUrls { get; private set; }
         public FuelType FuelType { get; private set; }
         public CarCondition Condition { get; private set; }
         public TransmissionType Transmission { get; private set; }
         public CarStatus Status { get; private set; }
         public CarValidationStatus ValidationStatus { get; private set; }
-        public CarPurpose Purpose { get; private set; }
         public double? RentalPricePerDay { get; private set; }
         public double? RentalPricePerWeek { get; private set; }
         public string VIN { get; private set; }
@@ -32,14 +30,15 @@ namespace GearUp.Domain.Entities.Cars
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
 
-        private readonly ICollection<CarImage> _images = new List<CarImage>();
-        public IReadOnlyCollection<CarImage> Images => _images.ToList().AsReadOnly();
+        private ICollection<CarImage> _images = new List<CarImage>();
+        public IReadOnlyCollection<CarImage> Images => (IReadOnlyCollection<CarImage>)_images;
 
         private Car()
         {
-            
+
         }
         public static Car CreateForSale(
+            Guid Id,
     string title,
     string description,
     string model,
@@ -54,7 +53,6 @@ namespace GearUp.Domain.Entities.Cars
     FuelType fuelType,
     CarCondition condition,
     TransmissionType transmission,
-    CarPurpose carPurpose,
     Guid dealerId,
     string vin,
     string licensePlate)
@@ -72,15 +70,12 @@ namespace GearUp.Domain.Entities.Cars
                 Mileage = mileage,
                 SeatingCapacity = seatingCapacity,
                 EngineCapacity = engineCapacity,
-                ImageUrls = imageUrls,
                 FuelType = fuelType,
                 Condition = condition,
                 Transmission = transmission,
+                _images = imageUrls,
                 Status = CarStatus.Available,
                 ValidationStatus = CarValidationStatus.Pending,
-                Purpose = carPurpose,
-                RentalPricePerDay = null,
-                RentalPricePerWeek = null,
                 VIN = vin,
                 LicensePlate = licensePlate,
                 DealerId = dealerId,
@@ -89,16 +84,34 @@ namespace GearUp.Domain.Entities.Cars
             };
         }
 
-
-        public void UpdateDetails(string title, string description, double price, string color, int mileage)
+        public void UpdateDetails(
+        string title, string description, string model, string make, int year, double price,
+        string color, int mileage, int seatingCapacity, int engineCapacity,
+        ICollection<CarImage>? imageUrls,
+        FuelType? fuelType, CarCondition? condition, TransmissionType? transmission)
         {
-            Title = title;
-            Description = description;
-            Price = price;
-            Color = color;
-            Mileage = mileage;
-            UpdatedAt = DateTime.UtcNow;
+            if (Status is CarStatus.Sold or CarStatus.Deleted)
+                throw new InvalidOperationException("Cannot update details of a sold or deleted car.");
+
+            Title = string.IsNullOrEmpty(title) ? Title : title;
+            Description = string.IsNullOrEmpty(description) ? Description : description;
+            Model = string.IsNullOrEmpty(model) ? Model : model;
+            Make = string.IsNullOrEmpty(make) ? Make : make;
+            Color = string.IsNullOrEmpty(color) ? Color : color;
+            Year = year > 0 ? year : Year;
+            Price = price >= 0 ? price : Price;
+            Mileage = mileage > 0 ? mileage : Mileage;
+            SeatingCapacity = seatingCapacity > 0 ? seatingCapacity : SeatingCapacity;
+            EngineCapacity = engineCapacity > 0 ? engineCapacity : EngineCapacity;
+            FuelType = FuelType != FuelType.Default && fuelType.HasValue ? fuelType.Value : FuelType;
+            Condition = Condition != CarCondition.Default && condition.HasValue ? condition.Value : Condition;
+            Transmission = Transmission != TransmissionType.Default && transmission.HasValue ? transmission.Value : Transmission;
+
+            if (imageUrls?.Count > 0)
+                _images = imageUrls;
+
         }
+
 
         public void MarkAsSold()
         {
@@ -126,6 +139,5 @@ namespace GearUp.Domain.Entities.Cars
             Status = CarStatus.Available;
             UpdatedAt = DateTime.UtcNow;
         }
-
     }
 }

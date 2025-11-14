@@ -55,7 +55,7 @@ namespace GearUp.Presentation.Controllers
         }
 
         [Authorize(Policy = "AdminOnly")]
-        [HttpGet("kyc/{kycId}")]
+        [HttpGet("kyc/{kycId:guid}")]
         public async Task<IActionResult> GetKycRequestById([FromRoute] Guid kycId)
         {
             var result = await _generalAdminService.GetKycById(kycId);
@@ -63,7 +63,7 @@ namespace GearUp.Presentation.Controllers
         }
 
         [Authorize(Policy = "AdminOnly")]
-        [HttpPut("kyc/{kycId}")]
+        [HttpPut("kyc/{kycId:guid}")]
         public async Task<IActionResult> ReviewKyc([FromRoute] Guid kycId, kycRequestDto req)
         {
             var reviewerId = User.FindFirst(c => c.Type == "id")?.Value;

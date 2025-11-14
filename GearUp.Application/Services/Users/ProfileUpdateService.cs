@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;

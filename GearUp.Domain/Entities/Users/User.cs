@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Cars;
+using GearUp.Domain.Entities.Cars;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
@@ -36,16 +36,16 @@ namespace GearUp.Domain.Entities.Users
         private readonly List<KycSubmissions> _kycSubmissionsReviewed = new List<KycSubmissions>();
 
 
-        public IReadOnlyCollection<ConversationParticipant> ConversationParticipants => _conversationParticipants.AsReadOnly();
-        public IReadOnlyCollection<Post> Posts => _posts.AsReadOnly();
-        public IReadOnlyCollection<CarRental> OwnedRentals => _ownedRentals.AsReadOnly();
-        public IReadOnlyCollection<CarRental> BookedRentals => _bookedRentals.AsReadOnly();
-        public IReadOnlyCollection<Appointment> ReceivedAppointments => _receivedAppointments.AsReadOnly();
-        public IReadOnlyCollection<Appointment> SentAppointments => _sentAppointments.AsReadOnly();
-        public IReadOnlyCollection<Notification> Notifications => _notifications.AsReadOnly();
-        public IReadOnlyCollection<Car> Cars => _cars.AsReadOnly();
-        public IReadOnlyCollection<KycSubmissions> KycSubmitted => _kycSubmitted.AsReadOnly();
-        public IReadOnlyCollection<KycSubmissions> KycSubmissionsReviewed => _kycSubmissionsReviewed.AsReadOnly();
+        public IReadOnlyCollection<ConversationParticipant> ConversationParticipants => _conversationParticipants;
+        public IReadOnlyCollection<Post> Posts => _posts;
+        public IReadOnlyCollection<CarRental> OwnedRentals => _ownedRentals;
+        public IReadOnlyCollection<CarRental> BookedRentals => _bookedRentals;
+        public IReadOnlyCollection<Appointment> ReceivedAppointments => _receivedAppointments;
+        public IReadOnlyCollection<Appointment> SentAppointments => _sentAppointments;
+        public IReadOnlyCollection<Notification> Notifications => _notifications;
+        public IReadOnlyCollection<Car> Cars => _cars;
+        public IReadOnlyCollection<KycSubmissions> KycSubmitted => _kycSubmitted;
+        public IReadOnlyCollection<KycSubmissions> KycSubmissionsReviewed => _kycSubmissionsReviewed;
 
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }

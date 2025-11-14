@@ -1,4 +1,4 @@
-﻿
+
 
 using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Enums;
