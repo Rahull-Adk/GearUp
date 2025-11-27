@@ -25,11 +25,11 @@ namespace GearUp.Application.Services.Cars
             _logger = logger;
         }
 
-        public async Task<Result<List<CarImage>>> ProcessForCreateAsync(ICollection<IFormFile> files, Guid dealerId, Guid carId, CancellationToken ct)
+        public async Task<Result<List<CarImage>>> ProcessForCreateAsync(ICollection<IFormFile> files, Guid dealerId, Guid carId)
         {
             try
             {
-                var streams = await ConvertToStreamsAsync(files, ct);
+                var streams = await ConvertToStreamsAsync(files);
                 var uploadPath = $"gearup/dealers/{dealerId}/cars";
                 var uris = await _uploader.UploadImageListAsync(streams, uploadPath);
                 var images = uris.Select(u => CarImage.CreateCarImage(carId, u.ToString())).ToList();
@@ -42,7 +42,7 @@ namespace GearUp.Application.Services.Cars
             }
         }
 
-        public async Task<Result<List<CarImage>>> ProcessForUpdateAsync(Car existingCar, ICollection<IFormFile>? files, Guid dealerId, CancellationToken ct)
+        public async Task<Result<List<CarImage>>> ProcessForUpdateAsync(Car existingCar, ICollection<IFormFile>? files, Guid dealerId)
         {
             if (files == null || files.Count == 0)
                 return Result<List<CarImage>>.Success(existingCar.Images.ToList(), "No new images", 200);
@@ -66,7 +66,7 @@ namespace GearUp.Application.Services.Cars
                 _carRepo.RemoveCarImageByCarId(existingCar);
                 await _commonRepo.SaveChangesAsync();
 
-                var streams = await ConvertToStreamsAsync(files, ct);
+                var streams = await ConvertToStreamsAsync(files);
                 var uploadPath = $"gearup/dealers/{dealerId}/cars";
                 var uris = await _uploader.UploadImageListAsync(streams, uploadPath);
                 var images = uris.Select(u => CarImage.CreateCarImage(existingCar.Id, u.ToString())).ToList();
@@ -80,13 +80,13 @@ namespace GearUp.Application.Services.Cars
             }
         }
 
-        private static async Task<List<MemoryStream>> ConvertToStreamsAsync(ICollection<IFormFile> files, CancellationToken ct)
+        private static async Task<List<MemoryStream>> ConvertToStreamsAsync(ICollection<IFormFile> files)
         {
             var result = new List<MemoryStream>();
             foreach (var file in files)
             {
                 var ms = new MemoryStream();
-                await file.CopyToAsync(ms, ct);
+                await file.CopyToAsync(ms);
                 ms.Position = 0;
                 result.Add(ms);
             }

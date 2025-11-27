@@ -46,7 +46,8 @@ namespace GearUp.Domain.Entities.Users
         public IReadOnlyCollection<Car> Cars => _cars;
         public IReadOnlyCollection<KycSubmissions> KycSubmitted => _kycSubmitted;
         public IReadOnlyCollection<KycSubmissions> KycSubmissionsReviewed => _kycSubmissionsReviewed;
-
+        public bool IsDeleted { get; private set; } = false;
+        public DateTime? DeletedAt { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
 
@@ -64,7 +65,7 @@ namespace GearUp.Domain.Entities.Users
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public static User CreateLocalUser(string username, string email, string name)
+        public static User CreateLocalUser(string username, string email, string name, bool isEmailVerified = false, UserRole role = UserRole.Customer)
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentException("Username cannot be null or empty.", nameof(username));
@@ -78,9 +79,9 @@ namespace GearUp.Domain.Entities.Users
                 Username = username.ToLower(),
                 Email = email.ToLower(),
                 Name = name,
-                Role = UserRole.Customer,
+                Role = role,
                 AvatarUrl = "https://i.pravatar.cc/300",
-                IsEmailVerified = false,
+                IsEmailVerified = isEmailVerified,
             };
         }
 

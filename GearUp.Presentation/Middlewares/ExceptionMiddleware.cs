@@ -1,4 +1,4 @@
-﻿namespace GearUp.Presentation.Middlewares
+namespace GearUp.Presentation.Middlewares
 {
     public class ExceptionMiddleware
     {

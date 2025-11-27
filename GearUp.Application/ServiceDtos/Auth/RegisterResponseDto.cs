@@ -1,4 +1,4 @@
-﻿namespace GearUp.Application.ServiceDtos.Auth
+namespace GearUp.Application.ServiceDtos.Auth
 {
     public record RegisterResponseDto(
     Guid Id,
@@ -6,7 +6,8 @@
     string Username,
     string Email,
     string Name,
-    string Role,
+    string Role, DateOnly DateOfBirth,
+    string? PhoneNumber,
     string AvatarUrl
 );
 

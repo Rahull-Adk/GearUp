@@ -149,7 +149,7 @@ namespace GearUp.Application.Services.Users
             var uploadPath = $"gearup/users/{user.Id}/avatar";
             var imageUrl = await _cloudinaryImageUploader.UploadImageListAsync(new List<MemoryStream> { processedImage.Data }, uploadPath);
             _logger.LogInformation("Avatar updated successfully for user ID: {UserId}", user.Id);
-            return imageUrl?.ToString() ?? defaultAvatarUrl;
+            return imageUrl.First()?.ToString() ?? defaultAvatarUrl;
         }
 
         private async Task<Result<UpdateUserResponseDto>?> HandleEmailUpdateAsync(User user, UpdateUserRequestDto reqDto)

@@ -14,8 +14,16 @@ namespace GearUp.Application.Services
 
         public async Task<T?> GetAsync<T>(string key)
         {
-           var data = await _cache.GetStringAsync(key);
-           return data == null ? default : JsonSerializer.Deserialize<T>(data);
+            var data = await _cache.GetStringAsync(key);
+            if (string.IsNullOrEmpty(data)) return default;
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+
+            return JsonSerializer.Deserialize<T>(data, options);
         }
 
         public async Task RemoveAsync(string key)

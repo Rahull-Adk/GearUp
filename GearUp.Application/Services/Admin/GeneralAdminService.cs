@@ -60,7 +60,7 @@ namespace GearUp.Application.Services.Admin
 
             var cachedKyc = await _cache.GetAsync<ToAdminKycResponseDto>(cacheKey);
 
-            if(cachedKyc != null)
+            if (cachedKyc != null)
             {
                 return Result<ToAdminKycResponseDto>.Success(cachedKyc, "KYC submission retrieved from cache", 200);
             }
@@ -149,6 +149,8 @@ namespace GearUp.Application.Services.Admin
             await _cache.RemoveAsync(cachedKey);
             var cacheKey2 = $"user:profile:{user.Username}";
             await _cache.RemoveAsync(cacheKey2);
+            var cacheKey3 = $"kyc:{kycId}";
+            await _cache.RemoveAsync(cacheKey3);
             _logger.LogInformation("KYC submission status updated successfully");
             return Result<string>.Success(null!, "KYC status updated successfully", 200);
 

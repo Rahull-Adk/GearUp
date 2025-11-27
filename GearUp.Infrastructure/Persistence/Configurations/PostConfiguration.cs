@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Posts;
+using GearUp.Domain.Entities.Posts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,6 +9,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<Post> builder)
         {
             builder.HasKey(p => p.Id);
+            builder.HasQueryFilter(p => !p.IsDeleted);
 
             builder.Property(p => p.Caption).HasMaxLength(300);
             builder.Property(p => p.Content).IsRequired().HasMaxLength(2000);

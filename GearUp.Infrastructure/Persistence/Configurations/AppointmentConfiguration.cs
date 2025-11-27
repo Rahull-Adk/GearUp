@@ -9,6 +9,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<Appointment> builder)
         {
             builder.HasKey(a => a.Id);
+            builder.HasQueryFilter(a => !a.Agent.IsDeleted && !a.Requester.IsDeleted);
 
             builder.Property(a => a.Location)
                 .IsRequired()

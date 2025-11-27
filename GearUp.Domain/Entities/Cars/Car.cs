@@ -26,9 +26,12 @@ namespace GearUp.Domain.Entities.Cars
         public string VIN { get; private set; }
         public string LicensePlate { get; private set; }
         public Guid DealerId { get; private set; }
-        public User Dealer { get; private set; }
+        public User? Dealer { get; private set; }
+        public bool IsDeleted { get; private set; } = false;
+        public DateTime? DeletedAt { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
+
 
         private ICollection<CarImage> _images = new List<CarImage>();
         public IReadOnlyCollection<CarImage> Images => (IReadOnlyCollection<CarImage>)_images;
@@ -55,7 +58,10 @@ namespace GearUp.Domain.Entities.Cars
     TransmissionType transmission,
     Guid dealerId,
     string vin,
-    string licensePlate)
+    string licensePlate,
+    CarValidationStatus validationStatus = CarValidationStatus.Pending,
+    CarStatus status = CarStatus.Available
+    )
         {
             return new Car
             {
@@ -73,9 +79,9 @@ namespace GearUp.Domain.Entities.Cars
                 FuelType = fuelType,
                 Condition = condition,
                 Transmission = transmission,
-                _images = imageUrls,
-                Status = CarStatus.Available,
-                ValidationStatus = CarValidationStatus.Pending,
+                _images = imageUrls!,
+                Status = status,
+                ValidationStatus = validationStatus,
                 VIN = vin,
                 LicensePlate = licensePlate,
                 DealerId = dealerId,
@@ -90,7 +96,7 @@ namespace GearUp.Domain.Entities.Cars
         ICollection<CarImage>? imageUrls,
         FuelType? fuelType, CarCondition? condition, TransmissionType? transmission)
         {
-            if (Status is CarStatus.Sold or CarStatus.Deleted)
+            if (Status is CarStatus.Sold)
                 throw new InvalidOperationException("Cannot update details of a sold or deleted car.");
 
             Title = string.IsNullOrEmpty(title) ? Title : title;
@@ -112,7 +118,6 @@ namespace GearUp.Domain.Entities.Cars
 
         }
 
-
         public void MarkAsSold()
         {
             if (Status == CarStatus.Sold)
@@ -122,21 +127,30 @@ namespace GearUp.Domain.Entities.Cars
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public void Deactivate()
+        //public void Deactivate()
+        //{
+        //    if (Status == CarStatus.Deleted)
+        //        throw new InvalidOperationException("Car is already deleted.");
+
+        //    Status = CarStatus.Deleted;
+        //    UpdatedAt = DateTime.UtcNow;
+        //}
+
+        //public void Reactivate()
+        //{
+        //    if (Status != CarStatus.Deleted)
+        //        throw new InvalidOperationException("Only deleted cars can be reactivated.");
+
+        //    Status = CarStatus.Available;
+        //    UpdatedAt = DateTime.UtcNow;
+        //}
+
+        public void DeleteCar()
         {
-            if (Status == CarStatus.Deleted)
+            if (IsDeleted)
                 throw new InvalidOperationException("Car is already deleted.");
-
-            Status = CarStatus.Deleted;
-            UpdatedAt = DateTime.UtcNow;
-        }
-
-        public void Reactivate()
-        {
-            if (Status != CarStatus.Deleted)
-                throw new InvalidOperationException("Only deleted cars can be reactivated.");
-
-            Status = CarStatus.Available;
+            IsDeleted = true;
+            DeletedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
         }
     }

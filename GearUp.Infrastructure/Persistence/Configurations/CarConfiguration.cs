@@ -10,7 +10,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<Car> builder)
         {
             builder.HasKey(c => c.Id);
-
+            builder.HasQueryFilter(c => !c.IsDeleted);
             builder.Property(c => c.Title).IsRequired().HasMaxLength(200);
             builder.Property(c => c.Description).IsRequired(false).HasMaxLength(1000);
             builder.Property(c => c.Make).IsRequired().HasMaxLength(100);

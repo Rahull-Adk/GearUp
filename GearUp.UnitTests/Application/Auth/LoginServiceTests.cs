@@ -166,7 +166,6 @@ namespace GearUp.UnitTests.Application.Auth
             var result = await svc.LoginAdmin(req);
             Assert.False(result.IsSuccess);
             Assert.Equal(401, result.Status);
-
         }
 
         [Fact]

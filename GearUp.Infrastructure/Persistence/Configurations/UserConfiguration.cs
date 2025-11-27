@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Tokens;
+using GearUp.Domain.Entities.Tokens;
 using GearUp.Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -9,11 +9,11 @@ namespace GearUp.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<User> builder)
         {
+            builder.HasQueryFilter(u => !u.IsDeleted);
             builder.Property(u => u.Id)
      .HasColumnType("char(36)")
      .UseCollation("utf8mb4_0900_ai_ci")
      .IsRequired();
-
             builder.Property(u => u.Provider).IsRequired(false).HasMaxLength(50);
             builder.Property(u => u.ProviderUserId).IsRequired(false).HasMaxLength(100);
             builder.Property(u => u.Username).IsRequired().HasMaxLength(50);

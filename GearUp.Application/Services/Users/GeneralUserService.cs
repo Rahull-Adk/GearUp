@@ -1,9 +1,10 @@
-﻿using AutoMapper;
+using AutoMapper;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.ServiceDtos.Auth;
+using GearUp.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace GearUp.Application.Services.Users
@@ -47,6 +48,7 @@ namespace GearUp.Application.Services.Users
 
             var mappedUser = _mapper.Map<RegisterResponseDto>(user);
             await _cache.SetAsync(cacheKey, mappedUser);
+
             _logger.LogInformation("User profile fetched successfully for user ID: {UserId}", userId);
             return Result<RegisterResponseDto>.Success(mappedUser, "User fetched Successfully", 200);
         }
@@ -67,9 +69,8 @@ namespace GearUp.Application.Services.Users
                 return Result<RegisterResponseDto>.Success(cachedUser, "User fetched Successfully from cache", 200);
             }
 
-
             var user = await _userRepo.GetUserByUsernameAsync(username);
-            if (user == null)
+            if (user == null || user.Role == UserRole.Admin)
             {
                 return Result<RegisterResponseDto>.Failure("User not found", 404);
             }
@@ -77,8 +78,10 @@ namespace GearUp.Application.Services.Users
             var mappedUser = _mapper.Map<RegisterResponseDto>(user);
 
             await _cache.SetAsync(cacheKey, mappedUser);
+
             _logger.LogInformation("User profile fetched successfully for username: {Username}", username);
             return Result<RegisterResponseDto>.Success(mappedUser, "User fetched Successfully", 200);
+
         }
 
     }

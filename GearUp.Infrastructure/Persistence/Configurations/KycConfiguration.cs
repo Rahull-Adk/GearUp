@@ -8,6 +8,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<KycSubmissions> builder)
         {
+            builder.HasQueryFilter(k => !k.SubmittedBy.IsDeleted);
 
             builder.Property(k => k.Id).HasColumnType("char(36)")
                 .UseCollation("utf8mb4_0900_ai_ci")

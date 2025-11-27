@@ -40,7 +40,7 @@ namespace GearUp.Application.Services.Cars
             _updateCarValidator = updateCarDtoValiator;
         }
 
-        public async Task<Result<CreateCarResponseDto>> CreateCarAsync(CreateCarRequestDto request, Guid dealerId, CancellationToken cancellationToken = default)
+        public async Task<Result<CreateCarResponseDto>> CreateCarAsync(CreateCarRequestDto request, Guid dealerId)
         {
             _logger.LogInformation("Car creation initiated for dealer ID: {DealerId}", dealerId);
 
@@ -67,7 +67,7 @@ namespace GearUp.Application.Services.Cars
                 return Result<CreateCarResponseDto>.Failure("A car with the provided VIN already exists.", 409);
             }
             Guid carId = Guid.NewGuid();
-            var imagesResult = await _carImageService.ProcessForCreateAsync(request.CarImages, dealerId, carId, cancellationToken);
+            var imagesResult = await _carImageService.ProcessForCreateAsync(request.CarImages, dealerId, carId);
             if (!imagesResult.IsSuccess)
             {
                 return Result<CreateCarResponseDto>.Failure(imagesResult.ErrorMessage, imagesResult.Status);
@@ -104,27 +104,36 @@ namespace GearUp.Application.Services.Cars
             return Result<CreateCarResponseDto>.Success(responseData, "Car added successfully.", 201);
         }
 
-        public async Task<Result<ICollection<CreateCarResponseDto>>> GetAllCarsAsync(CancellationToken cancellationToken = default)
+        public async Task<Result<PageResult<CreateCarResponseDto>>> GetAllCarsAsync(int pageNum)
         {
-            var cachedKey = "cars:all";
-            var cachedCars = await _cache.GetAsync<ICollection<CreateCarResponseDto>>(cachedKey);
+            if(pageNum < 1)
+            {
+                return Result<PageResult<CreateCarResponseDto>>.Failure("Page number must be greater than zero", 400);
+            }
+            var cachedKey = $"cars:all:{pageNum}";
+            var cachedCars = await _cache.GetAsync<PageResult<CreateCarResponseDto>>(cachedKey);
             if (cachedCars != null)
             {
                 _logger.LogInformation("Fetched all cars from cache.");
-                return Result<ICollection<CreateCarResponseDto>>.Success(cachedCars, "Cars fetched successfully", 200);
+                return Result<PageResult<CreateCarResponseDto>>.Success(cachedCars, "Cars fetched successfully", 200);
             }
 
-            var cars = await _carRepository.GetAllCarsAsync();
-            if (cars.Count == 0)
+            var cars = await _carRepository.GetAllCarsAsync(pageNum);
+
+            var dto = new PageResult<CreateCarResponseDto>
             {
-                return Result<ICollection<CreateCarResponseDto>>.Success(null!, "No cars found", 200);
-            }
-            var responseData = _mapper.Map<ICollection<CreateCarResponseDto>>(cars);
-            await _cache.SetAsync(cachedKey, responseData, TimeSpan.FromHours(1));
-            return Result<ICollection<CreateCarResponseDto>>.Success(responseData, "Cars fetched successfully", 200);
+                TotalCount = cars.TotalCount,
+                CurrentPage = cars.CurrentPage,
+                PageSize = cars.PageSize,
+                TotalPages = cars.TotalPages,
+                Items = _mapper.Map<List<CreateCarResponseDto>>(cars.Items),
+            };
+
+            await _cache.SetAsync(cachedKey, dto, TimeSpan.FromHours(1));
+            return Result<PageResult<CreateCarResponseDto>>.Success(dto, "Cars fetched successfully", 200);
         }
 
-        public async Task<Result<CreateCarResponseDto>> GetCarByIdAsync(Guid carId, CancellationToken cancellationToken = default)
+        public async Task<Result<CreateCarResponseDto>> GetCarByIdAsync(Guid carId)
         {
             var cacheKey = $"car:{carId}";
             var cachedCar = await _cache.GetAsync<CreateCarResponseDto>(cacheKey);
@@ -144,7 +153,7 @@ namespace GearUp.Application.Services.Cars
             return Result<CreateCarResponseDto>.Success(responseData, "Car fetched successfully", 200);
         }
 
-        public async Task<Result<CreateCarResponseDto>> UpdateCarAsync(Guid carId, UpdateCarDto request, Guid dealerId, CancellationToken cancellationToken = default)
+        public async Task<Result<CreateCarResponseDto>> UpdateCarAsync(Guid carId, UpdateCarDto request, Guid dealerId)
         {
             _logger.LogInformation("Car Update initiated for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
 
@@ -154,11 +163,18 @@ namespace GearUp.Application.Services.Cars
                 _logger.LogWarning("No existing car found for car ID: {CarId}", carId);
                 return Result<CreateCarResponseDto>.Failure("Car not found", 404);
             }
+
+            if (existingCar.DealerId != dealerId)
+            {
+                _logger.LogWarning("Unauthorized deletion attempt for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
+                return Result<CreateCarResponseDto>.Failure("Unauthorized to delete this car", 403);
+            }
+
             var validation = ValidateCarUpdate(existingCar, request, dealerId);
             if (!validation.IsSuccess)
                 return validation;
 
-            var imagesResult = await _carImageService.ProcessForUpdateAsync(existingCar!, request.CarImages, dealerId, cancellationToken);
+            var imagesResult = await _carImageService.ProcessForUpdateAsync(existingCar!, request.CarImages, dealerId);
             if (!imagesResult.IsSuccess)
                 return Result<CreateCarResponseDto>.Failure(imagesResult.ErrorMessage, imagesResult.Status);
 
@@ -188,17 +204,31 @@ namespace GearUp.Application.Services.Cars
             return Result<CreateCarResponseDto>.Success(response, "Car updated successfully", 200);
         }
 
-        public Task<Result<CreateCarResponseDto>> CreateCarAsync(CreateCarRequestDto request, Guid dealerId)
- => CreateCarAsync(request, dealerId, default);
+        public async Task<Result<string>> DeleteCarByIdAsync(Guid carId, Guid dealerId)
+        {
+            _logger.LogInformation("Car Deletion initiated for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
 
-        public Task<Result<ICollection<CreateCarResponseDto>>> GetAllCarsAsync()
- => GetAllCarsAsync(default);
+            var existingCar = await _carRepository.GetCarByIdAsync(carId);
+            if (existingCar is null)
+            {
+                _logger.LogWarning("No existing car found for car ID: {CarId}", carId);
+                return Result<string>.Failure("Car not found", 404);
+            }
 
-        public Task<Result<CreateCarResponseDto>> GetCarByIdAsync(Guid carId)
- => GetCarByIdAsync(carId, default);
+            if (existingCar.DealerId != dealerId)
+            {
+                _logger.LogWarning("Unauthorized deletion attempt for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
+                return Result<string>.Failure("Unauthorized to delete this car", 403);
+            }
 
-        public Task<Result<CreateCarResponseDto>> UpdateCarAsync(Guid carId, UpdateCarDto request, Guid dealerId)
- => UpdateCarAsync(carId, request, dealerId, default);
+            existingCar.DeleteCar();
+            await _commonRepository.SaveChangesAsync();
+
+            _logger.LogInformation("Car deleted successfully for car ID: {CarId}", carId);
+            await _cache.RemoveAsync($"car:{existingCar.Id}");
+            return Result<string>.Success(default!, "Car deleted successfully", 200);
+
+        }
 
         private Result<CreateCarResponseDto> ValidateCarUpdate(Car? existingCar, UpdateCarDto request, Guid dealerId)
         {
@@ -216,6 +246,72 @@ namespace GearUp.Application.Services.Cars
             }
 
             return Result<CreateCarResponseDto>.Success(null!, "Validation passed", 200);
+        }
+
+        public async Task<Result<PageResult<CreateCarResponseDto>>> SearchCarsAsync(CarSearchDto searchDto)
+        {
+            if (searchDto == null)
+            {
+                return Result<PageResult<CreateCarResponseDto>>.Failure("Search criteria cannot be null", 400);
+            }
+
+            if(searchDto.Query == null && searchDto.Color == null && searchDto.MinPrice == null && searchDto.MaxPrice == null)
+            {
+                return Result<PageResult<CreateCarResponseDto>>.Failure("At least one search criteria must be provided", 400);
+            }
+
+            if(searchDto.Page < 1)
+            {
+                return Result<PageResult<CreateCarResponseDto>>.Failure("Page number must be greater than zero", 400);
+            }
+
+            if(searchDto.MinPrice != null && searchDto.MaxPrice != null && searchDto.MinPrice > searchDto.MaxPrice)
+            {
+                return Result<PageResult<CreateCarResponseDto>>.Failure("MinPrice cannot be greater than MaxPrice", 400);
+            }
+
+            if(searchDto.SortBy != null)
+            {
+                var validSortBy = new List<string> { "price", "year", "make", "model" };
+                if(!validSortBy.Contains(searchDto.SortBy.ToLower()))
+                {
+                    return Result<PageResult<CreateCarResponseDto>>.Failure($"Invalid SortBy value. Valid values are: {string.Join(", ", validSortBy)}", 400);
+                }
+            }
+
+            if(searchDto.SortOrder != null)
+            {
+                var validSortOrder = new List<string> { "asc", "desc" };
+                if(!validSortOrder.Contains(searchDto.SortOrder.ToLower()))
+                {
+                    return Result<PageResult<CreateCarResponseDto>>.Failure($"Invalid SortOrder value. Valid values are: {string.Join(", ", validSortOrder)}", 400);
+                }
+            }
+
+            var cacheKey = $"cars:search:{searchDto.Query}:{searchDto.Color}:{searchDto.MinPrice}:{searchDto.MaxPrice}:{searchDto.Page}:{searchDto.SortBy}:{searchDto.SortOrder}";
+
+            var cachedResult = await _cache.GetAsync<PageResult<CreateCarResponseDto>>(cacheKey);
+
+            if (cachedResult is not null)
+            {
+                _logger.LogInformation("Fetched search results from cache for key: {CacheKey}", cacheKey);
+                return Result<PageResult<CreateCarResponseDto>>.Success(cachedResult, "Search results fetched successfully", 200);
+            }
+
+            var cars = await _carRepository.SearchCarsAsync(searchDto);
+
+            var dto = new PageResult<CreateCarResponseDto>
+            {
+                TotalCount = cars.TotalCount,
+                CurrentPage = cars.CurrentPage,
+                PageSize = cars.PageSize,
+                TotalPages = cars.TotalPages,
+                Items = _mapper.Map<List<CreateCarResponseDto>>(cars.Items),
+            };
+
+            await _cache.SetAsync(cacheKey, dto, TimeSpan.FromHours(1));
+
+            return Result<PageResult<CreateCarResponseDto>>.Success(dto, "Cars fetched successfully", 200);
         }
     }
 }

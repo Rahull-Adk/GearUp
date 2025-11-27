@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Users;
+using GearUp.Domain.Entities.Users;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,9 +11,9 @@ namespace GearUp.Domain.Entities.Posts
     {
         public Guid Id { get; private set; }
         public Guid PostId { get; private set; }
-        public Post Post { get; private set; }
+        public Post? Post { get; private set; }
         public Guid ViewedUserId { get; private set; }
-        public User ViewedUser { get; private set; }
+        public User? ViewedUser { get; private set; }
         public DateTime ViewedAt { get; private set; }
 
         private PostView()

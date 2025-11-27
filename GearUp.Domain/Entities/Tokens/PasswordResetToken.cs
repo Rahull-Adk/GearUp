@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Users;
+using GearUp.Domain.Entities.Users;
 
 namespace GearUp.Domain.Entities.Tokens
 {
@@ -9,7 +9,7 @@ namespace GearUp.Domain.Entities.Tokens
         public DateTime ExpiresAt { get; private set; }
         public bool IsUsed { get; private set; }
         public Guid UserId { get; private set; }
-        public User User { get; private set; }
+        public User? User { get; private set; }
         public DateTime CreatedAt { get; private set; }
 
         public PasswordResetToken()

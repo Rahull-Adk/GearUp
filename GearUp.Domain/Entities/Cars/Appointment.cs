@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Users;
+using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Enums;
 
 namespace GearUp.Domain.Entities.Cars
@@ -12,8 +12,8 @@ namespace GearUp.Domain.Entities.Cars
         public string Location { get; private set; }
         public AppointmentStatus Status { get; private set; }
         public string Notes { get; private set; }
-        public User Agent { get; private set; }
-        public User Requester { get; private set; }
+        public User? Agent { get; private set; }
+        public User? Requester { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
 

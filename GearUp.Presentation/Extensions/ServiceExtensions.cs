@@ -1,38 +1,40 @@
+using System.Net.Mail;
+using System.Text;
+using System.Threading.RateLimiting;
 using AutoMapper;
+using CloudinaryDotNet;
 using Email.Net;
 using Email.Net.Channel.SendGrid;
 using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.Interfaces.Services;
+using GearUp.Application.Interfaces.Services.AdminServiceInterface;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
+using GearUp.Application.Interfaces.Services.CarServiceInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.Mappings;
 using GearUp.Application.ServiceDtos.Auth;
+using GearUp.Application.ServiceDtos.Car;
+using GearUp.Application.Services;
+using GearUp.Application.Services.Admin;
 using GearUp.Application.Services.Auth;
+using GearUp.Application.Services.Cars;
 using GearUp.Application.Services.Users;
 using GearUp.Application.Validators;
 using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Enums;
 using GearUp.Infrastructure;
+using GearUp.Infrastructure.Helpers;
 using GearUp.Infrastructure.Persistence;
 using GearUp.Infrastructure.Repositories;
-using GearUp.Infrastructure.Helpers;
+using GearUp.Infrastructure.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
-using System.Net.Mail;
-using System.Text;
-using System.Threading.RateLimiting;
-using CloudinaryDotNet;
-using GearUp.Application.Interfaces.Services;
-using GearUp.Application.Services.Admin;
-using GearUp.Application.Interfaces.Services.AdminServiceInterface;
-using GearUp.Application.Services;
-using GearUp.Application.Interfaces.Services.CarServiceInterface;
-using GearUp.Application.Services.Cars;
-using GearUp.Application.ServiceDtos.Car;
 
 
 namespace GearUp.Presentation.Extensions
@@ -82,6 +84,7 @@ namespace GearUp.Presentation.Extensions
             services.AddSingleton(mapper);
 
             // Service Injection
+            services.AddScoped<DbSeeder>();
             services.AddScoped<IRegisterService, RegisterService>();
             services.AddScoped<ILoginService, LoginService>();
             services.AddScoped<ILogoutService, LogoutService>();

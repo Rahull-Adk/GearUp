@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Users;
+using GearUp.Domain.Entities.Users;
 
 namespace GearUp.Domain.Entities.Posts
 {
@@ -6,9 +6,9 @@ namespace GearUp.Domain.Entities.Posts
     {
         public Guid Id { get; private set; }
         public Guid PostId { get; private set; }
-        public Post Post { get; private set; }
+        public Post? Post { get; private set; }
         public Guid LikedUserId { get; private set; }
-        public User LikedUser { get; private set; }
+        public User? LikedUser { get; private set; }
         public bool IsLiked { get; private set; }
         public DateTime UpdatedAt { get; private set; }
 

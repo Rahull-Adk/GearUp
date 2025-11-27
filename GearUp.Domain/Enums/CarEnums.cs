@@ -17,7 +17,7 @@ namespace GearUp.Domain.Enums
         Sold = 2,
         Reserved = 3,
         Unavailable = 4,
-        Deleted = 5
+
     }
     public enum TransmissionType
     {

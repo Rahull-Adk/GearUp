@@ -1,4 +1,4 @@
-﻿
+
 
 namespace GearUp.Domain.Entities.Users
 {
@@ -7,8 +7,8 @@ namespace GearUp.Domain.Entities.Users
         public Guid Id { get; private set; }
         public Guid ReviewerId { get; private set; }
         public Guid RevieweeId { get; private set; }
-        public User Reviewer { get; private set; }
-        public User Reviewee { get; private set; }
+        public User? Reviewer { get; private set; }
+        public User? Reviewee { get; private set; }
         public string ReviewText { get; private set; }
         public int Rating { get; private set; } 
         public DateTime CreatedAt { get; private set; }

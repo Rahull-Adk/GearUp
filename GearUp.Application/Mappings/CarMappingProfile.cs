@@ -29,6 +29,9 @@ namespace GearUp.Application.Mappings
                 .ForMember(dest => dest.CarValidationStatus, opt => opt.MapFrom(src => src.ValidationStatus))
                 .ForMember(dest => dest.LicensePlate, opt => opt.MapFrom(src => src.LicensePlate));
 
+            CreateMap<CarImage, CarImageDto>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.Url, opt => opt.MapFrom(src => src.Url));
         }
     }
 }

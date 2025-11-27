@@ -1,8 +1,8 @@
 using System.Text.Json;
 using DotNetEnv;
 using GearUp.Domain.Entities.Users;
-using GearUp.Infrastructure;
 using GearUp.Infrastructure.Persistence;
+using GearUp.Infrastructure.Seed;
 using GearUp.Presentation.Extensions;
 using GearUp.Presentation.Middlewares;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -48,8 +48,10 @@ using (var scope = app.Services.CreateScope())
 {
     var hasher = new PasswordHasher<User>();
     var db = scope.ServiceProvider.GetRequiredService<GearUpDbContext>();
-    await AdminSeeder.SeedAdminAsync(db, hasher, adminUsername, adminEmail, adminPassword);
+    var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
     db.Database.Migrate();
+    await AdminSeeder.SeedAdminAsync(db, hasher, adminUsername, adminEmail, adminPassword);
+    await seeder.SeedAsync();
 }
 
 if (app.Environment.IsDevelopment())

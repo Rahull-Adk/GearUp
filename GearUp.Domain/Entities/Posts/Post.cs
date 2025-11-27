@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Cars;
+using GearUp.Domain.Entities.Cars;
 using GearUp.Domain.Entities.Users;
 
 namespace GearUp.Domain.Entities.Posts
@@ -11,8 +11,8 @@ namespace GearUp.Domain.Entities.Posts
         public PostVisibility Visibility { get; private set; }
         public Guid UserId { get; private set; }
         public Guid? CarId { get; private set; }
-        public User User { get; private set; }
-        public Car Car { get; private set; }
+        public User? User { get; private set; }
+        public Car? Car { get; private set; }
 
         private readonly List<PostLike> _likes = new List<PostLike>();
         private readonly List<PostComment> _comments = new List<PostComment>();
@@ -20,24 +20,25 @@ namespace GearUp.Domain.Entities.Posts
         public IReadOnlyCollection<PostLike> Likes => _likes.AsReadOnly();
         public IReadOnlyCollection<PostComment> Comments => _comments.AsReadOnly();
         public IReadOnlyCollection<PostView> Views => _views.AsReadOnly();
-
+        public bool IsDeleted { get; private set; } = false;
+        public DateTime? DeletedAt { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
 
-    
-    private Post()
+
+        private Post()
         {
             Id = Guid.NewGuid();
             CreatedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
         }
 
-    public static Post CreatePost(
-        string caption,
-        string content,
-        PostVisibility visibility,
-        Guid userId,
-        Guid carId)
+        public static Post CreatePost(
+            string caption,
+            string content,
+            PostVisibility visibility,
+            Guid userId,
+            Guid carId)
         {
             return new Post
             {

@@ -1,4 +1,4 @@
-﻿
+
 
 using GearUp.Domain.Entities.Users;
 
@@ -11,7 +11,7 @@ namespace GearUp.Domain.Entities.RealTime
         public string Content { get; private set; }
         public Guid UserId { get; private set; }
         public bool IsRead { get; private set; }
-        public User User { get; private set; }
+        public User? User { get; private set; }
         public DateTime CreatedAt { get; private set; }
 
         private Notification() { }

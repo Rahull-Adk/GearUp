@@ -11,6 +11,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<ConversationParticipant> builder)
         {
             builder.HasKey(cp => new { cp.UserId, cp.ConversationId });
+            builder.HasQueryFilter(cp => !cp.User.IsDeleted);
 
             builder.Property(cp => cp.JoinedAt)
                 .IsRequired();

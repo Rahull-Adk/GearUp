@@ -39,6 +39,7 @@ namespace GearUp.Infrastructure.Persistence
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(GearUpDbContext).Assembly);
+         
         }
 
     }

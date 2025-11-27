@@ -1,6 +1,9 @@
 using System.Threading.Tasks;
+using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.ServiceDtos.Car;
 using GearUp.Domain.Entities.Cars;
+using GearUp.Domain.Enums;
 using GearUp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,18 +27,97 @@ namespace GearUp.Infrastructure.Repositories
         {
             await _db.Cars.AddAsync(car);
         }
+
         public async Task AddCarImagesAsync(IEnumerable<CarImage> carImages)
         {
             await _db.CarImages.AddRangeAsync(carImages);
         }
-        public async Task<List<Car>> GetAllCarsAsync()
+
+        public async Task<PageResult<Car>> GetAllCarsAsync(int pageNum)
         {
-            return await _db.Cars.AsNoTracking().Include(c => c.Images).ToListAsync();
+            var query = _db.Cars
+                .AsNoTracking()
+                .Where(car => car.IsDeleted == false && car.ValidationStatus == CarValidationStatus.Approved && car.Status == CarStatus.Available)
+                .Include(c => c.Images)
+                .OrderByDescending(c => c.CreatedAt);
+
+            var totalCars = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCars / 10.0);
+            var cars = await query
+                .Skip((pageNum - 1) * 10)
+                .Take(10)
+                .ToListAsync();
+
+            return new PageResult<Car>
+            {
+                TotalCount = totalCars,
+                PageSize = 10,
+                CurrentPage = pageNum,
+                TotalPages = totalPages,
+                Items = cars
+
+            };
+        }
+
+        public async Task<PageResult<Car>> SearchCarsAsync(CarSearchDto dto)
+        {
+            IQueryable<Car> query = _db.Cars.AsQueryable();
+            query = query.Where(car => car.ValidationStatus == CarValidationStatus.Approved && car.Status == CarStatus.Available);
+            if (!string.IsNullOrEmpty(dto.Query))
+            {
+                query = query.Where(c => c.Title.Contains(dto.Query) || c.Description.Contains(dto.Query) || c.Model.Contains(dto.Query) || c.Make.Contains(dto.Query));
+            }
+
+            if (!string.IsNullOrEmpty(dto.Color))
+            {
+                query = query.Where(c => c.Color == dto.Color);
+            }
+
+            if (dto.MinPrice.HasValue)
+            {
+                query = query.Where(c => c.Price >= dto.MinPrice.Value);
+            }
+
+            if (dto.MaxPrice.HasValue)
+            {
+                query = query.Where(c => c.Price <= dto.MaxPrice.Value);
+            }
+
+            if (!string.IsNullOrEmpty(dto.SortBy))
+            {
+                bool ascending = dto.SortOrder?.ToLower() == "asc";
+                query = dto.SortBy.ToLower() switch
+                {
+                    "price" => ascending ? query.OrderBy(c => c.Price) : query.OrderByDescending(c => c.Price),
+                    "year" => ascending ? query.OrderBy(c => c.Year) : query.OrderByDescending(c => c.Year),
+                    _ => query
+                };
+            }
+            else
+            {
+                query = query.OrderByDescending(c => c.CreatedAt);
+            }
+
+            var totalCars = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCars / 10.0);
+            var cars = await query
+                .Include(c => c.Images)
+                .Skip((dto.Page - 1) * 10)
+                .Take(10)
+                .ToListAsync();
+            return new PageResult<Car>
+            {
+                TotalCount = totalCars,
+                PageSize = 10,
+                CurrentPage = dto.Page,
+                TotalPages = totalPages,
+                Items = cars
+            };
         }
 
         public async Task<Car?> GetCarByIdAsync(Guid carId)
         {
-            return await _db.Cars.AsNoTracking().Include(c => c.Images).FirstOrDefaultAsync(c => c.Id == carId);
+            return await _db.Cars.Where(c => c.ValidationStatus == CarValidationStatus.Approved && c.Status == CarStatus.Available).Include(c => c.Images).FirstOrDefaultAsync(c => c.Id == carId);
         }
 
         public async Task<CarImage?> GetCarImageByCarIdAsync(Guid carId)

@@ -1,6 +1,7 @@
 using AutoMapper;
 using FluentValidation;
-using FluentValidation.Results
+using FluentValidation.Results;
+using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
@@ -11,7 +12,7 @@ using GearUp.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
-
+using Xunit;
 
 namespace GearUp.UnitTests.Application.Cars
 {
@@ -21,12 +22,9 @@ namespace GearUp.UnitTests.Application.Cars
         private readonly Mock<IValidator<UpdateCarDto>> _updateValidator = new();
         private readonly Mock<ICacheService> _cache = new();
         private readonly Mock<ILogger<CarService>> _logger = new();
-        private readonly Mock<IUserRepository> _userRepo = new();
         private readonly Mock<ICarRepository> _carRepo = new();
-        private readonly Mock<ICloudinaryImageUploader> _uploader = new();
         private readonly Mock<IMapper> _mapper = new();
         private readonly Mock<ICommonRepository> _commonRepo = new();
-        private readonly Mock<IDocumentProcessor> _docProcessor = new();
         private readonly Mock<ICarImageService> _carImageService = new();
 
         private CarService CreateService() => new(
@@ -57,7 +55,7 @@ namespace GearUp.UnitTests.Application.Cars
         }
 
         [Fact]
-        public async Task CreateCar_ValidationFails_Returns400()
+        public async Task CreateCar_ValidationFails_Returns422()
         {
             var service = CreateService();
             var req = new CreateCarRequestDto { Title = "t" };
@@ -84,15 +82,18 @@ namespace GearUp.UnitTests.Application.Cars
         }
 
         [Fact]
-        public async Task GetAllCars_NoCars_Returns200WithMessage()
+        public async Task GetAllCars_NoCars_ReturnsEmptyItems()
         {
             var service = CreateService();
-            _carRepo.Setup(r => r.GetAllCarsAsync()).ReturnsAsync(new List<Car>());
-            var result = await service.GetAllCarsAsync();
+            var pageResult = new PageResult<Car> { Items = new List<Car>(), TotalCount =0, CurrentPage =1, PageSize =10, TotalPages =0 };
+            _carRepo.Setup(r => r.GetAllCarsAsync(1)).ReturnsAsync(pageResult);
+            _mapper.Setup(m => m.Map<List<CreateCarResponseDto>>(It.IsAny<List<Car>>()))
+            .Returns(new List<CreateCarResponseDto>());
+            var result = await service.GetAllCarsAsync(1);
             Assert.True(result.IsSuccess);
             Assert.Equal(200, result.Status);
-            Assert.Null(result.Data);
-            Assert.Equal("No cars found", result.SuccessMessage);
+            Assert.NotNull(result.Data);
+            Assert.Empty(result.Data.Items);
         }
 
         [Fact]
@@ -100,48 +101,17 @@ namespace GearUp.UnitTests.Application.Cars
         {
             var service = CreateService();
             var dealerId = Guid.NewGuid();
-            var car = Car.CreateForSale(
-                Guid.NewGuid(),
-            title: "Toyota Camry",
-            description: "desc",
-            model: "Camry",
-            make: "Toyota",
-            year: 2020,
-            price: 20000,
-            color: "Black",
-            mileage: 10000,
-            seatingCapacity: 5,
-            engineCapacity: 2500,
-            imageUrls: new List<CarImage>(),
-            fuelType: FuelType.Petrol,
-            condition: CarCondition.Used,
-            transmission: TransmissionType.Automatic,
-            dealerId: dealerId,
-            vin: "VIN1",
-            licensePlate: "ABC123");
-            _carRepo.Setup(r => r.GetAllCarsAsync()).ReturnsAsync(new List<Car> { car });
-
-            ICollection<CreateCarResponseDto> mapped = new List<CreateCarResponseDto>
-            {
-                new() { Id = car.Id, Title = car.Title }
-            };
-
-
-            _mapper.Setup(m => m.Map<ICollection<CreateCarResponseDto>>(It.IsAny<List<Car>>()))
-            .Returns(mapped);
-
-            var result = await service.GetAllCarsAsync();
-
+            var car = Car.CreateForSale(Guid.NewGuid(),
+            "Toyota Camry","desc","Camry","Toyota",2020,20000,"Black",10000,5,2500,new List<CarImage>(),FuelType.Petrol,CarCondition.Used,TransmissionType.Automatic,dealerId,"VIN1","ABC123");
+            var pageResult = new PageResult<Car> { Items = new List<Car>{car}, TotalCount =1, CurrentPage =1, PageSize =10, TotalPages =1 };
+            _carRepo.Setup(r => r.GetAllCarsAsync(1)).ReturnsAsync(pageResult);
+            var mappedList = new List<CreateCarResponseDto> { new CreateCarResponseDto { Id = car.Id, Title = car.Title } };
+            _mapper.Setup(m => m.Map<List<CreateCarResponseDto>>(It.IsAny<List<Car>>())).Returns(mappedList);
+            var result = await service.GetAllCarsAsync(1);
             Assert.True(result.IsSuccess);
             Assert.Equal(200, result.Status);
-            Assert.Single(result.Data!);
-            _cache.Verify(c =>
-                c.SetAsync(
-                    "cars:all",
-                mapped,
-                    It.IsAny<TimeSpan>()),
-                Times.Once);
-
+            Assert.Single(result.Data.Items);
+            _cache.Verify(c => c.SetAsync("cars:all:1", It.IsAny<PageResult<CreateCarResponseDto>>(), It.IsAny<TimeSpan>()), Times.Once);
         }
 
         [Fact]
@@ -193,7 +163,7 @@ namespace GearUp.UnitTests.Application.Cars
             var service = CreateService();
             var dealerId = Guid.NewGuid();
             var otherDealer = Guid.NewGuid();
-            var car = Car.CreateForSale(Guid.NewGuid(), "t", "d", "m", "mk", 2020, 1000, "c", 10, 4, 2000, new List<CarImage>(), FuelType.Petrol, CarCondition.New, TransmissionType.Automatic, otherDealer, "VIN", "PLT");
+            var car = Car.CreateForSale(Guid.NewGuid(),"t","d","m","mk",2020,1000,"c",10,4,2000,new List<CarImage>(),FuelType.Petrol,CarCondition.New,TransmissionType.Automatic,otherDealer,"VIN","PLT");
             _carRepo.Setup(r => r.GetCarByIdAsync(car.Id)).ReturnsAsync(car);
 
             var result = await service.UpdateCarAsync(car.Id, new UpdateCarDto(), dealerId);

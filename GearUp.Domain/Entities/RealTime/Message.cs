@@ -1,4 +1,4 @@
-﻿
+
 using GearUp.Domain.Entities.Users;
 
 namespace GearUp.Domain.Entities.Chats
@@ -12,8 +12,8 @@ namespace GearUp.Domain.Entities.Chats
         public string Content { get; private set; }
         public DateTime SentAt { get; private set; }
         public bool IsRead { get; private set; }
-        public User Sender { get; private set; }
-        public User Receiver { get; private set; }
+        public User? Sender { get; private set; }
+        public User? Receiver { get; private set; }
         public Conversation Conversation { get; private set; }
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;

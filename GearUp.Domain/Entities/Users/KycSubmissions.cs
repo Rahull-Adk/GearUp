@@ -17,7 +17,7 @@ namespace GearUp.Domain.Entities
         public List<Uri> DocumentUrls { get; private set; } = new List<Uri>();
 
 
-        public User SubmittedBy { get; private set; } = default!;
+        public User? SubmittedBy { get; private set; } = default!;
         public User? ReviewedBy { get; private set; }
 
         private KycSubmissions()

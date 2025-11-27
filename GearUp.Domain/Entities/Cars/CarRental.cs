@@ -9,11 +9,11 @@ namespace GearUp.Domain.Entities.Cars
     {
         public Guid Id { get; private set; }
         public Guid CarId { get; private set; }
-        public Car Car { get; private set; }
+        public Car? Car { get; private set; }
         public Guid RenterId { get; private set; }
-        public User Renter { get; private set; }
+        public User? Renter { get; private set; }
         public Guid TenantId { get; private set; }
-        public User Tenant { get; private set; }
+        public User? Tenant { get; private set; }
 
         public DateTime StartDate { get; private set; }
         public DateTime EndDate { get; private set; }

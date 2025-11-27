@@ -1,4 +1,4 @@
-﻿services:
+services:
   db:
     image: mysql:8.0
     container_name: gearup-db
@@ -35,6 +35,9 @@
       ClientUrl: ${ClientUrl}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       CLOUDINARY_URL: ${CLOUDINARY_URL}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     depends_on:
       - db
       - redis

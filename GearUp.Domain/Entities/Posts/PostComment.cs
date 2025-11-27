@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Users;
+using GearUp.Domain.Entities.Users;
 
 namespace GearUp.Domain.Entities.Posts
 {
@@ -6,9 +6,9 @@ namespace GearUp.Domain.Entities.Posts
     {
         public Guid Id { get; private set; }
         public Guid PostId { get; private set; }
-        public Post Post { get; private set; }
+        public Post? Post { get; private set; }
         public Guid CommentedUserId { get; private set; }
-        public User CommentedUser { get; private set; }
+        public User? CommentedUser { get; private set; }
         public string Content { get; private set; }
         public Guid? ParentCommentId { get; private set; }
         public PostComment ParentComment { get; private set; }

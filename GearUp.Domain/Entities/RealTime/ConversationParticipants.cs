@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities.Chats;
+using GearUp.Domain.Entities.Chats;
 using GearUp.Domain.Entities.Users;
 
 
@@ -10,7 +10,7 @@ namespace GearUp.Domain.Entities.RealTime
         public Guid ConversationId { get; private set; }
 
         
-        public User User { get; private set; }
+        public User? User { get; private set; }
         public Conversation Conversation { get; private set; }
 
         public DateTime JoinedAt { get; private set; }
