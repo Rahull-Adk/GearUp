@@ -21,7 +21,7 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task AddKycAsync(KycSubmissions kyc)
         {
-            await  _db.KycSubmissions.AddAsync(kyc);
+            await _db.KycSubmissions.AddAsync(kyc);
         }
 
         public async Task<User?> GetUserByUsernameOrEmailAsync(string usernameOrEmail)
@@ -47,6 +47,11 @@ namespace GearUp.Infrastructure.Repositories
         public async Task SaveChangesAsync()
         {
             await _db.SaveChangesAsync();
+        }
+
+        public async Task<Dictionary<Guid, User>> GetAllUserWithIds(List<Guid> userIds)
+        {
+            return await _db.Users.Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id);
         }
 
 

@@ -1,4 +1,4 @@
-﻿using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.Interfaces.Repositories;
 using GearUp.Domain.Entities;
 using GearUp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +14,7 @@ namespace GearUp.Infrastructure.Repositories
         }
         public async Task<ICollection<KycSubmissions>> GetAllKycSubmissionsAsync()
         {
-            return await _db.KycSubmissions.Include(k => k.SubmittedBy).ToListAsync();
+            return await _db.KycSubmissions.AsNoTracking().Include(k => k.SubmittedBy).ToListAsync();
         }
 
         public async Task<KycSubmissions?> GetKycSubmissionByIdAsync(Guid kycId)

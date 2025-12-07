@@ -1,9 +1,7 @@
-﻿using AutoMapper;
+using AutoMapper;
 using GearUp.Application.ServiceDtos.Admin;
 using GearUp.Application.ServiceDtos.User;
 using GearUp.Domain.Entities;
-using System.Linq;
-
 namespace GearUp.Application.Mappings
 {
     public class KycMappingProfile : Profile

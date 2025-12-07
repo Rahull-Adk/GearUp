@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using GearUp.Domain.Entities.Users;
 
 namespace GearUp.Domain.Entities.Posts
@@ -6,15 +7,21 @@ namespace GearUp.Domain.Entities.Posts
     {
         public Guid Id { get; private set; }
         public Guid PostId { get; private set; }
+        [JsonIgnore]
         public Post? Post { get; private set; }
         public Guid CommentedUserId { get; private set; }
+        [JsonIgnore]
         public User? CommentedUser { get; private set; }
         public string Content { get; private set; }
         public Guid? ParentCommentId { get; private set; }
+        [JsonIgnore]
         public PostComment ParentComment { get; private set; }
         public bool IsDeleted { get; private set; }
         private readonly List<PostComment> _replies = new List<PostComment>();
+        private readonly List<CommentLike> _likes = new List<CommentLike>();
         public IReadOnlyCollection<PostComment> Replies => _replies.AsReadOnly();
+        public IReadOnlyCollection<CommentLike> Likes => _likes.AsReadOnly();
+
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
 
@@ -27,6 +34,8 @@ namespace GearUp.Domain.Entities.Posts
             Content = content;
             ParentCommentId = parentCommentId;
             IsDeleted = false;
+            _replies = [];
+            _likes = [];
             CreatedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
         }
@@ -51,6 +60,7 @@ namespace GearUp.Domain.Entities.Posts
                 throw new ArgumentException("Content cannot be null or empty.", nameof(content));
             Content = content;
             UpdatedAt = DateTime.UtcNow;
+            
         }
     }
 }

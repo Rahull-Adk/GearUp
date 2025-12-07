@@ -9,6 +9,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<Post> builder)
         {
             builder.HasKey(p => p.Id);
+
             builder.HasQueryFilter(p => !p.IsDeleted);
 
             builder.Property(p => p.Caption).HasMaxLength(300);

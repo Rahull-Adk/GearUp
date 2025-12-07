@@ -38,7 +38,7 @@ namespace GearUp.Application.ServiceDtos.Car
         public int Mileage { get; init; }
         public int SeatingCapacity { get; init; }
         public int EngineCapacity { get; init; }
-        public ICollection<CarImageDto>? CarImages { get; init; }
+        public ICollection<CarImageDto>? CarImages { get; set; }
         public FuelType FuelType { get; init; }
         public CarCondition CarCondition { get; init; }
         public TransmissionType TransmissionType { get; init; }

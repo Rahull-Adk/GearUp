@@ -7,10 +7,12 @@ using GearUp.Domain.Entities.Tokens;
 using GearUp.Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace GearUp.Infrastructure.Persistence
 {
     public class GearUpDbContext : DbContext
     {
+      
         public GearUpDbContext(DbContextOptions<GearUpDbContext> options) : base(options)
         {
         }
@@ -29,6 +31,8 @@ namespace GearUp.Infrastructure.Persistence
         public DbSet<PostComment> PostComments { get; set; }
         public DbSet<PostView> PostViews { get; set; }
 
+        public DbSet<CommentLike> CommentLikes { get; set; }
+
         public DbSet<Conversation> Conversations { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<ConversationParticipant> ConversationParticipants { get; set; }
@@ -39,7 +43,16 @@ namespace GearUp.Infrastructure.Persistence
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(GearUpDbContext).Assembly);
-         
+
+
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties().Where(p => p.ClrType == typeof(Guid) || p.ClrType == typeof(Guid?)))
+                {
+                    property.SetColumnType("char(36)");
+                    property.SetAnnotation("Relational:Collation", "utf8mb4_0900_ai_ci");
+                }
+            }
         }
 
     }

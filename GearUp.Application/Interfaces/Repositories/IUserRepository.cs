@@ -11,5 +11,6 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<User?> GetUserByUsernameAsync(string username);
         Task<User?> GetUserByIdAsync(Guid id);
         Task SaveChangesAsync();
+        Task<Dictionary<Guid, User>> GetAllUserWithIds(List<Guid> userIds);
     }
 }

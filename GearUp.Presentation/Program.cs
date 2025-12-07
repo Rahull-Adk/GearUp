@@ -3,6 +3,7 @@ using DotNetEnv;
 using GearUp.Domain.Entities.Users;
 using GearUp.Infrastructure.Persistence;
 using GearUp.Infrastructure.Seed;
+using GearUp.Infrastructure.SignalR;
 using GearUp.Presentation.Extensions;
 using GearUp.Presentation.Middlewares;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -92,6 +93,7 @@ app.UseAuthentication();
 app.UseCors("AllowFrontend");
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<PostHub>("/hubs/post");
 
 try
 {

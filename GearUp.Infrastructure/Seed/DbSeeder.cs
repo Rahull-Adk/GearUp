@@ -24,7 +24,8 @@ public class DbSeeder
         await SeedFakeUsersAsync(200);
         await SeedFakeCarsAsync(1000);
         await SeedFakePostsAsync(300);
-        // await SeedFakeConversationsAsync(150);
+        await SeedFakeCommentsAsync(10000);
+        await SeedFakePostLikeAsync(20000);
     }
 
     private async Task SeedFakeUsersAsync(int targetCount)
@@ -56,7 +57,6 @@ public class DbSeeder
             {
                 role = UserRole.Customer;
             }
-            // create username and email with marker so we can count later
             var username = faker.Internet.UserName().ToLower();
             var email = $"{username}@example.com";
             var name = faker.Name.FullName();
@@ -87,8 +87,6 @@ public class DbSeeder
         int toCreate = targetCount - existing;
 
         var faker = new Faker("en");
-
-        // ensure there are fake users to assign as dealers
         var userIds = await _context.Users
             .Where(u => u.Email.EndsWith("@example.com") && u.Role == UserRole.Dealer)
             .Select(u => u.Id)
@@ -172,9 +170,7 @@ public class DbSeeder
         await _context.SaveChangesAsync();
     }
 
-    // ===============================
-    // 3️⃣ POSTS (factory or initializer fallback)
-    // ===============================
+
     private async Task SeedFakePostsAsync(int targetCount)
     {
         int existing = await _context.Posts
@@ -213,6 +209,65 @@ public class DbSeeder
 
         await _context.Posts.AddRangeAsync(newPosts);
         await _context.SaveChangesAsync();
+    }
+
+
+    private async Task SeedFakeCommentsAsync(int targetCount)
+    {
+        int existing = await _context.PostComments
+            .CountAsync(c => c.Content.EndsWith("seeded_comment"));
+        if (existing >= targetCount)
+            return;
+        int toCreate = targetCount - existing;
+        var faker = new Faker("en");
+        var userIds = await _context.Users
+            .Where(u => u.Email.EndsWith("@example.com"))
+            .Select(u => u.Id)
+            .ToListAsync();
+        var postIds = await _context.Posts
+            .Select(p => p.Id)
+            .ToListAsync();
+        var newComments = new List<PostComment>(toCreate);
+        for (int i = 0; i < toCreate; i++)
+        {
+            var comment = PostComment.CreateComment(
+                content: $"{faker.Lorem.Sentence()}seeded_comment",
+                postId: faker.PickRandom(postIds),
+                commentedUserId: faker.PickRandom(userIds)
+            );
+            newComments.Add(comment);
+        }
+        await _context.PostComments.AddRangeAsync(newComments);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task SeedFakePostLikeAsync(int targetCount)
+    {
+        int existing = await _context.PostLikes
+            .CountAsync();
+        if (existing >= targetCount)
+            return;
+        int toCreate = targetCount - existing;
+        var faker = new Faker("en");
+        var userIds = await _context.Users
+            .Where(u => u.Email.EndsWith("@example.com"))
+            .Select(u => u.Id)
+            .ToListAsync();
+        var postIds = await _context.Posts
+            .Select(p => p.Id)
+            .ToListAsync();
+        var newLikes = new List<PostLike>(toCreate);
+        for (int i = 0; i < toCreate; i++)
+        {
+            var like = PostLike.CreateLike(
+                postId: faker.PickRandom(postIds),
+                likedUserId: faker.PickRandom(userIds)
+            );
+            newLikes.Add(like);
+        }
+        await _context.PostLikes.AddRangeAsync(newLikes);
+        await _context.SaveChangesAsync();
+
     }
 
 }

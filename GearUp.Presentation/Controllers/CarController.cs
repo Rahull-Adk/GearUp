@@ -1,12 +1,8 @@
-using System.Globalization;
-using CloudinaryDotNet;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
 using GearUp.Application.ServiceDtos.Car;
 using GearUp.Presentation.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Org.BouncyCastle.Ocsp;
-using SendGrid.Helpers.Mail;
 
 namespace GearUp.Presentation.Controllers
 {

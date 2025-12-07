@@ -20,6 +20,7 @@ namespace GearUp.Application.Services.Cars
         private readonly IMapper _mapper;
         private readonly ICommonRepository _commonRepository;
         private readonly ICarImageService _carImageService;
+        private readonly IUserRepository _userRepository;
 
         public CarService(
             IValidator<CreateCarRequestDto> createCarValidator,
@@ -28,7 +29,8 @@ namespace GearUp.Application.Services.Cars
             ICarRepository carRepository,
             IMapper mapper,
             ICommonRepository commonRepository,
-            ICarImageService carImageService, IValidator<UpdateCarDto> updateCarDtoValiator)
+            ICarImageService carImageService, IValidator<UpdateCarDto> updateCarDtoValiator,
+            IUserRepository userRepository)
         {
             _createCarValidator = createCarValidator;
             _cache = cache;
@@ -38,6 +40,7 @@ namespace GearUp.Application.Services.Cars
             _commonRepository = commonRepository;
             _carImageService = carImageService;
             _updateCarValidator = updateCarDtoValiator;
+            _userRepository = userRepository;
         }
 
         public async Task<Result<CreateCarResponseDto>> CreateCarAsync(CreateCarRequestDto request, Guid dealerId)
@@ -53,6 +56,13 @@ namespace GearUp.Application.Services.Cars
                 var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
                 _logger.LogWarning("Car creation failed validation for dealer ID: {DealerId}. Errors: {Errors}", dealerId, errors);
                 return Result<CreateCarResponseDto>.Failure(errors, 422);
+            }
+
+            var dealer = await _userRepository.GetUserByIdAsync(dealerId);
+            if (dealer == null)
+                {
+                _logger.LogWarning("Car creation failed: Dealer not found for ID: {DealerId}", dealerId);
+                return Result<CreateCarResponseDto>.Failure("Dealer not found.", 404);
             }
 
             if (request.CarImages == null || request.CarImages.Count == 0)
@@ -213,6 +223,12 @@ namespace GearUp.Application.Services.Cars
             {
                 _logger.LogWarning("No existing car found for car ID: {CarId}", carId);
                 return Result<string>.Failure("Car not found", 404);
+            }
+
+            var user = await _userRepository.GetUserByIdAsync(dealerId);
+            if (user == null) {
+                _logger.LogWarning("Car deletion failed: Dealer not found for ID: {DealerId}", dealerId);
+                return Result<string>.Failure("Dealer not found.", 404);
             }
 
             if (existingCar.DealerId != dealerId)

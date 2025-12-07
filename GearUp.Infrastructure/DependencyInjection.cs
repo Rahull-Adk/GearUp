@@ -1,4 +1,4 @@
-﻿using Email.Net;
+using Email.Net;
 using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Infrastructure.Helpers;
@@ -20,7 +20,6 @@ namespace GearUp.Infrastructure
             services.AddSingleton<ITokenValidator>(new TokenValidator(audience, issuer));
 
             services.AddScoped<IEmailSender>(provider => new EmailSender(provider.GetRequiredService<IEmailService>(), fromEmail, clientUrl, logger));
-
 
             return services;
         }

@@ -101,6 +101,7 @@ namespace GearUp.Infrastructure.Repositories
             var totalCars = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalCars / 10.0);
             var cars = await query
+                .AsNoTracking()
                 .Include(c => c.Images)
                 .Skip((dto.Page - 1) * 10)
                 .Take(10)
@@ -120,9 +121,14 @@ namespace GearUp.Infrastructure.Repositories
             return await _db.Cars.Where(c => c.ValidationStatus == CarValidationStatus.Approved && c.Status == CarStatus.Available).Include(c => c.Images).FirstOrDefaultAsync(c => c.Id == carId);
         }
 
-        public async Task<CarImage?> GetCarImageByCarIdAsync(Guid carId)
+        public async Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId)
         {
-            return await _db.CarImages.AsNoTracking().FirstOrDefaultAsync(img => img.CarId == carId);
+            return await _db.CarImages.AsNoTracking().Select(ci => new CarImageDto
+            {
+                Id = ci.Id,
+                CarId = ci.CarId,
+                Url = ci.Url
+            }).Where(img => img.CarId == carId).ToListAsync();
         }
 
         public void RemoveCarImageByCarId(Car car)

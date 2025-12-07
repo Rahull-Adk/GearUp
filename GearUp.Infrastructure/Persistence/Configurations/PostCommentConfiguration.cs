@@ -8,8 +8,16 @@ namespace GearUp.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<PostComment> builder)
         {
+
             builder.HasKey(pc => pc.Id);
-            builder.HasQueryFilter(pc => !pc.IsDeleted && !pc.CommentedUser.IsDeleted);
+
+            builder.UseCollation("utf8mb4_general_ci");
+
+            builder.HasQueryFilter(pc => !pc.IsDeleted);
+
+            builder.Property(pc => pc.Content)
+                .IsRequired();
+    
         }
     }
 }

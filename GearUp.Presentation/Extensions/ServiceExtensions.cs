@@ -7,19 +7,23 @@ using Email.Net;
 using Email.Net.Channel.SendGrid;
 using FluentValidation;
 using GearUp.Application.Common;
+using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.AdminServiceInterface;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
+using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.Mappings;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.ServiceDtos.Car;
+using GearUp.Application.ServiceDtos.Post;
 using GearUp.Application.Services;
 using GearUp.Application.Services.Admin;
 using GearUp.Application.Services.Auth;
 using GearUp.Application.Services.Cars;
+using GearUp.Application.Services.Posts;
 using GearUp.Application.Services.Users;
 using GearUp.Application.Validators;
 using GearUp.Domain.Entities.Users;
@@ -29,10 +33,10 @@ using GearUp.Infrastructure.Helpers;
 using GearUp.Infrastructure.Persistence;
 using GearUp.Infrastructure.Repositories;
 using GearUp.Infrastructure.Seed;
+using GearUp.Infrastructure.SignalR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 
@@ -76,12 +80,15 @@ namespace GearUp.Presentation.Extensions
                 cfg.AddProfile(new UserMappingProfile());
                 cfg.AddProfile(new KycMappingProfile());
                 cfg.AddProfile(new CarMappingProfile());
+  
             }, NullLoggerFactory.Instance);
 
             mapperConfig.AssertConfigurationIsValid();
 
             var mapper = mapperConfig.CreateMapper();
             services.AddSingleton(mapper);
+
+            services.AddSignalR();
 
             // Service Injection
             services.AddScoped<DbSeeder>();
@@ -90,6 +97,9 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<ILogoutService, LogoutService>();
             services.AddScoped<ICarService, CarService>();
             services.AddScoped<ICarImageService, CarImageService>();
+            services.AddScoped<IPostService, PostService>();
+            services.AddScoped<ICommentService, CommentService>();
+            services.AddScoped<ILikeService, LikeService>();
             services.AddScoped<IEmailVerificationService, EmailVerificationService>();
             services.AddSingleton<ICloudinaryImageUploader, CloudinaryImageUploader>();
             services.AddScoped<IGeneralUserService, GeneralUserService>();
@@ -97,6 +107,7 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IKycService, KycService>();
             services.AddScoped<IProfileUpdateService, ProfileUpdateService>();
             services.AddScoped<IDocumentProcessor, DocumentProcessor>();
+            services.AddScoped<IRealTimeNotifier, SignalRRealTimeNotifier>();
 
             // Redis Cache Injection
             var redisConnection = config["Redis:ConnectionString"] ?? "localhost:6379";
@@ -125,10 +136,14 @@ namespace GearUp.Presentation.Extensions
 
             // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();
-            services.AddScoped<ITokenRepository, TokenRepository>();
             services.AddScoped<IAdminRepository, AdminRepository>();
             services.AddScoped<ICarRepository, CarRepository>();
+            services.AddScoped<IPostRepository, PostRepository>();
+            services.AddScoped<ICommentRepository, CommentRepository>();
+            services.AddScoped<ILikeRepository, LikeRepository>();
             services.AddScoped<ICommonRepository, CommonRepository>();
+            services.AddScoped<ITokenRepository, TokenRepository>();
+
 
             // Validator Injections
             services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestDtoValidator>();
@@ -137,6 +152,7 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IValidator<AdminLoginRequestDto>, AdminLoginRequestDtoValidator>();
             services.AddScoped<IValidator<CreateCarRequestDto>, CarRequestDtoValidator>();
             services.AddScoped<IValidator<UpdateCarDto>, UpdateCarDtoValidator>();
+            services.AddScoped<IValidator<CreatePostRequestDto>, PostValidators>();
 
             // Password Hasher Injection
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();

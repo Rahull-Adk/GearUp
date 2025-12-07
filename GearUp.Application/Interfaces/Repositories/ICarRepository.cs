@@ -12,7 +12,7 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<PageResult<Car>> GetAllCarsAsync(int pageNum);
         Task<PageResult<Car>> SearchCarsAsync(CarSearchDto dto);
         Task<Car?> GetCarByIdAsync(Guid carId);
-        Task<CarImage?> GetCarImageByCarIdAsync(Guid carId);
+        Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId);
         void RemoveCarImageByCarId(Car car);
     }
 }
