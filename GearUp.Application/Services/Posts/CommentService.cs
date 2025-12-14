@@ -31,6 +31,7 @@ namespace GearUp.Application.Services.Posts
         public async Task<Result<CommentDto>> PostCommentAsync(CreateCommentDto comment, Guid userId)
         {
             var cacheKey = $"post:{comment.PostId}";
+            var cacheKey1 = $"posts:all:page:1";
             _logger.LogInformation("User with Id: {UserId} is commenting on post with Id: {PostId}", userId, comment.PostId);
 
             var post = await _postRepository.GetPostByIdAsync(comment.PostId);
@@ -70,6 +71,7 @@ namespace GearUp.Application.Services.Posts
             await _commonRepository.SaveChangesAsync();
 
             await _cache.RemoveAsync(cacheKey);
+            await _cache.RemoveAsync(cacheKey1);
             var commentDto = new CommentDto
             {
                 Id = postComment.Id,
@@ -86,6 +88,8 @@ namespace GearUp.Application.Services.Posts
                 Replies = []
             };
             _logger.LogInformation("User with Id: {UserId} commented successfully on post with Id: {PostId}", userId, comment.PostId);
+
+
 
             return Result<CommentDto>.Success(commentDto, "Comment added successfully", 201);
 

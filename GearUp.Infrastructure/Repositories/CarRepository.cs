@@ -121,6 +121,14 @@ namespace GearUp.Infrastructure.Repositories
             return await _db.Cars.Where(c => c.ValidationStatus == CarValidationStatus.Approved && c.Status == CarStatus.Available).Include(c => c.Images).FirstOrDefaultAsync(c => c.Id == carId);
         }
 
+        public async Task<Dictionary<Guid, Car>> GetCarsByIdsAsync(List<Guid> carIds)
+        {
+            return await _db.Cars
+                .Where(c => carIds.Contains(c.Id) && c.ValidationStatus == CarValidationStatus.Approved && c.Status == CarStatus.Available)
+                .Include(c => c.Images)
+                .ToDictionaryAsync(k => k.Id, v => v);
+        }
+
         public async Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId)
         {
             return await _db.CarImages.AsNoTracking().Select(ci => new CarImageDto

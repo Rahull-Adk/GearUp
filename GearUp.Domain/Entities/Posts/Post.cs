@@ -51,6 +51,23 @@ namespace GearUp.Domain.Entities.Posts
                 UpdatedAt = DateTime.UtcNow
             };
         }
+
+        public void SoftDelete()
+        {
+            IsDeleted = true;
+            DeletedAt = DateTime.UtcNow;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void UpdateContent(string caption, string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+                throw new ArgumentException("Content cannot be empty", nameof(content));
+            if (!string.IsNullOrWhiteSpace(caption))
+                Caption = caption;
+            Content = content;
+            UpdatedAt = DateTime.UtcNow;
+        }
     }
 
     public enum PostVisibility

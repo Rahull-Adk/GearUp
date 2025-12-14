@@ -11,6 +11,7 @@ namespace GearUp.Application.Interfaces.Repositories
         Task AddCarImagesAsync(IEnumerable<CarImage> carImages);
         Task<PageResult<Car>> GetAllCarsAsync(int pageNum);
         Task<PageResult<Car>> SearchCarsAsync(CarSearchDto dto);
+        Task<Dictionary<Guid, Car>> GetCarsByIdsAsync(List<Guid> carIds);
         Task<Car?> GetCarByIdAsync(Guid carId);
         Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId);
         void RemoveCarImageByCarId(Car car);

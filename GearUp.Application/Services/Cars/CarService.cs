@@ -29,7 +29,8 @@ namespace GearUp.Application.Services.Cars
             ICarRepository carRepository,
             IMapper mapper,
             ICommonRepository commonRepository,
-            ICarImageService carImageService, IValidator<UpdateCarDto> updateCarDtoValiator,
+            ICarImageService carImageService,
+            IValidator<UpdateCarDto> updateCarDtoValiator,
             IUserRepository userRepository)
         {
             _createCarValidator = createCarValidator;

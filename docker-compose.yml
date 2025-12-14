@@ -17,10 +17,10 @@ services:
         retries: 10
 
   api:
-    image: rahulladk/gearupweb-api:car2.0
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
+    # image: rahulladk/gearupweb-api:car2.0
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "5255:8080"
     environment:

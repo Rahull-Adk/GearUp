@@ -35,8 +35,8 @@ namespace GearUp.Presentation.Controllers
         public async Task<IActionResult> GetAllPosts([FromQuery] int pageNumber = 1)
         {
             var currUserId = User.FindFirst(u => u.Type == "id")?.Value ?? Guid.Empty.ToString();
-            var result = await _postService.GetAllPostsAsync(Guid.Parse(currUserId), pageNumber);
-            return StatusCode(result.Status, result);
+            var pageResult = await _postService.GetAllPostsAsync(Guid.Parse(currUserId), pageNumber);
+            return Ok(pageResult);
 
         }
 

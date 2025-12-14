@@ -1,4 +1,3 @@
-using Email.Net;
 using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Infrastructure.Helpers;
@@ -11,7 +10,7 @@ namespace GearUp.Infrastructure
 {
     public static class DependencyInjection
     {
-        public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString, string audience, string issuer, string accessToken_SecretKey, string sendGridKey, string fromEmail, string emailVerificationToken_SecretKey, string clientUrl, ILogger<EmailSender> logger)
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString, string audience, string issuer, string accessToken_SecretKey, string brevo_api_key, string fromEmail, string emailVerificationToken_SecretKey, string clientUrl, ILogger<EmailSender> logger)
         {
             services.AddDbContext<GearUpDbContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
@@ -19,7 +18,9 @@ namespace GearUp.Infrastructure
 
             services.AddSingleton<ITokenValidator>(new TokenValidator(audience, issuer));
 
-            services.AddScoped<IEmailSender>(provider => new EmailSender(provider.GetRequiredService<IEmailService>(), fromEmail, clientUrl, logger));
+            services.AddSingleton<ITransactionalEmailClient>(new BrevoEmailClient(brevo_api_key));
+
+            services.AddScoped<IEmailSender>(provider => new EmailSender(provider.GetRequiredService<ITransactionalEmailClient>(), fromEmail, clientUrl, logger));
 
             return services;
         }

@@ -31,7 +31,7 @@ namespace GearUp.Application.Validators
             RuleFor(x => x.CarImages)
                 .NotNull().WithMessage("Car images are required.")
                 .Must(images => images!.Any()).WithMessage("At least one car image must be provided.")
-                .Must(images => images.All(file => file.Length < 5 * 1024 * 1024))
+                .Must(images => images!.All(file => file.Length < 5 * 1024 * 1024))
                 .WithMessage("Each car image must be less than 5MB in size.");
 
 

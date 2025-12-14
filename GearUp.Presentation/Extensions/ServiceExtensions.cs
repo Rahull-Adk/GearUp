@@ -3,8 +3,9 @@ using System.Text;
 using System.Threading.RateLimiting;
 using AutoMapper;
 using CloudinaryDotNet;
-using Email.Net;
-using Email.Net.Channel.SendGrid;
+using sib_api_v3_sdk.Api;
+using sib_api_v3_sdk.Client;
+using sib_api_v3_sdk.Model;
 using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces;
@@ -40,7 +41,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 
-
 namespace GearUp.Presentation.Extensions
 {
     public static class ServiceExtensions
@@ -54,20 +54,20 @@ namespace GearUp.Presentation.Extensions
             var issuer = config["Jwt:Issuer"];
             var accessToken_SecretKey = config["Jwt:AccessToken_SecretKey"];
             var emailVerificationToken_SecretKey = config["Jwt:EmailVerificationToken_SecretKey"];
-            var sendGridKey = config["SendGridApiKey"];
+            var brevo_api_key = config["BREVO_API_KEY"];
             var fromEmail = config["FromEmail"];
             var clientUrl = config["ClientUrl"];
             var cloudinary_secret = config["CLOUDINARY_URL"];
 
 
 
-            if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(audience) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(accessToken_SecretKey) || string.IsNullOrEmpty(sendGridKey) || string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(emailVerificationToken_SecretKey) || string.IsNullOrEmpty(clientUrl))
+            if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(audience) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(accessToken_SecretKey) || string.IsNullOrEmpty(brevo_api_key) || string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(emailVerificationToken_SecretKey) || string.IsNullOrEmpty(clientUrl))
             {
                 throw new InvalidOperationException("Secret keys not found");
             }
             ILogger<EmailSender> logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<EmailSender>();
 
-            services.AddInfrastructure(connectionString, audience, issuer, accessToken_SecretKey, sendGridKey, fromEmail, emailVerificationToken_SecretKey, clientUrl, logger);
+            services.AddInfrastructure(connectionString, audience, issuer, accessToken_SecretKey, brevo_api_key, fromEmail, emailVerificationToken_SecretKey, clientUrl, logger);
 
 
             // Swagger Injection
@@ -80,7 +80,7 @@ namespace GearUp.Presentation.Extensions
                 cfg.AddProfile(new UserMappingProfile());
                 cfg.AddProfile(new KycMappingProfile());
                 cfg.AddProfile(new CarMappingProfile());
-  
+
             }, NullLoggerFactory.Instance);
 
             mapperConfig.AssertConfigurationIsValid();
@@ -162,7 +162,7 @@ namespace GearUp.Presentation.Extensions
             });
 
             // Cloudinary Injection
-            Cloudinary cloudinary = new Cloudinary(cloudinary_secret);
+            Cloudinary cloudinary = new(cloudinary_secret);
             cloudinary.Api.Secure = true;
             services.AddSingleton(cloudinary);
 
@@ -197,14 +197,6 @@ namespace GearUp.Presentation.Extensions
                 });
             });
 
-
-            // Email Service Injection
-            services.AddEmailNet(options =>
-            {
-                options.PauseSending = false;
-                options.DefaultFrom = new MailAddress(fromEmail);
-                options.DefaultEmailDeliveryChannel = SendgridEmailDeliveryChannel.Name;
-            }).UseSendGrid(sendGridKey);
 
             // JWT Authentication Injection
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(ops => ops.TokenValidationParameters = new TokenValidationParameters

@@ -27,7 +27,7 @@ namespace GearUp.UnitTests.Application.Users
         public async Task GetCurrentUserProfile_ReturnsFromCache()
         {
             var id = Guid.NewGuid();
-            var dto = new RegisterResponseDto(id, null, "u", "e", "n", "r", "a");
+            var dto = new RegisterResponseDto(id, null, "u", "e", "n", "r", DateOnly.FromDayNumber(2), "1123", "url");
             _cache.Setup(c => c.GetAsync<RegisterResponseDto>($"user:profile:{id}")).ReturnsAsync(dto);
             var svc = CreateService();
             var res = await svc.GetCurrentUserProfileService(id.ToString());
@@ -43,7 +43,7 @@ namespace GearUp.UnitTests.Application.Users
             _cache.Setup(c => c.GetAsync<RegisterResponseDto>($"user:profile:{id}")).ReturnsAsync((RegisterResponseDto?)null);
             var user = User.CreateLocalUser("u", "e@example.com", "n");
             _userRepo.Setup(r => r.GetUserByIdAsync(id)).ReturnsAsync(user);
-            var dto = new RegisterResponseDto(id, null, user.Username, user.Email, user.Name, "Customer", user.AvatarUrl);
+            var dto = new RegisterResponseDto(id, null, user.Username, user.Email, user.Name, "Customer", user.DateOfBirth, user.PhoneNumber,  user.AvatarUrl);
             _mapper.Setup(m => m.Map<RegisterResponseDto>(user)).Returns(dto);
             var svc = CreateService();
             var res = await svc.GetCurrentUserProfileService(id.ToString());
@@ -69,7 +69,7 @@ namespace GearUp.UnitTests.Application.Users
         public async Task GetUserProfile_ReturnsFromCache()
         {
             var username = "john";
-            var dto = new RegisterResponseDto(Guid.NewGuid(), null, username, "e", "n", "r", "a");
+            var dto = new RegisterResponseDto(Guid.NewGuid(), null, "u", "e", "n", "r", DateOnly.FromDayNumber(2), "1123", "url");
             _cache.Setup(c => c.GetAsync<RegisterResponseDto>($"user:profile:{username}")).ReturnsAsync(dto);
             var svc = CreateService();
             var res = await svc.GetUserProfile(username);
@@ -85,7 +85,7 @@ namespace GearUp.UnitTests.Application.Users
             _cache.Setup(c => c.GetAsync<RegisterResponseDto>($"user:profile:{username}")).ReturnsAsync((RegisterResponseDto?)null);
             var user = User.CreateLocalUser(username, "e@example.com", "n");
             _userRepo.Setup(r => r.GetUserByUsernameAsync(username)).ReturnsAsync(user);
-            var dto = new RegisterResponseDto(Guid.NewGuid(), null, user.Username, user.Email, user.Name, "Customer", user.AvatarUrl);
+            var dto = new RegisterResponseDto(Guid.NewGuid(), null, user.Username, user.Email, user.Name, "Customer", user.DateOfBirth, user.PhoneNumber, user.AvatarUrl);
             _mapper.Setup(m => m.Map<RegisterResponseDto>(user)).Returns(dto);
             var svc = CreateService();
             var res = await svc.GetUserProfile(username);
