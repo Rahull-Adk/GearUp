@@ -8,6 +8,7 @@ namespace GearUp.Application.ServiceDtos.Post
 {
     public class PostCountsDto
     {
+        public Guid PostId { get; set; }
         public int LikeCount { get; set; }
         public int CommentCount { get; set; }
         public int ViewCount { get; set; }

@@ -1,4 +1,4 @@
-﻿using GearUp.Application.Common;
+using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;

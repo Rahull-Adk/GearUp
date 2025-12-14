@@ -55,7 +55,7 @@ namespace GearUp.UnitTests.Application.Auth
             _passwordHasher.Setup(h => h.HashPassword(It.IsAny<User>(), req.Password)).Returns("hashed");
             _tokenGenerator.Setup(t => t.GenerateEmailVerificationToken(It.IsAny<IEnumerable<System.Security.Claims.Claim>>())).Returns("email-token");
 
-            var expected = new RegisterResponseDto(Guid.NewGuid(), null, req.Username, req.Email, "John Doe", "Customer", "https://i.pravatar.cc/300");
+            var expected = new RegisterResponseDto(Guid.NewGuid(), null, req.Username, req.Email, "John Doe", "Customer", DateOnly.FromDayNumber(1), "123", "https://i.pravatar.cc/300");
             _mapper.Setup(m => m.Map<RegisterResponseDto>(It.IsAny<User>())).Returns(expected);
 
             var svc = CreateService();

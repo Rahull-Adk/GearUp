@@ -8,6 +8,7 @@ using GearUp.Application.Interfaces.Services.CarServiceInterface;
 using GearUp.Application.ServiceDtos.Car;
 using GearUp.Application.Services.Cars;
 using GearUp.Domain.Entities.Cars;
+using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,7 @@ namespace GearUp.UnitTests.Application.Cars
     public class CarServiceTests
     {
         private readonly Mock<IValidator<CreateCarRequestDto>> _createValidator = new();
+        private readonly Mock<IUserRepository> _userRepository = new();
         private readonly Mock<IValidator<UpdateCarDto>> _updateValidator = new();
         private readonly Mock<ICacheService> _cache = new();
         private readonly Mock<ILogger<CarService>> _logger = new();
@@ -35,9 +37,11 @@ namespace GearUp.UnitTests.Application.Cars
         _mapper.Object,
         _commonRepo.Object,
         _carImageService.Object,
-        _updateValidator.Object
+        _updateValidator.Object,
+        _userRepository.Object
             );
 
+       
         private static ValidationResult Valid() => new ValidationResult();
         private static ValidationResult Invalid(params string[] messages)
         => new ValidationResult(messages.Select(m => new ValidationFailure("field", m)).ToList());
@@ -71,8 +75,10 @@ namespace GearUp.UnitTests.Application.Cars
         [Fact]
         public async Task CreateCar_NoImages_Returns422()
         {
+            var moqUser = User.CreateLocalUser("username", "email", "name", true, UserRole.Dealer);
             var service = CreateService();
             var req = new CreateCarRequestDto { Title = "t", CarImages = new List<IFormFile>() };
+            _userRepository.Setup(u => u.GetUserByIdAsync(It.IsAny<Guid>())).ReturnsAsync(moqUser);
             _createValidator.Setup(v => v.Validate(req)).Returns(Valid());
 
             var result = await service.CreateCarAsync(req, Guid.NewGuid());

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Enums;
 
@@ -26,6 +27,7 @@ namespace GearUp.Domain.Entities.Cars
         public string VIN { get; private set; }
         public string LicensePlate { get; private set; }
         public Guid DealerId { get; private set; }
+        [JsonIgnore]
         public User? Dealer { get; private set; }
         public bool IsDeleted { get; private set; } = false;
         public DateTime? DeletedAt { get; private set; }

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Infrastructure.Persistence;
@@ -39,7 +37,23 @@ namespace GearUp.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<List<Guid>>? GetAllCommentsLikedByUser(Guid userId, List<Guid> commentIds)
+        public async Task<List<PostComment>> GetAllCommentsByPostIdsAsync(List<Guid> postIds)
+        {
+            return await _db.PostComments
+                .Where(pc => postIds.Contains(pc.PostId))
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<Dictionary<Guid, PostComment>> GetAllCommentsByIdsAsync(List<Guid> commentIds)
+        {
+            return await _db.PostComments
+                .Where(pc => commentIds.Contains(pc.Id))
+                .OrderByDescending(c => c.CreatedAt)
+                .ToDictionaryAsync(k => k.Id, v => v);
+        }
+
+        public async Task<List<Guid>> GetAllCommentsLikedByUser(Guid userId, List<Guid> commentIds)
         {
             return await _db.CommentLikes.Where(cl => cl.LikedUserId == userId && commentIds.Contains(cl.CommentId))
                 .Select(cl => cl.CommentId)

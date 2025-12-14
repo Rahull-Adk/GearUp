@@ -1,26 +1,25 @@
-﻿using GearUp.Application.Interfaces.Services.EmailServiceInterface;
-using Email.Net;
-using Serilog.Core;
+using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using Microsoft.Extensions.Logging;
+using sib_api_v3_sdk.Model;
 
 namespace GearUp.Infrastructure.Helpers
 {
     public class EmailSender : IEmailSender
     {
-        private readonly IEmailService _emailService;
+        private readonly ITransactionalEmailClient _emailClient;
         private readonly string _fromEmail;
         private readonly string _clientUrl;
-        private readonly ILogger<EmailSender> _logger;
-        public EmailSender(IEmailService emailService, string fromEmail, string clientUrl, ILogger<EmailSender> logger)
+        private readonly ILogger<EmailSender>? _logger;
+        public EmailSender(ITransactionalEmailClient emailClient, string fromEmail, string clientUrl, ILogger<EmailSender>? logger)
         {
-            _emailService = emailService;
+            _emailClient = emailClient;
             _fromEmail = fromEmail;
             _clientUrl = clientUrl;
             _logger = logger;
         }
 
 
-        public async Task SendVerificationEmail(string toEmail, string verificationToken)
+        public async System.Threading.Tasks.Task SendVerificationEmail(string toEmail, string verificationToken)
         {
             var verifyLink = $"{_clientUrl}/verify?token={verificationToken}";
             await SendEmailAsync(
@@ -31,10 +30,10 @@ namespace GearUp.Infrastructure.Helpers
                 "Welcome to GearUp! We’re excited to have you on board. Please confirm your email address to activate your account.",
                 "Verify Email",
                 verifyLink
-            );
+, new SendSmtpEmailTo(toEmail));
         }
 
-        public async Task SendPasswordResetEmail(string toEmail, string resetToken)
+        public async System.Threading.Tasks.Task SendPasswordResetEmail(string toEmail, string resetToken)
         {
             var resetLink = $"{_clientUrl}/reset-password?token={resetToken}";
             await SendEmailAsync(
@@ -44,27 +43,27 @@ namespace GearUp.Infrastructure.Helpers
                 "Reset Your Password",
                 "We received a request to reset your GearUp account password. Click the button below to set a new password.",
                 "Reset Password",
-                resetLink
-            );
+                resetLink,
+                new SendSmtpEmailTo(toEmail));
         }
 
-        public async Task SendEmailReset(string toEmail, string resetToken)
+        public async System.Threading.Tasks.Task SendEmailReset(string toEmail, string resetToken)
         {
             var resetLink = $"{_clientUrl}/reset-email?token={resetToken}";
 
             await SendEmailAsync(
                 toEmail,
                 "Verify Your New Email Address - GearUp",
-                "We’ve received a request to update your email address on GearUp.", 
+                "We’ve received a request to update your email address on GearUp.",
                 "Verify Your New Email Address",
                 @"You recently requested to change the email address associated with your GearUp account. 
         To complete this update and keep your account secure, please verify your new email by clicking the button below.",
                 "Verify Email",
                 resetLink
-            );
+, new SendSmtpEmailTo(toEmail));
         }
 
-        private async Task SendEmailAsync(
+        private async Task<bool> SendEmailAsync(
             string toEmail,
             string subject,
             string plainTextContent,
@@ -72,14 +71,16 @@ namespace GearUp.Infrastructure.Helpers
             string bodyText,
             string buttonText,
             string buttonLink
-        )
+, SendSmtpEmailTo sendSmtpEmailTo)
         {
-            var message = EmailMessage.Compose()
-                .From(_fromEmail, "GearUp Support")
-                .To(toEmail)
-                .WithSubject(subject)
-                .WithPlainTextContent(plainTextContent)
-                .WithHtmlContent($@"
+
+            var sendSmtpEmail = new SendSmtpEmail
+            {
+                To = [sendSmtpEmailTo],
+                Subject = subject,
+                TextContent = plainTextContent,
+                Sender = new SendSmtpEmailSender { Email = _fromEmail, Name = "GearUp Support" },
+                HtmlContent = $@"
 <html>
 <body style='margin:0; padding:0; background-color:#f4f6f8; font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif;'>
     <table role='presentation' cellpadding='0' cellspacing='0' width='100%'>
@@ -118,11 +119,23 @@ namespace GearUp.Infrastructure.Helpers
         </tr>
     </table>
 </body>
-</html>")
-                .WithNormalPriority()
-                .Build();
-    
-            await _emailService.SendAsync(message);
+</html>"
+            };
+
+
+            try
+            {
+                await _emailClient.SendAsync(sendSmtpEmail);
+
+                _logger?.LogInformation("Email sent to {Email} successfully.", toEmail);
+                return true;
+
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Exception when sending email to {Email}: {Message}", toEmail, ex.Message);
+                return false;
+            }
         }
     }
 }
