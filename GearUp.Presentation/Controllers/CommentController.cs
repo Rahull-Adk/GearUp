@@ -54,6 +54,23 @@ namespace GearUp.Presentation.Controllers
             return StatusCode(result.Status, result);
         }
 
+        [Authorize]
+        [HttpGet("{postId:guid}/top")]
+        public async Task<IActionResult> GetTopLevelCommentsByPostId([FromRoute] Guid postId)
+        {
+            var currentUser = User.FindFirst(u => u.Type == "id")?.Value;
+            var result = await _commentService.GetParentCommentsByPostId(postId, Guid.Parse(currentUser!));
+            return StatusCode(result.Status, result);
+        }
+
+        [Authorize]
+        [HttpGet("{parentCommentId:guid}/childrens")]
+        public async Task<IActionResult> GetChildCommentsByParentId([FromRoute] Guid parentCommentId)
+        {
+            var currentUser = User.FindFirst(u => u.Type == "id")?.Value;
+            var result = await _commentService.GetChildCommentsByParentId(parentCommentId, Guid.Parse(currentUser!));
+            return StatusCode(result.Status, result);
+        }
 
     }
 }

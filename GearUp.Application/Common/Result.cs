@@ -1,4 +1,4 @@
-﻿namespace GearUp.Application.Common
+namespace GearUp.Application.Common
 {
     public class Result<T>
     {

@@ -24,57 +24,9 @@ namespace GearUp.UnitTests.Application.Admin
             _mockAdminRepository.Object,
             _mockMapper.Object,
             _mockUserRepository.Object,
-            _mockCacheService.Object,
             _mockLogger.Object
         );
 
-
-        [Fact]
-        public async Task GetAllKycs_ShouldReturnCacheResult_WhenCacheIsNotNull()
-        {
-            // Arrange
-
-            ToAdminKycListResponseDto data = new ToAdminKycListResponseDto(new List<ToAdminKycResponseDto>
-            {
-                new ToAdminKycResponseDto
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = Guid.NewGuid(),
-                    Status = KycStatus.Pending,
-                    SubmittedAt = DateTime.UtcNow.AddDays(-2)
-                },
-                new ToAdminKycResponseDto
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = Guid.NewGuid(),
-                    Status = KycStatus.Approved,
-                    SubmittedAt = DateTime.UtcNow.AddDays(-5)
-                },
-
-                new ToAdminKycResponseDto
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = Guid.NewGuid(),
-                    Status = KycStatus.Rejected,
-                    SubmittedAt = DateTime.UtcNow.AddDays(-10)
-                }
-            }, 3);
-
-            _mockCacheService.Setup(c => c.GetAsync<ToAdminKycListResponseDto>("kyc:all")).ReturnsAsync(data);
-
-            var svc = CreateService();
-
-            // Act
-            var result = await svc.GetAllKycs();
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(200, result.Status);
-            Assert.True(result.IsSuccess);
-            Assert.Equal(3, result.Data.TotalCount);
-            Assert.Equal("KYC submissions retrieved from cache", result.SuccessMessage);
-
-        }
 
         [Fact]
         public async Task GetAllKyc_ShouldReturnResult_WhenCacheIsNull()
@@ -153,36 +105,6 @@ namespace GearUp.UnitTests.Application.Admin
         }
 
         [Fact]
-        public async Task GetKycById_ShouldReturnCacheResult_WhenCacheIsNotNull()
-        {
-            // Arrange
-            var id = Guid.NewGuid();
-            _mockCacheService.Setup(c => c.GetAsync<ToAdminKycResponseDto>($"kyc:{id}")).ReturnsAsync(new ToAdminKycResponseDto
-            {
-                Id = id,
-                UserId = Guid.NewGuid(),
-                Status = KycStatus.Pending,
-                SubmittedAt = DateTime.UtcNow.AddDays(-2)
-            });
-
-            _mockLogger.Setup(l => l.Log(
-                It.Is<LogLevel>(logLevel => logLevel == LogLevel.Information),
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"Fetching kyc submission with id: {id}")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()));
-
-            //Act
-            var svc = CreateService();
-            var result = await svc.GetKycById(id);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(200, result.Status);
-            Assert.Equal("KYC submission retrieved from cache", result.SuccessMessage);
-        }
-
-        [Fact]
         public async Task GetKycById_ShouldReturnResult_WhenCacheIsNull()
         {
             // Arrange
@@ -242,43 +164,6 @@ namespace GearUp.UnitTests.Application.Admin
             Assert.Equal(404, result.Status);
             Assert.False(result.IsSuccess);
             Assert.Equal("KYC submission not found", result.ErrorMessage);
-        }
-
-        [Theory]
-        [InlineData(KycStatus.Pending)]
-        [InlineData(KycStatus.Approved)]
-        [InlineData(KycStatus.Rejected)]
-        public async Task GetKycBuyStatus_ShouldReturnCacheResult_WhenCacheIsNotNull(KycStatus status)
-        {
-            // Arrange
-            _mockLogger.Setup(l => l.Log(
-                It.Is<LogLevel>(logLevel => logLevel == LogLevel.Information),
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"Fetching kyc submissions with status: {status}")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()));
-
-            _mockCacheService.Setup(c => c.GetAsync<ToAdminKycListResponseDto>($"kyc:status:{status}")).ReturnsAsync(new ToAdminKycListResponseDto(new List<ToAdminKycResponseDto>
-            {
-                new ToAdminKycResponseDto
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = Guid.NewGuid(),
-                    Status = status,
-                    SubmittedAt = DateTime.UtcNow.AddDays(-2)
-                }
-            }, 1));
-
-            //Act
-            var svc = CreateService();
-            var result = await svc.GetKycsByStatus(status);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(200, result.Status);
-            Assert.True(result.IsSuccess);
-            Assert.Equal(1, result.Data.TotalCount);
-            Assert.Equal("KYC submissions retrieved from cache", result.SuccessMessage);
         }
 
         [Theory]

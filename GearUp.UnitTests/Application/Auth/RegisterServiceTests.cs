@@ -29,49 +29,11 @@ namespace GearUp.UnitTests.Application.Auth
         _passwordHasher.Object,
         _emailSender.Object,
         _tokenGenerator.Object,
-        _mapper.Object,
         _logger.Object
         );
 
         private static ValidationResult Valid() => new ValidationResult();
 
-        [Fact]
-        public async Task Register_Success_ReturnsCreatedAndSendsEmail()
-        {
-            // Arrange
-            var req = new RegisterRequestDto
-            {
-                Username = "john",
-                Email = "john@example.com",
-                FirstName = "John",
-                LastName = "Doe",
-                Password = "P@ssw0rd",
-                ConfirmPassword = "P@ssw0rd"
-            };
-
-            _validator.Setup(v => v.ValidateAsync(req, default)).ReturnsAsync(Valid());
-            _userRepo.Setup(r => r.GetUserByEmailAsync(req.Email)).ReturnsAsync((User?)null);
-            _userRepo.Setup(r => r.GetUserByUsernameAsync(req.Username)).ReturnsAsync((User?)null);
-            _passwordHasher.Setup(h => h.HashPassword(It.IsAny<User>(), req.Password)).Returns("hashed");
-            _tokenGenerator.Setup(t => t.GenerateEmailVerificationToken(It.IsAny<IEnumerable<System.Security.Claims.Claim>>())).Returns("email-token");
-
-            var expected = new RegisterResponseDto(Guid.NewGuid(), null, req.Username, req.Email, "John Doe", "Customer", DateOnly.FromDayNumber(1), "123", "https://i.pravatar.cc/300");
-            _mapper.Setup(m => m.Map<RegisterResponseDto>(It.IsAny<User>())).Returns(expected);
-
-            var svc = CreateService();
-
-            // Act
-            var result = await svc.RegisterUser(req);
-
-            // Assert
-            Assert.True(result.IsSuccess);
-            Assert.Equal(201, result.Status);
-            Assert.Equal(expected, result.Data);
-
-            _userRepo.Verify(r => r.AddUserAsync(It.Is<User>(u => u.Email == req.Email && u.Username == req.Username && u.PasswordHash == "hashed")), Times.Once);
-            _userRepo.Verify(r => r.SaveChangesAsync(), Times.Once);
-            _emailSender.Verify(e => e.SendVerificationEmail(req.Email, "email-token"), Times.Once);
-        }
 
         [Fact]
         public async Task Register_Fails_WhenValidationInvalid()

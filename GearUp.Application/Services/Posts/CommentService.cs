@@ -1,7 +1,5 @@
-using System.Linq;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
-using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.ServiceDtos.Post;
 using GearUp.Domain.Entities.Posts;
@@ -9,19 +7,18 @@ using Microsoft.Extensions.Logging;
 
 namespace GearUp.Application.Services.Posts
 {
+
     public class CommentService : ICommentService
     {
         private readonly ILogger<ICommentService> _logger;
-        private readonly ICacheService _cache;
         private readonly IUserRepository _userRepository;
         private readonly ICommonRepository _commonRepository;
         private readonly IPostRepository _postRepository;
         private readonly ICommentRepository _commentRepository;
 
-        public CommentService(ILogger<ICommentService> logger, ICacheService cache, ICommonRepository commonRepository,  IPostRepository postRepository, IUserRepository userRepository, ICommentRepository commentRepository)
+        public CommentService(ILogger<ICommentService> logger, ICommonRepository commonRepository, IPostRepository postRepository, IUserRepository userRepository, ICommentRepository commentRepository)
         {
             _logger = logger;
-            _cache = cache;
             _commonRepository = commonRepository;
             _postRepository = postRepository;
             _userRepository = userRepository;
@@ -30,18 +27,17 @@ namespace GearUp.Application.Services.Posts
 
         public async Task<Result<CommentDto>> PostCommentAsync(CreateCommentDto comment, Guid userId)
         {
-            var cacheKey = $"post:{comment.PostId}";
-            var cacheKey1 = $"posts:all:page:1";
+           
             _logger.LogInformation("User with Id: {UserId} is commenting on post with Id: {PostId}", userId, comment.PostId);
 
-            var post = await _postRepository.GetPostByIdAsync(comment.PostId);
+            var post = await _postRepository.GetPostByIdAsync(comment.PostId, userId);
             if (post == null)
             {
                 _logger.LogWarning("Post with Id: {PostId} not found", comment.PostId);
                 return Result<CommentDto>.Failure("Post not found", 404);
             }
 
-            if(string.IsNullOrEmpty(comment.Text))
+            if (string.IsNullOrEmpty(comment.Text))
             {
                 _logger.LogWarning("Comment length is invalid. UserId: {UserId}, PostId: {PostId}", userId, comment.PostId);
                 return Result<CommentDto>.Failure("Invalid comment length", 400);
@@ -64,34 +60,12 @@ namespace GearUp.Application.Services.Posts
                 }
             }
 
-
-
             var postComment = PostComment.CreateComment(comment.PostId, userId, comment.Text, comment.ParentCommentId);
             await _commentRepository.AddCommentAsync(postComment);
             await _commonRepository.SaveChangesAsync();
-
-            await _cache.RemoveAsync(cacheKey);
-            await _cache.RemoveAsync(cacheKey1);
-            var commentDto = new CommentDto
-            {
-                Id = postComment.Id,
-                PostId = postComment.PostId,
-                CommentedUserId = postComment.CommentedUserId,
-                Content = postComment.Content,
-                ParentCommentId = postComment.ParentCommentId,
-                CreatedAt = postComment.CreatedAt,
-                UpdatedAt = postComment.UpdatedAt,
-                CommentedUserName = user.Name,
-                CommentedUserProfilePictureUrl = user.AvatarUrl,
-                LikeCount = 0,
-                IsLikedByCurrentUser = false,
-                Replies = []
-            };
             _logger.LogInformation("User with Id: {UserId} commented successfully on post with Id: {PostId}", userId, comment.PostId);
 
-
-
-            return Result<CommentDto>.Success(commentDto, "Comment added successfully", 201);
+            return Result<CommentDto>.Success(null!, "Comment added successfully", 201);
 
         }
 
@@ -105,7 +79,7 @@ namespace GearUp.Application.Services.Posts
                 _logger.LogWarning("Comment with Id: {CommentId} not found", commentId);
                 return Result<bool>.Failure("Comment not found", 404);
             }
-        var commentEntity = await _commentRepository.GetCommentByIdAsync(commentId);
+            var commentEntity = await _commentRepository.GetCommentByIdAsync(commentId);
 
             if (commentEntity == null)
             {
@@ -121,14 +95,10 @@ namespace GearUp.Application.Services.Posts
 
             commentEntity.DeleteComment();
             await _commonRepository.SaveChangesAsync();
-
-            await _cache.RemoveAsync($"post:{commentInfo.PostId}");
-
             _logger.LogInformation("User with Id: {UserId} deleted comment with Id: {CommentId} successfully", userId, commentId);
             return Result<bool>.Success(true, "Comment deleted successfully", 200);
 
         }
-
 
         public async Task<Result<CommentDto>> UpdateCommentAsync(Guid commentId, Guid userId, string updatedContent)
         {
@@ -146,7 +116,7 @@ namespace GearUp.Application.Services.Posts
                 _logger.LogWarning("Comment with Id: {CommentId} not found", commentId);
                 return Result<CommentDto>.Failure("Comment not found", 404);
             }
-            
+
             var commentEntity = await _commentRepository.GetCommentByIdAsync(commentId);
             if (commentEntity == null)
             {
@@ -162,26 +132,38 @@ namespace GearUp.Application.Services.Posts
 
             commentEntity.UpdateContent(updatedContent);
             await _commonRepository.SaveChangesAsync();
-
-
-
-            var updatedDto = new CommentDto
-            {
-                Id = commentEntity.Id,
-                PostId = commentEntity.PostId,
-                CommentedUserId = commentEntity.CommentedUserId,
-                Content = updatedContent,
-                ParentCommentId = commentEntity.ParentCommentId,
-                CreatedAt = commentEntity.CreatedAt,
-                UpdatedAt = commentEntity.UpdatedAt,
-                IsEdited = commentEntity.UpdatedAt > commentEntity.CreatedAt,
-            };
-
-        
-            await _cache.RemoveAsync($"post:{commentInfo.PostId}");
-
             _logger.LogInformation("User with Id: {UserId} updated comment with Id: {CommentId} successfully", userId, commentId);
-            return Result<CommentDto>.Success(updatedDto, "Comment updated successfully", 200);
+            return Result<CommentDto>.Success(null, "Comment updated successfully", 200);
+        }
+
+        public async Task<Result<IEnumerable<CommentDto>>> GetParentCommentsByPostId(Guid postId, Guid userId)
+        {
+            _logger.LogInformation("Fetching parent comments for post with Id: {PostId}", postId);
+            var post = await _postRepository.GetPostByIdAsync(postId, userId);
+            if (post is null)
+            {
+                _logger.LogWarning("Post with Id: {PostId} not found", postId);
+                return Result<IEnumerable<CommentDto>>.Failure("Post not found", 404);
+            }
+            var comments = await _commentRepository.GetTopLevelCommentsByPostIdAsync(postId);
+             _logger.LogInformation("Fetched {CommentCount} comments for post with Id: {PostId}", comments.Count(), postId);
+
+            return Result<IEnumerable<CommentDto>>.Success(comments, "Comments fetched successfully", 200);
+        }
+
+        public async Task<Result<IEnumerable<CommentDto>>> GetChildCommentsByParentId(Guid parentCommentId, Guid userId)
+        {
+            _logger.LogInformation("Fetching child comments for parent comment with Id: {ParentCommentId}", parentCommentId);
+            var parentComment = await _commentRepository.GetCommentByIdAsync(parentCommentId);
+           if(parentComment is null)
+            {
+                _logger.LogWarning("Parent comment with Id: {ParentCommentId} not found", parentCommentId);
+                return Result<IEnumerable<CommentDto>>.Failure("Parent comment not found", 404);
+            }
+
+            var comments = await _commentRepository.GetChildCommentsByParentIdAsync(parentCommentId);
+            _logger.LogInformation("Fetched {CommentCount} child comments for parent comment with Id: {ParentCommentId}", comments.Count(), parentCommentId);
+            return Result<IEnumerable<CommentDto>>.Success(comments, "Child comments fetched successfully", 200);
         }
     }
 }

@@ -1,7 +1,6 @@
 using AutoMapper;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
-using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.AdminServiceInterface;
 using GearUp.Application.ServiceDtos.Admin;
 using GearUp.Domain.Entities;
@@ -14,29 +13,18 @@ namespace GearUp.Application.Services.Admin
         private readonly IAdminRepository _adminRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMapper _mapper;
-        private readonly ICacheService _cache;
         private readonly ILogger<GeneralAdminService> _logger;
-        public GeneralAdminService(IAdminRepository adminRepository, IMapper mapper, IUserRepository userRepository, ICacheService cache, ILogger<GeneralAdminService> logger)
+        public GeneralAdminService(IAdminRepository adminRepository, IMapper mapper, IUserRepository userRepository, ILogger<GeneralAdminService> logger)
         {
             _adminRepository = adminRepository;
             _userRepository = userRepository;
             _mapper = mapper;
-            _cache = cache;
             _logger = logger;
         }
 
         public async Task<Result<ToAdminKycListResponseDto>> GetAllKycs()
         {
             _logger.LogInformation("Fetching all KYC submissions");
-
-            const string cacheKey = "kyc:all";
-            var cachedKycs = await _cache.GetAsync<ToAdminKycListResponseDto>(cacheKey);
-
-            if (cachedKycs != null)
-            {
-                _logger.LogInformation("KYC submissions retrieved from cache");
-                return Result<ToAdminKycListResponseDto>.Success(cachedKycs, "KYC submissions retrieved from cache", 200);
-            }
 
             var kycs = await _adminRepository.GetAllKycSubmissionsAsync();
 
@@ -48,7 +36,6 @@ namespace GearUp.Application.Services.Admin
 
             var mappedKycs = _mapper.Map<List<ToAdminKycResponseDto>>(kycs);
 
-            await _cache.SetAsync(cacheKey, new ToAdminKycListResponseDto(mappedKycs, mappedKycs.Count));
             _logger.LogInformation("KYC submissions retrieved successfully");
             return Result<ToAdminKycListResponseDto>.Success(new ToAdminKycListResponseDto(mappedKycs, mappedKycs.Count), "KYC submissions retrieved successfully", 200);
         }
@@ -56,14 +43,6 @@ namespace GearUp.Application.Services.Admin
         public async Task<Result<ToAdminKycResponseDto>> GetKycById(Guid kycId)
         {
             _logger.LogInformation("Fetching KYC submission with ID: {KycId}", kycId);
-            var cacheKey = $"kyc:{kycId}";
-
-            var cachedKyc = await _cache.GetAsync<ToAdminKycResponseDto>(cacheKey);
-
-            if (cachedKyc != null)
-            {
-                return Result<ToAdminKycResponseDto>.Success(cachedKyc, "KYC submission retrieved from cache", 200);
-            }
 
             var kyc = await _adminRepository.GetKycSubmissionByIdAsync(kycId);
             if (kyc == null)
@@ -71,7 +50,6 @@ namespace GearUp.Application.Services.Admin
                 return Result<ToAdminKycResponseDto>.Failure("KYC submission not found", 404);
             }
             var mappedKyc = _mapper.Map<ToAdminKycResponseDto>(kyc);
-            await _cache.SetAsync(cacheKey, mappedKyc);
             _logger.LogInformation("KYC submission retrieved successfully");
             return Result<ToAdminKycResponseDto>.Success(mappedKyc, "KYC submission retrieved successfully", 200);
         }
@@ -79,13 +57,6 @@ namespace GearUp.Application.Services.Admin
         public async Task<Result<ToAdminKycListResponseDto>> GetKycsByStatus(KycStatus status)
         {
             _logger.LogInformation("Fetching KYC submissions with status: {Status}", status);
-            var cacheKey = $"kyc:status:{status}";
-            var cachedKycs = await _cache.GetAsync<ToAdminKycListResponseDto>(cacheKey);
-
-            if(cachedKycs != null)
-            {
-                return Result<ToAdminKycListResponseDto>.Success(cachedKycs, "KYC submissions retrieved from cache", 200);
-            }
 
             if (status != KycStatus.Approved && status != KycStatus.Pending && status != KycStatus.Rejected)
             {
@@ -98,7 +69,6 @@ namespace GearUp.Application.Services.Admin
                 return Result<ToAdminKycListResponseDto>.Success(null!, "No KYC submissions found with the specified status", 200);
             }
             var mappedKycs = _mapper.Map<List<ToAdminKycResponseDto>>(kycs);
-            await _cache.SetAsync(cacheKey, new ToAdminKycListResponseDto(mappedKycs, mappedKycs.Count));
             _logger.LogInformation("KYC submissions retrieved successfully");
             return Result<ToAdminKycListResponseDto>.Success(new ToAdminKycListResponseDto(mappedKycs, mappedKycs.Count), "KYC submissions retrieved successfully", 200);
         }
@@ -145,12 +115,6 @@ namespace GearUp.Application.Services.Admin
                 user.SetRole(Domain.Enums.UserRole.Dealer);
 
             await _userRepository.SaveChangesAsync();
-            var cachedKey = $"kyc:status:{status}";
-            await _cache.RemoveAsync(cachedKey);
-            var cacheKey2 = $"user:profile:{user.Username}";
-            await _cache.RemoveAsync(cacheKey2);
-            var cacheKey3 = $"kyc:{kycId}";
-            await _cache.RemoveAsync(cacheKey3);
             _logger.LogInformation("KYC submission status updated successfully");
             return Result<string>.Success(null!, "KYC status updated successfully", 200);
 

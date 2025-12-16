@@ -2,7 +2,6 @@ using AutoMapper;
 using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
-using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
 using GearUp.Application.ServiceDtos.Car;
 using GearUp.Domain.Entities.Cars;
@@ -14,7 +13,6 @@ namespace GearUp.Application.Services.Cars
     {
         private readonly IValidator<CreateCarRequestDto> _createCarValidator;
         private readonly IValidator<UpdateCarDto> _updateCarValidator;
-        private readonly ICacheService _cache;
         private readonly ILogger<CarService> _logger;
         private readonly ICarRepository _carRepository;
         private readonly IMapper _mapper;
@@ -24,7 +22,6 @@ namespace GearUp.Application.Services.Cars
 
         public CarService(
             IValidator<CreateCarRequestDto> createCarValidator,
-            ICacheService cache,
             ILogger<CarService> logger,
             ICarRepository carRepository,
             IMapper mapper,
@@ -34,7 +31,6 @@ namespace GearUp.Application.Services.Cars
             IUserRepository userRepository)
         {
             _createCarValidator = createCarValidator;
-            _cache = cache;
             _logger = logger;
             _mapper = mapper;
             _carRepository = carRepository;
@@ -109,10 +105,7 @@ namespace GearUp.Application.Services.Cars
             await _commonRepository.SaveChangesAsync();
             _logger.LogInformation("Car created successfully for dealer ID: {DealerId}", dealerId);
 
-            var cacheKey = $"car:{newCar.Id}";
-            await _cache.SetAsync(cacheKey, newCar, TimeSpan.FromHours(1));
-            var responseData = _mapper.Map<CreateCarResponseDto>(newCar);
-            return Result<CreateCarResponseDto>.Success(responseData, "Car added successfully.", 201);
+            return Result<CreateCarResponseDto>.Success(null!, "Car added successfully.", 201);
         }
 
         public async Task<Result<PageResult<CreateCarResponseDto>>> GetAllCarsAsync(int pageNum)
@@ -121,14 +114,6 @@ namespace GearUp.Application.Services.Cars
             {
                 return Result<PageResult<CreateCarResponseDto>>.Failure("Page number must be greater than zero", 400);
             }
-            var cachedKey = $"cars:all:{pageNum}";
-            var cachedCars = await _cache.GetAsync<PageResult<CreateCarResponseDto>>(cachedKey);
-            if (cachedCars != null)
-            {
-                _logger.LogInformation("Fetched all cars from cache.");
-                return Result<PageResult<CreateCarResponseDto>>.Success(cachedCars, "Cars fetched successfully", 200);
-            }
-
             var cars = await _carRepository.GetAllCarsAsync(pageNum);
 
             var dto = new PageResult<CreateCarResponseDto>
@@ -140,19 +125,11 @@ namespace GearUp.Application.Services.Cars
                 Items = _mapper.Map<List<CreateCarResponseDto>>(cars.Items),
             };
 
-            await _cache.SetAsync(cachedKey, dto, TimeSpan.FromHours(1));
             return Result<PageResult<CreateCarResponseDto>>.Success(dto, "Cars fetched successfully", 200);
         }
 
         public async Task<Result<CreateCarResponseDto>> GetCarByIdAsync(Guid carId)
-        {
-            var cacheKey = $"car:{carId}";
-            var cachedCar = await _cache.GetAsync<CreateCarResponseDto>(cacheKey);
-            if (cachedCar != null)
-            {
-                _logger.LogInformation("Fetched car ID: {CarId} from cache.", carId);
-                return Result<CreateCarResponseDto>.Success(cachedCar, "Car fetched successfully", 200);
-            }
+        { 
             var car = await _carRepository.GetCarByIdAsync(carId);
             if (car == null)
             {
@@ -160,7 +137,6 @@ namespace GearUp.Application.Services.Cars
                 return Result<CreateCarResponseDto>.Failure("Car not found", 404);
             }
             var responseData = _mapper.Map<CreateCarResponseDto>(car);
-            await _cache.SetAsync(cacheKey, responseData, TimeSpan.FromHours(1));
             return Result<CreateCarResponseDto>.Success(responseData, "Car fetched successfully", 200);
         }
 
@@ -209,10 +185,7 @@ namespace GearUp.Application.Services.Cars
             await _commonRepository.SaveChangesAsync();
             _logger.LogInformation("Car updated successfully for car ID: {CarId}", carId);
 
-            await _cache.SetAsync($"car:{existingCar.Id}", existingCar, TimeSpan.FromHours(1));
-            var response = _mapper.Map<CreateCarResponseDto>(existingCar);
-
-            return Result<CreateCarResponseDto>.Success(response, "Car updated successfully", 200);
+            return Result<CreateCarResponseDto>.Success(null!, "Car updated successfully", 200);
         }
 
         public async Task<Result<string>> DeleteCarByIdAsync(Guid carId, Guid dealerId)
@@ -242,7 +215,6 @@ namespace GearUp.Application.Services.Cars
             await _commonRepository.SaveChangesAsync();
 
             _logger.LogInformation("Car deleted successfully for car ID: {CarId}", carId);
-            await _cache.RemoveAsync($"car:{existingCar.Id}");
             return Result<string>.Success(default!, "Car deleted successfully", 200);
 
         }
@@ -305,16 +277,6 @@ namespace GearUp.Application.Services.Cars
                 }
             }
 
-            var cacheKey = $"cars:search:{searchDto.Query}:{searchDto.Color}:{searchDto.MinPrice}:{searchDto.MaxPrice}:{searchDto.Page}:{searchDto.SortBy}:{searchDto.SortOrder}";
-
-            var cachedResult = await _cache.GetAsync<PageResult<CreateCarResponseDto>>(cacheKey);
-
-            if (cachedResult is not null)
-            {
-                _logger.LogInformation("Fetched search results from cache for key: {CacheKey}", cacheKey);
-                return Result<PageResult<CreateCarResponseDto>>.Success(cachedResult, "Search results fetched successfully", 200);
-            }
-
             var cars = await _carRepository.SearchCarsAsync(searchDto);
 
             var dto = new PageResult<CreateCarResponseDto>
@@ -325,8 +287,6 @@ namespace GearUp.Application.Services.Cars
                 TotalPages = cars.TotalPages,
                 Items = _mapper.Map<List<CreateCarResponseDto>>(cars.Items),
             };
-
-            await _cache.SetAsync(cacheKey, dto, TimeSpan.FromHours(1));
 
             return Result<PageResult<CreateCarResponseDto>>.Success(dto, "Cars fetched successfully", 200);
         }

@@ -31,7 +31,7 @@ services:
       Jwt__Audience: ${Jwt__Audience}
       Jwt__AccessToken_SecretKey: ${Jwt__AccessToken_SecretKey}
       Jwt__EmailVerificationToken_SecretKey: ${Jwt__EmailVerificationToken_SecretKey}
-      SendGridApiKey: ${SendGridApiKey}
+      BREVO_API_KEY: ${BREVO_API_KEY}
       FromEmail: ${FromEmail}
       ClientUrl: ${ClientUrl}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}

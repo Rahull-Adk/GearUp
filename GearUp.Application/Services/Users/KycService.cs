@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
@@ -11,7 +11,6 @@ namespace GearUp.Application.Services.Users
 {
     public class KycService : IKycService
     {
-
         private readonly IUserRepository _userRepo;
         private readonly IMapper _mapper;
         private readonly IDocumentProcessor _documentProcessor;
@@ -91,10 +90,8 @@ namespace GearUp.Application.Services.Users
 
             await _userRepo.AddKycAsync(kycSubmission);
             await _userRepo.SaveChangesAsync();
-
-            var responseData = _mapper.Map<KycUserResponseDto>(kycSubmission);
             _logger.LogInformation("KYC submission created successfully for user ID: {UserId}", userId);
-            return Result<KycUserResponseDto>.Success(responseData, "KYC submission successful.", 200);
+            return Result<KycUserResponseDto>.Success(null!, "KYC submission successful.", 200);
         }
     }
 }

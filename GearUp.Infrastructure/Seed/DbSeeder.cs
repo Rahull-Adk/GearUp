@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Bogus;
 using GearUp.Domain.Entities.Cars;
 using GearUp.Domain.Entities.Posts;
@@ -24,8 +25,9 @@ public class DbSeeder
         await SeedFakeUsersAsync(200);
         await SeedFakeCarsAsync(1000);
         await SeedFakePostsAsync(300);
-        await SeedFakeCommentsAsync(10000);
-        await SeedFakePostLikeAsync(20000);
+        await SeedFakeCommentsAsync(1800);
+        await SeedFakeNestedCommentAsync(5000);
+        await SeedFakePostLikeAsync(2000);
     }
 
     private async Task SeedFakeUsersAsync(int targetCount)
@@ -238,6 +240,41 @@ public class DbSeeder
             newComments.Add(comment);
         }
         await _context.PostComments.AddRangeAsync(newComments);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task SeedFakeNestedCommentAsync(int targetCount)
+    {
+         int existing = await _context.PostLikes
+            .CountAsync();
+        if (existing >= targetCount)
+            return;
+        int toCreate = targetCount - existing;
+        var faker = new Faker("en");
+        var userIds = await _context.Users
+            .Where(u => u.Email.EndsWith("@example.com"))
+            .Select(u => u.Id)
+            .ToListAsync();
+        var commentIds = await _context.PostComments
+            .Select(p => p.Id)
+            .ToListAsync();
+        var parentComments = await _context.PostComments
+    .Select(c => new { c.Id, c.PostId })
+    .ToListAsync();
+
+        var nestedComments = new List<PostComment>(toCreate);
+        for (int i = 0; i < toCreate; i++)
+        {
+           var parent = faker.PickRandom(parentComments);
+            var comment = PostComment.CreateComment(
+                content: $"{faker.Lorem.Sentence()}seeded_nested_comment",
+                postId: parent.PostId,
+                commentedUserId: faker.PickRandom(userIds),
+                parentCommentId: faker.PickRandom(commentIds)
+            );
+            nestedComments.Add(comment);
+        }
+        await _context.PostComments.AddRangeAsync(nestedComments);
         await _context.SaveChangesAsync();
     }
 

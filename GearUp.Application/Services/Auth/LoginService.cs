@@ -52,7 +52,8 @@ namespace GearUp.Application.Services.Auth
             var user = emailRegex.IsMatch(req.UsernameOrEmail)
                 ? await _userRepository.GetUserByEmailAsync(req.UsernameOrEmail)
                 : await _userRepository.GetUserByUsernameAsync(req.UsernameOrEmail);
-
+            if(user is not null && user.Role == UserRole.Admin)
+                return Result<LoginResponseDto>.Failure("User not Found", 404);
             return await HandleLogin(user!, req.Password);
         }
 
