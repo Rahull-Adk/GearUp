@@ -39,7 +39,21 @@ namespace GearUp.Presentation.Controllers
             {
                 return StatusCode(result.Status, result.ToApiResponse());
             }
-       
+            Response.Cookies.Append("access_token", result.Data.AccessToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddMinutes(15)
+            });
+            Response.Cookies.Append("refresh_token", result.Data.RefreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddDays(7)
+            });
+
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -77,7 +91,22 @@ namespace GearUp.Presentation.Controllers
             {
                 return StatusCode(result.Status, result.ToApiResponse());
             }
-         
+            Response.Cookies.Append("access_token", result.Data.AccessToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddMinutes(15)
+            });
+            Response.Cookies.Append("refresh_token", result.Data.RefreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddDays(7)
+            });
+
+
             return StatusCode(result.Status, result.ToApiResponse());
         }
 

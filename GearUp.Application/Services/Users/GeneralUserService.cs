@@ -13,13 +13,11 @@ namespace GearUp.Application.Services.Users
     {
         private readonly IUserRepository _userRepo;
         private readonly IMapper _mapper;
-        private readonly ICacheService _cache;
         private readonly ILogger<GeneralUserService> _logger;
-        public GeneralUserService(IUserRepository userRepo, IMapper mapper, ICacheService cache, ILogger<GeneralUserService> logger)
+        public GeneralUserService(IUserRepository userRepo, IMapper mapper, ILogger<GeneralUserService> logger)
         {
             _userRepo = userRepo;
             _mapper = mapper;
-            _cache = cache;
             _logger = logger;
         }
         public async Task<Result<RegisterResponseDto>> GetCurrentUserProfileService(string userId)
@@ -29,15 +27,6 @@ namespace GearUp.Application.Services.Users
             {
                 return Result<RegisterResponseDto>.Failure("User ID cannot be empty", 400);
             }
-
-            var cacheKey = $"user:profile:{userId}";
-            var cachedUser = await _cache.GetAsync<RegisterResponseDto>(cacheKey);
-
-            if (cachedUser != null)
-            {
-                return Result<RegisterResponseDto>.Success(cachedUser, "User fetched Successfully from cache", 200);
-            }
-
             var guidId = Guid.Parse(userId);
 
             var user = await _userRepo.GetUserByIdAsync(guidId);
@@ -47,7 +36,6 @@ namespace GearUp.Application.Services.Users
             }
 
             var mappedUser = _mapper.Map<RegisterResponseDto>(user);
-            await _cache.SetAsync(cacheKey, mappedUser);
 
             _logger.LogInformation("User profile fetched successfully for user ID: {UserId}", userId);
             return Result<RegisterResponseDto>.Success(mappedUser, "User fetched Successfully", 200);
@@ -61,13 +49,6 @@ namespace GearUp.Application.Services.Users
                 return Result<RegisterResponseDto>.Failure("Username cannot be empty", 400);
             }
 
-            var cacheKey = $"user:profile:{username}";
-            var cachedUser = await _cache.GetAsync<RegisterResponseDto>(cacheKey);
-
-            if (cachedUser != null)
-            {
-                return Result<RegisterResponseDto>.Success(cachedUser, "User fetched Successfully from cache", 200);
-            }
 
             var user = await _userRepo.GetUserByUsernameAsync(username);
             if (user == null || user.Role == UserRole.Admin)
@@ -76,8 +57,6 @@ namespace GearUp.Application.Services.Users
             }
 
             var mappedUser = _mapper.Map<RegisterResponseDto>(user);
-
-            await _cache.SetAsync(cacheKey, mappedUser);
 
             _logger.LogInformation("User profile fetched successfully for username: {Username}", username);
             return Result<RegisterResponseDto>.Success(mappedUser, "User fetched Successfully", 200);

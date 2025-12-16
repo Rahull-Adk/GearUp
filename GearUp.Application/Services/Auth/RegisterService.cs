@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
@@ -21,16 +21,14 @@ namespace GearUp.Application.Services.Auth
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IEmailSender _emailSender;
         private readonly ITokenGenerator _tokenGenerator;
-        private readonly IMapper _mapper;
         private readonly ILogger<RegisterService> _logger;
-        public RegisterService(IValidator<RegisterRequestDto> validator, IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IMapper mapper, ILogger<RegisterService> logger)
+        public RegisterService(IValidator<RegisterRequestDto> validator, IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, ILogger<RegisterService> logger)
         {
             _validator = validator;
             _userRepo = userRepo;
             _passwordHasher = passwordHasher;
             _emailSender = emailSender;
             _tokenGenerator = tokenGenerator;
-            _mapper = mapper;
             _logger = logger;
         }
         public async Task<Result<RegisterResponseDto>> RegisterUser(RegisterRequestDto data)
@@ -73,10 +71,8 @@ namespace GearUp.Application.Services.Auth
             var emailVerificationToken = _tokenGenerator.GenerateEmailVerificationToken(claims);
 
             await _emailSender.SendVerificationEmail(newUser.Email, emailVerificationToken);
-
-            var mappedRes = _mapper.Map<RegisterResponseDto>(newUser);
             _logger.LogInformation("User registration successful for email: {Email}", data.Email);
-            return Result<RegisterResponseDto>.Success(mappedRes, "User created Successfully!", 201);
+            return Result<RegisterResponseDto>.Success(null!, "User created Successfully!", 201);
         }
     }
 }

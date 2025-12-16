@@ -71,7 +71,7 @@ namespace GearUp.Application.Services.Cars
                 var uris = await _uploader.UploadImageListAsync(streams, uploadPath);
                 var images = uris.Select(u => CarImage.CreateCarImage(existingCar.Id, u.ToString())).ToList();
                 await _carRepo.AddCarImagesAsync(images);
-                return Result<List<CarImage>>.Success(images, "Images processed", 200);
+                return Result<List<CarImage>>.Success(null!, "Images processed", 200);
             }
             catch (Exception ex)
             {

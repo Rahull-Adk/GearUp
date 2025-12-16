@@ -188,6 +188,7 @@ namespace GearUp.Presentation.Extensions
             .AddPolicy("AdminOnly", policy => policy.RequireRole(UserRole.Admin.ToString()))
             .AddPolicy("DealerOnly", policy => policy.RequireRole(UserRole.Dealer.ToString()));
 
+
             // CORS Policy
             services.AddCors(opt =>
             {

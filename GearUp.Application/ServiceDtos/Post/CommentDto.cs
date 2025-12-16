@@ -12,10 +12,9 @@ namespace GearUp.Application.ServiceDtos.Post
         public bool IsLikedByCurrentUser { get; set; }
         public bool IsEdited { get; set; }
         public string CommentedUserProfilePictureUrl { get; set; } = string.Empty;
-
+        public int ChildCount { get; set; } = 0;
         public string Content { get; set; } = string.Empty;
         public Guid? ParentCommentId { get; set; }
-        public List<CommentDto> Replies { get; set; } = [];
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

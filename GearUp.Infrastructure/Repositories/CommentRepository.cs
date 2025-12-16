@@ -1,4 +1,5 @@
 using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.ServiceDtos.Post;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -29,42 +30,49 @@ namespace GearUp.Infrastructure.Repositories
                 .ToDictionaryAsync(k => k.Id, v => v.LikeCount);
         }
 
-        public async Task<List<PostComment>> GetAllCommentsByPostIdAsync(Guid postId)
+        public async Task<IEnumerable<CommentDto>> GetTopLevelCommentsByPostIdAsync(Guid postId)
         {
             return await _db.PostComments
-                .Where(pc => pc.PostId == postId)
+                .Where(pc => (pc.PostId == postId && pc.ParentCommentId == null))
                 .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new CommentDto
+                {
+                    Id = c.Id,
+                    PostId = c.PostId,
+                    ParentCommentId = c.ParentCommentId,
+                    Content = c.Content,
+                    ChildCount = _db.PostComments.Count(pc => pc.ParentCommentId == c.Id),  
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt,
+                    CommentedUserId = c.CommentedUserId,
+                    CommentedUserName = c.CommentedUser!.Username,
+                    CommentedUserProfilePictureUrl = c.CommentedUser.AvatarUrl
+                })
                 .ToListAsync();
         }
 
-        public async Task<List<PostComment>> GetAllCommentsByPostIdsAsync(List<Guid> postIds)
+        public async Task<IEnumerable<CommentDto>> GetChildCommentsByParentIdAsync(Guid parentCommentId)
         {
             return await _db.PostComments
-                .Where(pc => postIds.Contains(pc.PostId))
+                .Where(pc => pc.ParentCommentId == parentCommentId)
                 .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new CommentDto
+                {
+                    Id = c.Id,
+                    PostId = c.PostId,
+                    ParentCommentId = c.ParentCommentId,
+                    ChildCount = _db.PostComments.Count(pc => pc.ParentCommentId == c.Id),
+                    Content = c.Content,
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt,
+                    CommentedUserId = c.CommentedUserId,
+                    CommentedUserName = c.CommentedUser!.Username,
+                    CommentedUserProfilePictureUrl = c.CommentedUser.AvatarUrl
+                })
                 .ToListAsync();
         }
 
-        public async Task<Dictionary<Guid, PostComment>> GetAllCommentsByIdsAsync(List<Guid> commentIds)
-        {
-            return await _db.PostComments
-                .Where(pc => commentIds.Contains(pc.Id))
-                .OrderByDescending(c => c.CreatedAt)
-                .ToDictionaryAsync(k => k.Id, v => v);
-        }
-
-        public async Task<List<Guid>> GetAllCommentsLikedByUser(Guid userId, List<Guid> commentIds)
-        {
-            return await _db.CommentLikes.Where(cl => cl.LikedUserId == userId && commentIds.Contains(cl.CommentId))
-                .Select(cl => cl.CommentId)
-                .ToListAsync();
-        }
-
-        public async Task<int> GetPostCommentCountAsync(Guid postId)
-        {
-            return await _db.PostComments.CountAsync(pc => pc.PostId == postId);
-        }
-
+    
         public async Task<PostComment?> GetCommentByIdAsync(Guid commentId)
         {
             return await _db.PostComments.Where(c => c.Id == commentId)

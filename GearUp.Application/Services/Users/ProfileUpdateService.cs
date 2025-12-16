@@ -22,9 +22,8 @@ namespace GearUp.Application.Services.Users
         private readonly ITokenGenerator _tokenGenerator;
         private readonly IDocumentProcessor _documentProcessor;
         private readonly ICloudinaryImageUploader _cloudinaryImageUploader;
-        private readonly ICacheService _cache;
         private readonly ILogger<ProfileUpdateService> _logger;
-        public ProfileUpdateService(IUserRepository userRepo, IMapper mapper, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader, ICacheService cache, ILogger<ProfileUpdateService> logger)
+        public ProfileUpdateService(IUserRepository userRepo, IMapper mapper, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader, ILogger<ProfileUpdateService> logger)
         {
             _userRepo = userRepo;
             _mapper = mapper;
@@ -33,7 +32,6 @@ namespace GearUp.Application.Services.Users
             _documentProcessor = documentProcessor;
             _tokenGenerator = tokenGenerator;
             _cloudinaryImageUploader = cloudinaryImageUploader;
-            _cache = cache;
             _logger = logger;
         }
         public async Task<Result<UpdateUserResponseDto>> UpdateUserProfileService(string userId, UpdateUserRequestDto reqDto)
@@ -74,14 +72,12 @@ namespace GearUp.Application.Services.Users
 
             await _userRepo.SaveChangesAsync();
 
-            var mappedUser = _mapper.Map<UpdateUserResponseDto>(user);
             var message = string.IsNullOrEmpty(reqDto.NewEmail)
                 ? "Profile updated successfully"
                 : "Please verify your new email first.";
 
-            await _cache.RemoveAsync($"user:profile:{userId}");
             _logger.LogInformation("Profile updated successfully for user ID: {UserId}", userId);
-            return Result<UpdateUserResponseDto>.Success(mappedUser, message, 200);
+            return Result<UpdateUserResponseDto>.Success(null!, message, 200);
         }
 
 
@@ -149,7 +145,7 @@ namespace GearUp.Application.Services.Users
             var uploadPath = $"gearup/users/{user.Id}/avatar";
             var imageUrl = await _cloudinaryImageUploader.UploadImageListAsync(new List<MemoryStream> { processedImage.Data }, uploadPath);
             _logger.LogInformation("Avatar updated successfully for user ID: {UserId}", user.Id);
-            return imageUrl.First()?.ToString() ?? defaultAvatarUrl;
+            return "Avatar updated successfully";
         }
 
         private async Task<Result<UpdateUserResponseDto>?> HandleEmailUpdateAsync(User user, UpdateUserRequestDto reqDto)
