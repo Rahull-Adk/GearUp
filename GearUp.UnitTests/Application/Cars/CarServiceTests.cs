@@ -31,7 +31,6 @@ namespace GearUp.UnitTests.Application.Cars
 
         private CarService CreateService() => new(
         _createValidator.Object,
-        _cache.Object,
         _logger.Object,
         _carRepo.Object,
         _mapper.Object,
@@ -101,41 +100,6 @@ namespace GearUp.UnitTests.Application.Cars
             Assert.NotNull(result.Data);
             Assert.Empty(result.Data.Items);
         }
-
-        [Fact]
-        public async Task GetAllCars_MapsAndCaches()
-        {
-            var service = CreateService();
-            var dealerId = Guid.NewGuid();
-            var car = Car.CreateForSale(Guid.NewGuid(),
-            "Toyota Camry","desc","Camry","Toyota",2020,20000,"Black",10000,5,2500,new List<CarImage>(),FuelType.Petrol,CarCondition.Used,TransmissionType.Automatic,dealerId,"VIN1","ABC123");
-            var pageResult = new PageResult<Car> { Items = new List<Car>{car}, TotalCount =1, CurrentPage =1, PageSize =10, TotalPages =1 };
-            _carRepo.Setup(r => r.GetAllCarsAsync(1)).ReturnsAsync(pageResult);
-            var mappedList = new List<CreateCarResponseDto> { new CreateCarResponseDto { Id = car.Id, Title = car.Title } };
-            _mapper.Setup(m => m.Map<List<CreateCarResponseDto>>(It.IsAny<List<Car>>())).Returns(mappedList);
-            var result = await service.GetAllCarsAsync(1);
-            Assert.True(result.IsSuccess);
-            Assert.Equal(200, result.Status);
-            Assert.Single(result.Data.Items);
-            _cache.Verify(c => c.SetAsync("cars:all:1", It.IsAny<PageResult<CreateCarResponseDto>>(), It.IsAny<TimeSpan>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task GetCarById_FromCache_ReturnsCached()
-        {
-            var service = CreateService();
-            var id = Guid.NewGuid();
-            var cached = new CreateCarResponseDto { Id = id, Title = "cached" };
-            _cache.Setup(c => c.GetAsync<CreateCarResponseDto>($"car:{id}")).ReturnsAsync(cached);
-
-            var result = await service.GetCarByIdAsync(id);
-
-            Assert.True(result.IsSuccess);
-            Assert.Equal(200, result.Status);
-            Assert.Equal("cached", result.Data.Title);
-            _carRepo.Verify(r => r.GetCarByIdAsync(It.IsAny<Guid>()), Times.Never);
-        }
-
         [Fact]
         public async Task GetCarById_NotFound_Returns404()
         {

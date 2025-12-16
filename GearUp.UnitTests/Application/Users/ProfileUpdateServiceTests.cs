@@ -33,7 +33,6 @@ namespace GearUp.UnitTests.Application.Users
         _tokenGenerator.Object,
         _docProcessor.Object,
         _uploader.Object,
-        _cache.Object,
         _logger.Object);
 
         [Fact]
