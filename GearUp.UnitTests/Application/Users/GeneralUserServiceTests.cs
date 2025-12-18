@@ -40,7 +40,7 @@ namespace GearUp.UnitTests.Application.Users
         {
             var username = "missing";
             _cache.Setup(c => c.GetAsync<RegisterResponseDto>($"user:profile:{username}")).ReturnsAsync((RegisterResponseDto?)null);
-            _userRepo.Setup(r => r.GetUserByUsernameAsync(username)).ReturnsAsync((User?)null);
+            _userRepo.Setup(r => r.GetUserEntityByUsernameAsync(username)).ReturnsAsync((User?)null);
             var svc = CreateService();
             var res = await svc.GetUserProfile(username);
             Assert.False(res.IsSuccess);

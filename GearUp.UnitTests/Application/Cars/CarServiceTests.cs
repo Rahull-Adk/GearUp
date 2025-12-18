@@ -21,10 +21,8 @@ namespace GearUp.UnitTests.Application.Cars
         private readonly Mock<IValidator<CreateCarRequestDto>> _createValidator = new();
         private readonly Mock<IUserRepository> _userRepository = new();
         private readonly Mock<IValidator<UpdateCarDto>> _updateValidator = new();
-        private readonly Mock<ICacheService> _cache = new();
         private readonly Mock<ILogger<CarService>> _logger = new();
         private readonly Mock<ICarRepository> _carRepo = new();
-        private readonly Mock<IMapper> _mapper = new();
         private readonly Mock<ICommonRepository> _commonRepo = new();
         private readonly Mock<ICarImageService> _carImageService = new();
 
@@ -32,7 +30,6 @@ namespace GearUp.UnitTests.Application.Cars
             _createValidator.Object,
             _logger.Object,
             _carRepo.Object,
-            _mapper.Object,
             _commonRepo.Object,
             _carImageService.Object,
             _updateValidator.Object,
@@ -100,7 +97,7 @@ namespace GearUp.UnitTests.Application.Cars
         {
             var service = CreateService();
             var id = Guid.NewGuid();
-            _cache.Setup(c => c.GetAsync<CarResponseDto>($"car:{id}")).ReturnsAsync((CarResponseDto?)null);
+
             _carRepo.Setup(r => r.GetCarByIdAsync(id)).ReturnsAsync((CarResponseDto?)null);
 
             var result = await service.GetCarByIdAsync(id);

@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using AutoMapper;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Admin;
 using GearUp.Application.Services.Admin;
@@ -17,12 +13,10 @@ namespace GearUp.UnitTests.Application.Admin
     {
         private readonly Mock<IAdminRepository> _mockAdminRepository = new();
         private readonly Mock<IUserRepository> _mockUserRepository = new();
-        private readonly Mock<IMapper> _mockMapper = new();
         private readonly Mock<ILogger<GeneralAdminService>> _mockLogger = new();
 
         private GeneralAdminService CreateService() => new(
             _mockAdminRepository.Object,
-            _mockMapper.Object,
             _mockUserRepository.Object,
             _mockLogger.Object
         );

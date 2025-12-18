@@ -50,8 +50,8 @@ namespace GearUp.Application.Services.Auth
 
             Regex emailRegex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
             var user = emailRegex.IsMatch(req.UsernameOrEmail)
-                ? await _userRepository.GetUserByEmailAsync(req.UsernameOrEmail)
-                : await _userRepository.GetUserByUsernameAsync(req.UsernameOrEmail);
+                ? await _userRepository.GetUserEntityByEmailAsync(req.UsernameOrEmail)
+                : await _userRepository.GetUserEntityByUsernameAsync(req.UsernameOrEmail);
             if(user is not null && user.Role == UserRole.Admin)
                 return Result<LoginResponseDto>.Failure("User not Found", 404);
             return await HandleLogin(user!, req.Password);
@@ -67,7 +67,7 @@ namespace GearUp.Application.Services.Auth
                 return Result<LoginResponseDto>.Failure(errors, 400);
             }
 
-            var user = await _userRepository.GetUserByEmailAsync(req.Email);
+            var user = await _userRepository.GetUserEntityByEmailAsync(req.Email);
             if (user?.Role != UserRole.Admin)
                 return Result<LoginResponseDto>.Failure("Admin not found.", 404);
 
@@ -158,7 +158,7 @@ namespace GearUp.Application.Services.Auth
                 return Result<string>.Failure("Invalid email format", 400);
             }
 
-            var user = await _userRepository.GetUserByEmailAsync(email);
+            var user = await _userRepository.GetUserEntityByEmailAsync(email);
             if (user == null)
             {
                 return Result<string>.Failure("User not found", 404);

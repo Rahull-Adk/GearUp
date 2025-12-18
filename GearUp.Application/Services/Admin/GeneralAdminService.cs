@@ -12,13 +12,11 @@ namespace GearUp.Application.Services.Admin
     {
         private readonly IAdminRepository _adminRepository;
         private readonly IUserRepository _userRepository;
-        private readonly IMapper _mapper;
         private readonly ILogger<GeneralAdminService> _logger;
-        public GeneralAdminService(IAdminRepository adminRepository, IMapper mapper, IUserRepository userRepository, ILogger<GeneralAdminService> logger)
+        public GeneralAdminService(IAdminRepository adminRepository, IUserRepository userRepository, ILogger<GeneralAdminService> logger)
         {
             _adminRepository = adminRepository;
             _userRepository = userRepository;
-            _mapper = mapper;
             _logger = logger;
         }
 
@@ -65,7 +63,6 @@ namespace GearUp.Application.Services.Admin
             {
                 return Result<ToAdminKycListResponseDto>.Success(null!, "No KYC submissions found with the specified status", 200);
             }
-            var mappedKycs = _mapper.Map<List<ToAdminKycResponseDto>>(kycs);
             _logger.LogInformation("KYC submissions retrieved successfully");
             return Result<ToAdminKycListResponseDto>.Success(kycs, "KYC submissions retrieved successfully", 200);
         }

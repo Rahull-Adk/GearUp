@@ -1,5 +1,3 @@
-using System.Diagnostics.Eventing.Reader;
-using System.Runtime.CompilerServices;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Domain.Entities;
@@ -27,19 +25,29 @@ namespace GearUp.Infrastructure.Repositories
             await _db.KycSubmissions.AddAsync(kyc);
         }
 
-        public async Task<User?> GetUserByUsernameOrEmailAsync(string usernameOrEmail)
-        {
-            return await _db.Users.SingleOrDefaultAsync(u => u.Username == usernameOrEmail || u.Email == usernameOrEmail);
-
-        }
 
         public async Task<bool> UserExistAsync(Guid userId)
         {
             return await _db.Users.AnyAsync(u => u.Id == userId);
         }
-        public async Task<User?> GetUserByEmailAsync(string email)
+        public async Task<User?> GetUserEntityByEmailAsync(string email)
         {
             return await _db.Users.SingleOrDefaultAsync(u => u.Email == email);
+        }
+        public async Task<RegisterResponseDto?> GetUserByEmailAsync(string email)
+        {
+            return await _db.Users.Where(u => u.Email == email)
+                .Select(u => new RegisterResponseDto(
+                    u.Id,
+                    u.Provider,
+                    u.Username,
+                    u.Email,
+                    u.Name,
+                    u.Role,
+                    u.DateOfBirth,
+                    u.PhoneNumber,
+                    u.AvatarUrl
+                )).FirstOrDefaultAsync();
         }
 
         public async Task<RegisterResponseDto?> GetUserByIdAsync(Guid id)
@@ -58,9 +66,25 @@ namespace GearUp.Infrastructure.Repositories
                 )).FirstOrDefaultAsync();
         }
 
-        public async Task<User?> GetUserByUsernameAsync(string username)
+        public async Task<RegisterResponseDto?> GetUserByUsernameAsync(string username)
         {
-            return await _db.Users.SingleOrDefaultAsync(u => u.Username == username);
+            return await _db.Users.Where(u => u.Username == username)
+                  .Select(u => new RegisterResponseDto(
+                      u.Id,
+                      u.Provider,
+                      u.Username,
+                      u.Email,
+                      u.Name,
+                      u.Role,
+                      u.DateOfBirth,
+                      u.PhoneNumber,
+                      u.AvatarUrl
+                  )).FirstOrDefaultAsync();
+        }
+
+        public async Task<User?> GetUserEntityByUsernameAsync(string username)
+        {
+            return await _db.Users.Where(u => u.Username == username).FirstOrDefaultAsync();
         }
 
         public async Task SaveChangesAsync()

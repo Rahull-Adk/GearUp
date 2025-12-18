@@ -33,7 +33,7 @@ namespace GearUp.UnitTests.Application.Auth
         public async Task ResendVerification_Success_SendsEmail()
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
-            _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByEmailAsync(user.Email)).ReturnsAsync(user);
             _tokenGenerator.Setup(t => t.GenerateEmailVerificationToken(It.IsAny<IEnumerable<Claim>>())).Returns("token");
             var svc = CreateService();
             var result = await svc.ResendVerificationEmail(user.Email);
@@ -45,7 +45,7 @@ namespace GearUp.UnitTests.Application.Auth
         [Fact]
         public async Task ResendVerification_Fails_UserNotFound()
         {
-            _userRepo.Setup(r => r.GetUserByEmailAsync("missing@example.com")).ReturnsAsync((User?)null);
+            _userRepo.Setup(r => r.GetUserEntityByEmailAsync("missing@example.com")).ReturnsAsync((User?)null);
             var svc = CreateService();
             var result = await svc.ResendVerificationEmail("missing@example.com");
             Assert.False(result.IsSuccess);
@@ -57,7 +57,7 @@ namespace GearUp.UnitTests.Application.Auth
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John");
             user.VerifyEmail();
-            _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByEmailAsync(user.Email)).ReturnsAsync(user);
             var svc = CreateService();
             var result = await svc.ResendVerificationEmail(user.Email);
             Assert.False(result.IsSuccess);

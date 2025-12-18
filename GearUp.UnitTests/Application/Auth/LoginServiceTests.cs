@@ -48,7 +48,7 @@ namespace GearUp.UnitTests.Application.Auth
             _loginValidator.Setup(v => v.ValidateAsync(req, default)).ReturnsAsync(Valid());
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
             user.VerifyEmail();
-            _userRepo.Setup(r => r.GetUserByUsernameAsync("john")).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByUsernameAsync("john")).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, "secret"))
             .Returns(PasswordVerificationResult.Success);
             _tokenGenerator.Setup(t => t.GenerateAccessToken(It.IsAny<IEnumerable<Claim>>())).Returns("access");
@@ -88,7 +88,7 @@ namespace GearUp.UnitTests.Application.Auth
             var req = new LoginRequestDto { UsernameOrEmail = "john", Password = "secret" };
             _loginValidator.Setup(v => v.ValidateAsync(req, default)).ReturnsAsync(Valid());
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
-            _userRepo.Setup(r => r.GetUserByUsernameAsync("john")).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByUsernameAsync("john")).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, "secret"))
          .Returns(PasswordVerificationResult.Success);
             var svc = CreateService();
@@ -105,7 +105,7 @@ namespace GearUp.UnitTests.Application.Auth
             _loginValidator.Setup(v => v.ValidateAsync(req, default)).ReturnsAsync(Valid());
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
             user.VerifyEmail();
-            _userRepo.Setup(r => r.GetUserByUsernameAsync("john")).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByUsernameAsync("john")).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, "wrong"))
                 .Returns(PasswordVerificationResult.Failed);
             var svc = CreateService();
@@ -122,7 +122,7 @@ namespace GearUp.UnitTests.Application.Auth
             var req = new AdminLoginRequestDto { Email = "user@example.com", Password = "p" };
             _adminValidator.Setup(v => v.ValidateAsync(req, default)).ReturnsAsync(Valid());
             var user = User.CreateLocalUser("john", req.Email, "John");
-            _userRepo.Setup(r => r.GetUserByEmailAsync(req.Email)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByEmailAsync(req.Email)).ReturnsAsync(user);
 
             var svc = CreateService();
             var result = await svc.LoginAdmin(req);
@@ -140,7 +140,7 @@ namespace GearUp.UnitTests.Application.Auth
             var user = User.CreateLocalUser("admin", req.Email, "Admin User");
             user.VerifyEmail();
             user.SetRole(Domain.Enums.UserRole.Admin);
-            _userRepo.Setup(r => r.GetUserByEmailAsync(req.Email)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByEmailAsync(req.Email)).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, req.Password))
                 .Returns(PasswordVerificationResult.Success);
             _tokenGenerator.Setup(t => t.GenerateAccessToken(It.IsAny<IEnumerable<Claim>>())).Returns("admin-access");
@@ -159,7 +159,7 @@ namespace GearUp.UnitTests.Application.Auth
             var user = User.CreateLocalUser("admin", req.Email, "Admin User");
             user.VerifyEmail();
             user.SetRole(Domain.Enums.UserRole.Admin);
-            _userRepo.Setup(r => r.GetUserByEmailAsync(req.Email)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByEmailAsync(req.Email)).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, req.Password))
                 .Returns(PasswordVerificationResult.Failed);
             var svc = CreateService();

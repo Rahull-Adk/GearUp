@@ -72,7 +72,7 @@ namespace GearUp.UnitTests.Application.Users
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
             _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
-            _userRepo.Setup(r => r.GetUserByEmailAsync("new@example.com")).ReturnsAsync((User?)null);
+            _userRepo.Setup(r => r.GetUserEntityByEmailAsync("new@example.com")).ReturnsAsync((User?)null);
             _tokenGenerator.Setup(t => t.GenerateEmailVerificationToken(It.IsAny<IEnumerable<System.Security.Claims.Claim>>())).Returns("token");
             var dto = new UpdateUserRequestDto("new@example.com", null, null, null, null, null, null, null);
             var svc = CreateService();
@@ -87,7 +87,7 @@ namespace GearUp.UnitTests.Application.Users
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
             _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
-            _userRepo.Setup(r => r.GetUserByEmailAsync("new@example.com")).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByEmailAsync("new@example.com")).ReturnsAsync(user);
             var dto = new UpdateUserRequestDto("new@example.com", null, null, null, null, null, null, null);
             var svc = CreateService();
             var res = await svc.UpdateUserProfileService(user.Id.ToString(), dto);

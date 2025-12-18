@@ -1,4 +1,3 @@
-using AutoMapper;
 using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
@@ -15,7 +14,6 @@ namespace GearUp.Application.Services.Cars
         private readonly IValidator<UpdateCarDto> _updateCarValidator;
         private readonly ILogger<CarService> _logger;
         private readonly ICarRepository _carRepository;
-        private readonly IMapper _mapper;
         private readonly ICommonRepository _commonRepository;
         private readonly ICarImageService _carImageService;
         private readonly IUserRepository _userRepository;
@@ -24,7 +22,6 @@ namespace GearUp.Application.Services.Cars
             IValidator<CreateCarRequestDto> createCarValidator,
             ILogger<CarService> logger,
             ICarRepository carRepository,
-            IMapper mapper,
             ICommonRepository commonRepository,
             ICarImageService carImageService,
             IValidator<UpdateCarDto> updateCarDtoValiator,
@@ -32,7 +29,6 @@ namespace GearUp.Application.Services.Cars
         {
             _createCarValidator = createCarValidator;
             _logger = logger;
-            _mapper = mapper;
             _carRepository = carRepository;
             _commonRepository = commonRepository;
             _carImageService = carImageService;

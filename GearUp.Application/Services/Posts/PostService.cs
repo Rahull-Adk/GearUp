@@ -5,7 +5,6 @@ using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
-using GearUp.Application.ServiceDtos.Car;
 using GearUp.Application.ServiceDtos.Post;
 using GearUp.Domain.Entities.Posts;
 using Microsoft.Extensions.Logging;
@@ -20,17 +19,15 @@ namespace GearUp.Application.Services.Posts
         private readonly ICommonRepository _commonRepository;
         private readonly ICarRepository _carRepository;
         private readonly IPostRepository _postRepository;
-        private readonly IMapper _mapper;
 
 
-        public PostService(ILogger<IPostService> logger, ICacheService cache, IValidator<CreatePostRequestDto> createPostValidator, ICommonRepository commonRepository, ICarRepository carRepository, IPostRepository postRepository, IMapper mapper, IUserRepository userRepository, IRealTimeNotifier realTimeNotifier)
+        public PostService(ILogger<IPostService> logger, IValidator<CreatePostRequestDto> createPostValidator, ICommonRepository commonRepository, ICarRepository carRepository, IPostRepository postRepository,  IUserRepository userRepository)
         {
             _logger = logger;
             _createPostValidator = createPostValidator;
             _commonRepository = commonRepository;
             _carRepository = carRepository;
             _postRepository = postRepository;
-            _mapper = mapper;
             _userRepository = userRepository;
         }
         public async Task<Result<PageResult<PostResponseDto>>> GetAllPostsAsync(Guid userId, int pageNum)

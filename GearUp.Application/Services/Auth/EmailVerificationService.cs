@@ -30,7 +30,7 @@ namespace GearUp.Application.Services.Auth
         public async Task<Result<string>> ResendVerificationEmail(string email)
         {
             _logger.LogInformation("Resend verification email requested for {Email}", email);
-            var user = await _userRepository.GetUserByEmailAsync(email);
+            var user = await _userRepository.GetUserEntityByEmailAsync(email);
             if (user == null)
             {
                 return Result<string>.Failure("User not found", 404);
