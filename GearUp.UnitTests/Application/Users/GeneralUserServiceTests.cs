@@ -27,7 +27,7 @@ namespace GearUp.UnitTests.Application.Users
         {
             var id = Guid.NewGuid();
             _cache.Setup(c => c.GetAsync<RegisterResponseDto>($"user:profile:{id}")).ReturnsAsync((RegisterResponseDto?)null);
-            _userRepo.Setup(r => r.GetUserByIdAsync(id)).ReturnsAsync((User?)null);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(id)).ReturnsAsync((User?)null);
             var svc = CreateService();
             var res = await svc.GetCurrentUserProfileService(id.ToString());
             Assert.False(res.IsSuccess);
@@ -40,7 +40,7 @@ namespace GearUp.UnitTests.Application.Users
         {
             var username = "missing";
             _cache.Setup(c => c.GetAsync<RegisterResponseDto>($"user:profile:{username}")).ReturnsAsync((RegisterResponseDto?)null);
-            _userRepo.Setup(r => r.GetUserByUsernameAsync(username)).ReturnsAsync((User?)null);
+            _userRepo.Setup(r => r.GetUserEntityByUsernameAsync(username)).ReturnsAsync((User?)null);
             var svc = CreateService();
             var res = await svc.GetUserProfile(username);
             Assert.False(res.IsSuccess);

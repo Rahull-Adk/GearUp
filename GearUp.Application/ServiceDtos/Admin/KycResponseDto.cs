@@ -1,4 +1,4 @@
-﻿using GearUp.Domain.Entities;
+using GearUp.Domain.Entities;
 
 namespace GearUp.Application.ServiceDtos.Admin
 {
@@ -25,5 +25,5 @@ namespace GearUp.Application.ServiceDtos.Admin
     }
 
 
-    public record class ToAdminKycListResponseDto(List<ToAdminKycResponseDto> KycSubmissions, int TotalCount);
+    public record class ToAdminKycListResponseDto(List<ToAdminKycResponseDto> kycDto, int TotalCount);
 }

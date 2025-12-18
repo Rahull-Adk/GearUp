@@ -1,28 +1,22 @@
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics.Arm;
-using AutoMapper;
 using GearUp.Application.Interfaces.Repositories;
-using GearUp.Application.Interfaces.Services;
 using GearUp.Application.ServiceDtos.Admin;
 using GearUp.Application.Services.Admin;
 using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Users;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Xunit;
 
 namespace GearUp.UnitTests.Application.Admin
 {
     public class AdminTest
     {
-        private readonly Mock<ICacheService> _mockCacheService = new();
         private readonly Mock<IAdminRepository> _mockAdminRepository = new();
         private readonly Mock<IUserRepository> _mockUserRepository = new();
-        private readonly Mock<IMapper> _mockMapper = new();
         private readonly Mock<ILogger<GeneralAdminService>> _mockLogger = new();
 
         private GeneralAdminService CreateService() => new(
             _mockAdminRepository.Object,
-            _mockMapper.Object,
             _mockUserRepository.Object,
             _mockLogger.Object
         );
@@ -32,27 +26,8 @@ namespace GearUp.UnitTests.Application.Admin
         public async Task GetAllKyc_ShouldReturnResult_WhenCacheIsNull()
         {
             // Arrange
-            _mockCacheService.Setup(c => c.GetAsync<ToAdminKycListResponseDto>("kyc:all")).ReturnsAsync((ToAdminKycListResponseDto)null!);
-            List<Uri> documentUrls = new List<Uri>
-            {
-                new Uri("http://example.com/document1.jpg"),
-                new Uri("http://example.com/document2.jpg")
-            };
-            ICollection<KycSubmissions> input = new List<KycSubmissions>
-            {
-                KycSubmissions.CreateKycSubmissions(Guid.NewGuid(), KycDocumentType.NationalID, documentUrls, "12345"),
-                KycSubmissions.CreateKycSubmissions(Guid.NewGuid(), KycDocumentType.Passport, documentUrls, "67890")
-            };
-            _mockLogger.Setup(l => l.Log(
-                It.Is<LogLevel>(logLevel => logLevel == LogLevel.Information),
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Fetching all KYC submissions")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()));
-
-            _mockAdminRepository.Setup(a => a.GetAllKycSubmissionsAsync()).ReturnsAsync(input);
-            _mockMapper.Setup(m => m.Map<List<ToAdminKycResponseDto>>(It.IsAny<ICollection<KycSubmissions>>()))
-                .Returns(new List<ToAdminKycResponseDto>
+            var input = new ToAdminKycListResponseDto(
+                new List<ToAdminKycResponseDto>
                 {
                     new ToAdminKycResponseDto
                     {
@@ -68,7 +43,11 @@ namespace GearUp.UnitTests.Application.Admin
                         Status = KycStatus.Approved,
                         SubmittedAt = DateTime.UtcNow.AddDays(-5)
                     }
-                });
+                },
+                2
+            );
+
+            _mockAdminRepository.Setup(a => a.GetAllKycSubmissionsAsync()).ReturnsAsync(input);
 
             //Act
             var svc = CreateService();
@@ -85,14 +64,9 @@ namespace GearUp.UnitTests.Application.Admin
         public async Task GetAllKyc_ShouldReturnNoKycResult_WhenNoKycSubmissionsExist()
         {
             // Arrange
-            _mockCacheService.Setup(c => c.GetAsync<ToAdminKycListResponseDto>("kyc:all")).ReturnsAsync((ToAdminKycListResponseDto)null!);
-            _mockLogger.Setup(l => l.Log(
-                It.Is<LogLevel>(logLevel => logLevel == LogLevel.Information),
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Fetching all KYC submissions")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()));
-            _mockAdminRepository.Setup(a => a.GetAllKycSubmissionsAsync()).ReturnsAsync(new List<KycSubmissions>());
+            var empty = new ToAdminKycListResponseDto(new List<ToAdminKycResponseDto>(), 0);
+            _mockAdminRepository.Setup(a => a.GetAllKycSubmissionsAsync()).ReturnsAsync(empty);
+
             // Act
             var svc = CreateService();
             var result = await svc.GetAllKycs();
@@ -109,26 +83,15 @@ namespace GearUp.UnitTests.Application.Admin
         {
             // Arrange
             var id = Guid.NewGuid();
-            _mockCacheService.Setup(c => c.GetAsync<ToAdminKycResponseDto>($"kyc:{id}")).ReturnsAsync((ToAdminKycResponseDto)null!);
-            _mockLogger.Setup(l => l.Log(
-                It.Is<LogLevel>(logLevel => logLevel == LogLevel.Information),
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"Fetching kyc submission with id: {id}")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()));
-            _mockAdminRepository.Setup(a => a.GetKycSubmissionByIdAsync(id)).ReturnsAsync(KycSubmissions.CreateKycSubmissions(
-                Guid.NewGuid(),
-                KycDocumentType.Passport,
-                new List<Uri> { new Uri("http://example.com/document1.jpg") },
-                "A1234567"
-            ));
-            _mockMapper.Setup(m => m.Map<ToAdminKycResponseDto>(It.IsAny<KycSubmissions>())).Returns(new ToAdminKycResponseDto
+            var dto = new ToAdminKycResponseDto
             {
                 Id = id,
                 UserId = Guid.NewGuid(),
                 Status = KycStatus.Pending,
                 SubmittedAt = DateTime.UtcNow.AddDays(-2)
-            });
+            };
+
+            _mockAdminRepository.Setup(a => a.GetKycSubmissionByIdAsync(id)).ReturnsAsync(dto);
 
             //Act
             var svc = CreateService();
@@ -147,14 +110,7 @@ namespace GearUp.UnitTests.Application.Admin
         {
             // Arrange
             var id = Guid.NewGuid();
-            _mockCacheService.Setup(c => c.GetAsync<ToAdminKycResponseDto>($"kyc:{id}")).ReturnsAsync((ToAdminKycResponseDto)null!);
-            _mockLogger.Setup(l => l.Log(
-                It.Is<LogLevel>(logLevel => logLevel == LogLevel.Information),
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"Fetching kyc submission with id: {id}")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()));
-            _mockAdminRepository.Setup(a => a.GetKycSubmissionByIdAsync(id)).ReturnsAsync((KycSubmissions?)null);
+            _mockAdminRepository.Setup(a => a.GetKycSubmissionByIdAsync(id)).ReturnsAsync((ToAdminKycResponseDto?)null);
 
             //Act
             var svc = CreateService();
@@ -173,31 +129,13 @@ namespace GearUp.UnitTests.Application.Admin
         public async Task GetKycByStatus_ShouldReturnResult_WhenCacheIsNull(KycStatus status)
         {
             // Arrange
-            _mockCacheService.Setup(c => c.GetAsync<ToAdminKycListResponseDto>($"kyc:status:{status}")).ReturnsAsync((ToAdminKycListResponseDto)null!);
-
-            _mockLogger.Setup(l => l.Log(
-                It.Is<LogLevel>(logLevel => logLevel == LogLevel.Information),
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"Fetching kyc submissions with status: {status}")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()));
-
-            List<KycSubmissions> input = new List<KycSubmissions>
+            var list = new List<ToAdminKycResponseDto>
             {
-                KycSubmissions.CreateKycSubmissions(Guid.NewGuid(), KycDocumentType.NationalID, new List<Uri>{ new Uri("http://example.com/document1.jpg") }, "12345", status),
-                KycSubmissions.CreateKycSubmissions(Guid.NewGuid(), KycDocumentType.Passport, new List<Uri>{ new Uri("http://example.com/document2.jpg") }, "67890", status)
+                new ToAdminKycResponseDto { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), Status = status, SubmittedAt = DateTime.UtcNow },
+                new ToAdminKycResponseDto { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), Status = status, SubmittedAt = DateTime.UtcNow }
             };
-
-            _mockAdminRepository.Setup(a => a.GetKycSubmissionsByStatusAsync(status)).ReturnsAsync(input);
-
-            _mockMapper.Setup(m => m.Map<List<ToAdminKycResponseDto>>(It.IsAny<ICollection<KycSubmissions>>()))
-                .Returns(input.Select(k => new ToAdminKycResponseDto
-                {
-                    Id = k.Id,
-                    UserId = k.UserId,
-                    Status = k.Status,
-                    SubmittedAt = k.SubmittedAt
-                }).ToList());
+            var response = new ToAdminKycListResponseDto(list, list.Count);
+            _mockAdminRepository.Setup(a => a.GetKycSubmissionsByStatusAsync(status)).ReturnsAsync(response);
 
             //Act
             var svc = CreateService();
@@ -206,7 +144,7 @@ namespace GearUp.UnitTests.Application.Admin
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
             Assert.True(result.IsSuccess);
-            Assert.Equal(input.Count, result.Data.TotalCount);
+            Assert.Equal(list.Count, result.Data.TotalCount);
             Assert.Equal("KYC submissions retrieved successfully", result.SuccessMessage);
 
         }
@@ -218,14 +156,8 @@ namespace GearUp.UnitTests.Application.Admin
         public async Task GetKycByStatus_ShouldReturnMessage_WhenKycIsNotPresent(KycStatus status)
         {
             // Arrange
-            _mockCacheService.Setup(c => c.GetAsync<ToAdminKycListResponseDto>($"kyc:status:{status}")).ReturnsAsync((ToAdminKycListResponseDto)null!);
-            _mockLogger.Setup(l => l.Log(
-                It.Is<LogLevel>(logLevel => logLevel == LogLevel.Information),
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"Fetching kyc submissions with status: {status}")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()));
-            _mockAdminRepository.Setup(a => a.GetKycSubmissionsByStatusAsync(status)).ReturnsAsync(new List<KycSubmissions>());
+            var empty = new ToAdminKycListResponseDto(new List<ToAdminKycResponseDto>(), 0);
+            _mockAdminRepository.Setup(a => a.GetKycSubmissionsByStatusAsync(status)).ReturnsAsync(empty);
             //Act
             var svc = CreateService();
             var result = await svc.GetKycsByStatus(status);
@@ -268,16 +200,8 @@ namespace GearUp.UnitTests.Application.Admin
             );
             var mockUser = User.CreateLocalUser("user", "user@gmail.com", "proshane");
 
-            _mockLogger.Setup(l => l.Log(
-                It.Is<LogLevel>(logLevel => logLevel == LogLevel.Information),
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"Updating KYC status for ID: {kycId} to {status}")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()));
-
-            _mockAdminRepository.Setup(a => a.GetKycSubmissionByIdAsync(guidKycId)).ReturnsAsync(mockKyc);
-            _mockUserRepository.Setup(u => u.GetUserByIdAsync(mockKyc.UserId)).ReturnsAsync(mockUser);
-            _mockCacheService.Setup(c => c.RemoveAsync($"kyc:{kycId}")).Returns(Task.CompletedTask);
+            _mockAdminRepository.Setup(a => a.GetKycEntityByIdAsync(guidKycId)).ReturnsAsync(mockKyc);
+            _mockUserRepository.Setup(u => u.GetUserEntityByIdAsync(mockKyc.UserId)).ReturnsAsync(mockUser);
 
             // Act
             var svc = CreateService();

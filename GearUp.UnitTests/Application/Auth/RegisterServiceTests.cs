@@ -20,17 +20,23 @@ namespace GearUp.UnitTests.Application.Auth
         private readonly Mock<IPasswordHasher<User>> _passwordHasher = new();
         private readonly Mock<IEmailSender> _emailSender = new();
         private readonly Mock<ITokenGenerator> _tokenGenerator = new();
-        private readonly Mock<IMapper> _mapper = new();
         private readonly Mock<ILogger<RegisterService>> _logger = new();
 
-        private RegisterService CreateService() => new(
-        _validator.Object,
-        _userRepo.Object,
-        _passwordHasher.Object,
-        _emailSender.Object,
-        _tokenGenerator.Object,
-        _logger.Object
-        );
+        private RegisterService CreateService()
+        {
+
+            _passwordHasher.Setup(h => h.HashPassword(It.IsAny<User>(), It.IsAny<string>()))
+                           .Returns("hashed_password");
+
+            return new RegisterService(
+                _validator.Object,
+                _userRepo.Object,
+                _passwordHasher.Object,
+                _emailSender.Object,
+                _tokenGenerator.Object,
+                _logger.Object
+            );
+        }
 
         private static ValidationResult Valid() => new ValidationResult();
 
@@ -67,7 +73,7 @@ namespace GearUp.UnitTests.Application.Auth
                 ConfirmPassword = "P@ssw0rd"
             };
             _validator.Setup(v => v.ValidateAsync(req, default)).ReturnsAsync(Valid());
-            _userRepo.Setup(r => r.GetUserByEmailAsync(req.Email)).ReturnsAsync(User.CreateLocalUser("existing", req.Email, "Existing User"));
+            _userRepo.Setup(r => r.GetUserEntityByEmailAsync(req.Email)).ReturnsAsync(User.CreateLocalUser("existing", req.Email, "Existing User"));
 
             var svc = CreateService();
 
@@ -81,7 +87,7 @@ namespace GearUp.UnitTests.Application.Auth
         }
 
         [Fact]
-        public async Task Register_Fails_WhenUsernameExists()
+       public async Task Register_Fails_WhenUsernameExists()
         {
             // Arrange
             var req = new RegisterRequestDto
@@ -94,8 +100,8 @@ namespace GearUp.UnitTests.Application.Auth
                 ConfirmPassword = "P@ssw0rd"
             };
             _validator.Setup(v => v.ValidateAsync(req, default)).ReturnsAsync(Valid());
-            _userRepo.Setup(r => r.GetUserByEmailAsync(req.Email)).ReturnsAsync((User?)null);
-            _userRepo.Setup(r => r.GetUserByUsernameAsync(req.Username)).ReturnsAsync(User.CreateLocalUser(req.Username, "another@example.com", "Someone"));
+            _userRepo.Setup(r => r.GetUserEntityByEmailAsync(req.Email)).ReturnsAsync((User?)null);
+            _userRepo.Setup(r => r.GetUserEntityByUsernameAsync(req.Username)).ReturnsAsync(User.CreateLocalUser(req.Username, "another@example.com", "Someone"));
 
             var svc = CreateService();
 

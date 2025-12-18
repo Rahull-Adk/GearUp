@@ -42,12 +42,13 @@ namespace GearUp.Application.Services.Auth
                     return Result<RegisterResponseDto>.Failure(errors, 400);
                 }
 
-                var isEmailExists = await _userRepo.GetUserByEmailAsync(data.Email);
+                var isEmailExists = await _userRepo.GetUserEntityByEmailAsync(data.Email);
                 if(isEmailExists != null)
                 {
                     return Result<RegisterResponseDto>.Failure("Account with this email already exists. Please login", 400);
                 }
-                var isUsernameExists = await _userRepo.GetUserByUsernameAsync(data.Username);
+            
+                var isUsernameExists = await _userRepo.GetUserEntityByUsernameAsync(data.Username);
                 if(isUsernameExists != null)
                 {
                     return Result<RegisterResponseDto>.Failure("Account with this username already exists. Please choose another username", 400);

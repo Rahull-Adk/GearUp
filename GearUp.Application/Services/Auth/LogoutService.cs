@@ -1,8 +1,6 @@
-﻿using GearUp.Application.Common;
+using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
-using GearUp.Domain.Entities.Tokens;
-using Microsoft.AspNetCore.Http.Headers;
 using Microsoft.Extensions.Logging;
 
 

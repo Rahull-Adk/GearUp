@@ -30,8 +30,8 @@ namespace GearUp.Application.Services.Posts
            
             _logger.LogInformation("User with Id: {UserId} is commenting on post with Id: {PostId}", userId, comment.PostId);
 
-            var post = await _postRepository.GetPostByIdAsync(comment.PostId, userId);
-            if (post == null)
+            var postExist = await _postRepository.PostExistAsync(comment.PostId);
+            if (!postExist)
             {
                 _logger.LogWarning("Post with Id: {PostId} not found", comment.PostId);
                 return Result<CommentDto>.Failure("Post not found", 404);
@@ -43,8 +43,8 @@ namespace GearUp.Application.Services.Posts
                 return Result<CommentDto>.Failure("Invalid comment length", 400);
             }
 
-            var user = await _userRepository.GetUserByIdAsync(userId);
-            if (user == null)
+            bool userExist = await _userRepository.UserExistAsync(userId);
+            if (!userExist)
             {
                 _logger.LogWarning("User with Id: {UserId} not found", userId);
                 return Result<CommentDto>.Failure("User not found", 404);
@@ -73,12 +73,6 @@ namespace GearUp.Application.Services.Posts
         {
             _logger.LogInformation("User with Id: {UserId} is attempting to delete comment with Id: {CommentId}", userId, commentId);
 
-            var commentInfo = await _commentRepository.GetCommentByIdAsync(commentId);
-            if (commentInfo == null)
-            {
-                _logger.LogWarning("Comment with Id: {CommentId} not found", commentId);
-                return Result<bool>.Failure("Comment not found", 404);
-            }
             var commentEntity = await _commentRepository.GetCommentByIdAsync(commentId);
 
             if (commentEntity == null)
@@ -110,13 +104,6 @@ namespace GearUp.Application.Services.Posts
                 return Result<CommentDto>.Failure("Invalid comment content", 400);
             }
 
-            var commentInfo = await _commentRepository.GetCommentByIdAsync(commentId);
-            if (commentInfo == null)
-            {
-                _logger.LogWarning("Comment with Id: {CommentId} not found", commentId);
-                return Result<CommentDto>.Failure("Comment not found", 404);
-            }
-
             var commentEntity = await _commentRepository.GetCommentByIdAsync(commentId);
             if (commentEntity == null)
             {
@@ -139,8 +126,8 @@ namespace GearUp.Application.Services.Posts
         public async Task<Result<IEnumerable<CommentDto>>> GetParentCommentsByPostId(Guid postId, Guid userId)
         {
             _logger.LogInformation("Fetching parent comments for post with Id: {PostId}", postId);
-            var post = await _postRepository.GetPostByIdAsync(postId, userId);
-            if (post is null)
+            var postExist = await _postRepository.PostExistAsync(postId);
+            if (!postExist)
             {
                 _logger.LogWarning("Post with Id: {PostId} not found", postId);
                 return Result<IEnumerable<CommentDto>>.Failure("Post not found", 404);
@@ -154,8 +141,8 @@ namespace GearUp.Application.Services.Posts
         public async Task<Result<IEnumerable<CommentDto>>> GetChildCommentsByParentId(Guid parentCommentId, Guid userId)
         {
             _logger.LogInformation("Fetching child comments for parent comment with Id: {ParentCommentId}", parentCommentId);
-            var parentComment = await _commentRepository.GetCommentByIdAsync(parentCommentId);
-           if(parentComment is null)
+            var parentCommentExist = await _commentRepository.CommentExistAsync(parentCommentId);
+           if(!parentCommentExist)
             {
                 _logger.LogWarning("Parent comment with Id: {ParentCommentId} not found", parentCommentId);
                 return Result<IEnumerable<CommentDto>>.Failure("Parent comment not found", 404);
