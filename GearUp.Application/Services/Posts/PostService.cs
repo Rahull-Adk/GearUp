@@ -85,7 +85,6 @@ namespace GearUp.Application.Services.Posts
                 return Result<PostResponseDto>.Failure($"Post creation failed due to validation errors: {errors}", 400);
             }
 
-
             var refrencedCar = await _carRepository.GetCarByIdAsync(req.CarId);
 
             if (refrencedCar == null || refrencedCar.DealerId != dealerId)
@@ -100,7 +99,6 @@ namespace GearUp.Application.Services.Posts
             }
 
             var post = Post.CreatePost(req.Caption, req.Content, req.Visibility, dealerId, req.CarId);
-            var mappedCar = _mapper.Map<CreateCarResponseDto>(refrencedCar);
             await _postRepository.AddPostAsync(post);
             await _commonRepository.SaveChangesAsync();
             _logger.LogInformation("Post created successfully with Id: {PostId}", post.Id);

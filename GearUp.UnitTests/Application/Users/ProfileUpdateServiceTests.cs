@@ -47,7 +47,7 @@ namespace GearUp.UnitTests.Application.Users
         public async Task UpdateProfile_UpdatesBasicFields()
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, It.IsAny<string>())).Returns(PasswordVerificationResult.Failed);
             var dto = new UpdateUserRequestDto(null, "Jane", null, null, "123", null, null, null);
             _mapper.Setup(m => m.Map<UpdateUserResponseDto>(user)).Returns(new UpdateUserResponseDto(
@@ -71,7 +71,7 @@ namespace GearUp.UnitTests.Application.Users
         public async Task UpdateProfile_EmailChange_SendsVerification()
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             _userRepo.Setup(r => r.GetUserByEmailAsync("new@example.com")).ReturnsAsync((User?)null);
             _tokenGenerator.Setup(t => t.GenerateEmailVerificationToken(It.IsAny<IEnumerable<System.Security.Claims.Claim>>())).Returns("token");
             var dto = new UpdateUserRequestDto("new@example.com", null, null, null, null, null, null, null);
@@ -86,7 +86,7 @@ namespace GearUp.UnitTests.Application.Users
         public async Task UpdateProfile_EmailChange_Fails_EmailInUse()
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             _userRepo.Setup(r => r.GetUserByEmailAsync("new@example.com")).ReturnsAsync(user);
             var dto = new UpdateUserRequestDto("new@example.com", null, null, null, null, null, null, null);
             var svc = CreateService();
@@ -99,7 +99,7 @@ namespace GearUp.UnitTests.Application.Users
         public async Task UpdateProfile_PasswordChange_Succeeds()
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, It.IsAny<string>())).Returns(PasswordVerificationResult.Success);
             var dto = new UpdateUserRequestDto(null, null, null, null, null, "currPassword", "newPassword", "newPassword");
             var svc = CreateService();
@@ -113,7 +113,7 @@ namespace GearUp.UnitTests.Application.Users
         public async Task UpdateProfile_PasswordChange_Fails_WrongCurrentPassword()
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, It.IsAny<string>())).Returns(PasswordVerificationResult.Failed);
             var dto = new UpdateUserRequestDto(null, null, null, null, null, "currPassword", "newPassword", "newPassword");
             var svc = CreateService();
@@ -126,7 +126,7 @@ namespace GearUp.UnitTests.Application.Users
         public async Task UpdateProfile_PasswordChange_Fails_MismatchNewPasswords()
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             var dto = new UpdateUserRequestDto(null, null, null, null, null, "currPassword", "newPassword1", "newPassword2");
             var svc = CreateService();
             var res = await svc.UpdateUserProfileService(user.Id.ToString(), dto);

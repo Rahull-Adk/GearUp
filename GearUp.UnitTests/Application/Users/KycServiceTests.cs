@@ -32,7 +32,7 @@ namespace GearUp.UnitTests.Application.Users
         public async Task SubmitKyc_Success()
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John");
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             var images = new List<MemoryStream> { new MemoryStream(new byte[] { 1 }) };
             var pdfs = new List<MemoryStream> { new MemoryStream(new byte[] { 2 }) };
             _docProcessor.Setup(d => d.ProcessDocuments(It.IsAny<List<IFormFile>>(), 1200, 800))
@@ -77,7 +77,7 @@ namespace GearUp.UnitTests.Application.Users
         public async Task SubmitKyc_Fails_DocumentProcessingError()
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John");
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             _docProcessor.Setup(d => d.ProcessDocuments(It.IsAny<List<IFormFile>>(), 1200, 800))
                 .ReturnsAsync(Result<(List<MemoryStream>, List<MemoryStream>)>.Failure("Document processing error"));
             var svc = CreateService();

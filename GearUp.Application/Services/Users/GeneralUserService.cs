@@ -1,7 +1,6 @@
 using AutoMapper;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
-using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Domain.Enums;

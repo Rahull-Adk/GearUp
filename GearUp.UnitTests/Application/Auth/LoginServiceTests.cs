@@ -176,7 +176,7 @@ namespace GearUp.UnitTests.Application.Auth
             user.VerifyEmail();
             var stored = RefreshToken.CreateRefreshToken("old", DateTime.UtcNow.AddMinutes(10), user.Id);
             _tokenRepo.Setup(r => r.GetRefreshTokenAsync("old")).ReturnsAsync(stored);
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             _tokenGenerator.Setup(t => t.GenerateAccessToken(It.IsAny<IEnumerable<Claim>>())).Returns("new-access");
             _tokenGenerator.Setup(t => t.GenerateRefreshToken()).Returns("new-refresh");
 
@@ -198,7 +198,7 @@ namespace GearUp.UnitTests.Application.Auth
             var token = PasswordResetToken.CreatePasswordResetToken("t", DateTime.UtcNow.AddMinutes(30), user.Id);
             _resetValidator.Setup(v => v.ValidateAsync(It.IsAny<PasswordResetReqDto>(), default)).ReturnsAsync(Valid());
             _tokenRepo.Setup(r => r.GetPasswordResetTokenAsync("t")).ReturnsAsync(token);
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, It.IsAny<string>()))
             .Returns(PasswordVerificationResult.Failed);
             _passwordHasher.Setup(h => h.HashPassword(user, It.IsAny<string>())).Returns("hashed");

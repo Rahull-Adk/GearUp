@@ -76,7 +76,7 @@ namespace GearUp.UnitTests.Application.Auth
             var principal = new ClaimsPrincipal(identity);
             _tokenValidator.Setup(v => v.ValidateToken("token", "secret", null))
             .ReturnsAsync(new TokenValidationResultModel { IsValid = true, ClaimsPrincipal = principal, Status = 200 });
-            _userRepo.Setup(r => r.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id)).ReturnsAsync(user);
             var svc = CreateService();
             var result = await svc.VerifyEmail("token");
             Assert.True(result.IsSuccess);

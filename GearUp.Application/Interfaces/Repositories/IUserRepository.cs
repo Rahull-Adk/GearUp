@@ -1,3 +1,4 @@
+using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Users;
 
@@ -9,8 +10,9 @@ namespace GearUp.Application.Interfaces.Repositories
         Task AddKycAsync(KycSubmissions kyc);
         Task<User?> GetUserByEmailAsync(string email);
         Task<User?> GetUserByUsernameAsync(string username);
-        Task<User?> GetUserByIdAsync(Guid id);
+        Task<RegisterResponseDto?> GetUserByIdAsync(Guid id);
+        Task<User?> GetUserEntityByIdAsync(Guid id);
         Task SaveChangesAsync();
-        Task<Dictionary<Guid, User>> GetAllUserWithIds(List<Guid> userIds);
+        Task<bool> UserExistAsync(Guid userId);
     }
 }

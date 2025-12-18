@@ -126,7 +126,8 @@ namespace GearUp.Application.Services.Auth
             {
                 return Result<LoginResponseDto>.Failure("Invalid or expired refresh token", 401);
             }
-            var user = await _userRepository.GetUserByIdAsync(storedToken.UserId);
+            // Use GetUserEntityByIdAsync to retrieve the actual User entity (test and implementation provide this)
+            var user = await _userRepository.GetUserEntityByIdAsync(storedToken.UserId);
             if (user == null)
             {
                 return Result<LoginResponseDto>.Failure("User not found", 404);
@@ -192,7 +193,7 @@ namespace GearUp.Application.Services.Auth
                 _logger.LogWarning("Invalid or expired password reset token.");
                 return Result<string>.Failure("Invalid or expired password reset token", 401);
             }
-            var user = await _userRepository.GetUserByIdAsync(storedToken.UserId);
+            var user = await _userRepository.GetUserEntityByIdAsync(storedToken.UserId);
             
             if (user == null)
             {

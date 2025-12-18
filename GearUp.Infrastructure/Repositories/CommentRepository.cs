@@ -19,16 +19,6 @@ namespace GearUp.Infrastructure.Repositories
             await _db.PostComments.AddAsync(comment);
         }
 
-        public async Task<Dictionary<Guid, int>> GetCommentsLikeCount(List<Guid> commentIds)
-        {
-            return await _db.PostComments.Where(pc => commentIds.Contains(pc.Id))
-                .Select(pc => new
-                {
-                    pc.Id,
-                    LikeCount = _db.CommentLikes.Count(pcl => pcl.CommentId == pc.Id)
-                })
-                .ToDictionaryAsync(k => k.Id, v => v.LikeCount);
-        }
 
         public async Task<IEnumerable<CommentDto>> GetTopLevelCommentsByPostIdAsync(Guid postId)
         {
@@ -86,6 +76,11 @@ namespace GearUp.Infrastructure.Repositories
         public async Task<bool> IsCommentAlreadyLikedByUserAsync(Guid commentId, Guid userId)
         {
             return await _db.CommentLikes.AnyAsync(cl => cl.CommentId == commentId && cl.LikedUserId == userId);
+        }
+
+        public async Task<bool> CommentExistAsync(Guid commentId)
+        {
+            return await _db.PostComments.AnyAsync(c => c.Id == commentId);
         }
     }
 }

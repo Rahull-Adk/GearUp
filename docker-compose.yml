@@ -24,7 +24,6 @@ services:
     ports:
       - "5255:8080"
     environment:
-      KestrelCertificates__Development__Password: ${KestrelCertificates__Development__Password}
       ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection}
       Redis__ConnectionString: ${Redis__ConnectionString:-redis:6379}
       Jwt__Issuer: ${Jwt__Issuer}

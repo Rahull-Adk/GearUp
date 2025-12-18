@@ -9,10 +9,10 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<bool> IsUniqueVin(string vin);
         Task AddCarAsync(Car car);
         Task AddCarImagesAsync(IEnumerable<CarImage> carImages);
-        Task<PageResult<Car>> GetAllCarsAsync(int pageNum);
-        Task<PageResult<Car>> SearchCarsAsync(CarSearchDto dto);
-        Task<Dictionary<Guid, Car>> GetCarsByIdsAsync(List<Guid> carIds);
-        Task<Car?> GetCarByIdAsync(Guid carId);
+        Task<PageResult<CarResponseDto>> GetAllCarsAsync(int pageNum);
+        Task<PageResult<CarResponseDto>> SearchCarsAsync(CarSearchDto dto);
+        Task<CarResponseDto?> GetCarByIdAsync(Guid carId);
+        Task<Car?> GetCarEntityByIdAsync(Guid carId);
         Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId);
         void RemoveCarImageByCarId(Car car);
     }

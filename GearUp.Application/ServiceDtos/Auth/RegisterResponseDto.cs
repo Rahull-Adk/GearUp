@@ -1,3 +1,5 @@
+using GearUp.Domain.Enums;
+
 namespace GearUp.Application.ServiceDtos.Auth
 {
     public record RegisterResponseDto(
@@ -6,7 +8,7 @@ namespace GearUp.Application.ServiceDtos.Auth
     string Username,
     string Email,
     string Name,
-    string Role, DateOnly DateOfBirth,
+    UserRole Role, DateOnly DateOfBirth,
     string? PhoneNumber,
     string AvatarUrl
 );

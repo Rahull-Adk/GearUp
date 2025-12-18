@@ -32,7 +32,8 @@ namespace GearUp.Application.Services.Users
             if (string.IsNullOrEmpty(userId))
                 return Result<KycUserResponseDto>.Failure("Unauthorized", 401);
 
-            var user = await _userRepo.GetUserByIdAsync(Guid.Parse(userId));
+            // Use GetUserEntityByIdAsync to retrieve the full User entity (matches repository mock and intent)
+            var user = await _userRepo.GetUserEntityByIdAsync(Guid.Parse(userId));
             if (user == null)
                 return Result<KycUserResponseDto>.Failure("User not found", 404);
 
