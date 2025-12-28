@@ -1,4 +1,5 @@
 using GearUp.Application.Common;
+using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.ServiceDtos.Post;
@@ -15,19 +16,23 @@ namespace GearUp.Application.Services.Posts
         private readonly ICommonRepository _commonRepository;
         private readonly IPostRepository _postRepository;
         private readonly ICommentRepository _commentRepository;
+        private readonly IRealTimeNotifier _realTimeNotifier;
 
-        public CommentService(ILogger<ICommentService> logger, ICommonRepository commonRepository, IPostRepository postRepository, IUserRepository userRepository, ICommentRepository commentRepository)
+        public CommentService(ILogger<ICommentService> logger, ICommonRepository commonRepository, IPostRepository postRepository, IUserRepository userRepository, ICommentRepository commentRepository,
+            IRealTimeNotifier  realTimeNotifier
+            )
         {
             _logger = logger;
             _commonRepository = commonRepository;
             _postRepository = postRepository;
             _userRepository = userRepository;
             _commentRepository = commentRepository;
+            _realTimeNotifier = realTimeNotifier;
         }
 
         public async Task<Result<CommentDto>> PostCommentAsync(CreateCommentDto comment, Guid userId)
         {
-           
+
             _logger.LogInformation("User with Id: {UserId} is commenting on post with Id: {PostId}", userId, comment.PostId);
 
             var post = await _postRepository.GetPostByIdAsync(comment.PostId, userId);
@@ -63,6 +68,7 @@ namespace GearUp.Application.Services.Posts
             var postComment = PostComment.CreateComment(comment.PostId, userId, comment.Text, comment.ParentCommentId);
             await _commentRepository.AddCommentAsync(postComment);
             await _commonRepository.SaveChangesAsync();
+            await _realTimeNotifier.BroadCastCommentToPostViewers(comment.PostId);
             _logger.LogInformation("User with Id: {UserId} commented successfully on post with Id: {PostId}", userId, comment.PostId);
 
             return Result<CommentDto>.Success(null!, "Comment added successfully", 201);

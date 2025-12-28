@@ -1,7 +1,6 @@
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
-using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Domain.Entities.Posts;
 using Microsoft.Extensions.Logging;
@@ -16,12 +15,13 @@ namespace GearUp.Application.Services.Posts
         private readonly ICommentRepository _commentRepository;
         private readonly ICommonRepository _commonRepository;
         private readonly IPostRepository _postRepository;
+        private readonly IRealTimeNotifier _realTimeNotifier;
 
-
-        public LikeService(ILogger<IPostService> logger, ICacheService cache, ICommonRepository commonRepository, IPostRepository postRepository, IUserRepository userRepository, IRealTimeNotifier realTimeNotifier, ILikeRepository likeRepository, ICommentRepository commentRepository)
+        public LikeService(ILogger<IPostService> logger, ICommonRepository commonRepository, IPostRepository postRepository, IUserRepository userRepository, IRealTimeNotifier realTimeNotifier, ILikeRepository likeRepository, ICommentRepository commentRepository)
         {
             _logger = logger;
             _commonRepository = commonRepository;
+            _realTimeNotifier = realTimeNotifier;
             _postRepository = postRepository;
             _userRepository = userRepository;
             _likeRepository = likeRepository;
@@ -31,7 +31,7 @@ namespace GearUp.Application.Services.Posts
         {
 
             _logger.LogInformation("User with id: {UserId} is liking/unliking the Comment with id: {CommentId}", userId, commentId);
-            var message = string.Empty;
+            string message = "";
             var user = await _userRepository.GetUserByIdAsync(userId);
             if (user == null)
             {
@@ -47,12 +47,10 @@ namespace GearUp.Application.Services.Posts
             }
             var isCommentAlreadyLiked = await _commentRepository.IsCommentAlreadyLikedByUserAsync(commentId, userId);
 
-            bool isNowLiked;
             if (isCommentAlreadyLiked)
-            {
-                await _likeRepository.RemoveCommentLikeAsync(userId, commentId);
+            { _likeRepository.RemoveCommentLikeAsync(userId, commentId);
                 message = "Comment unliked successfully";
-                isNowLiked = false;
+
                 _logger.LogInformation("Comment with Id: {CommentId} unliked successfully by user with Id: {UserId}", commentId, userId);
             }
 
@@ -61,13 +59,12 @@ namespace GearUp.Application.Services.Posts
                 var commentLike = CommentLike.CreateCommentLike(commentId, userId);
                 await _likeRepository.AddCommentLikeAsync(commentLike);
                 message = "Comment liked successfully";
-                isNowLiked = true;
                 _logger.LogInformation("Comment with Id: {CommentId} liked successfully by user with Id: {UserId}", commentId, userId);
             }
 
             await _commonRepository.SaveChangesAsync();
-
             var likeCount = await _commentRepository.GetCommentLikeCountByIdAysnc(commentId);
+            await _realTimeNotifier.BroadCastCommentLikesToPostViewers(comment.PostId);
             return Result<int>.Success(likeCount, message, 200);
 
 
@@ -92,12 +89,12 @@ namespace GearUp.Application.Services.Posts
             }
             var counts = await _postRepository.GetCountsForPostById(postId, userId);
 
-            bool isNowLiked;
+
             if (counts.IsLikedByCurrentUser)
             {
-                await _likeRepository.RemovePostLikeAsync(userId, postId);
+             _likeRepository.RemovePostLikeAsync(userId, postId);
                 message = "Post unliked successfully";
-                isNowLiked = false;
+
                 _logger.LogInformation("Post with Id: {PostId} unliked successfully by user with Id: {UserId}", postId, userId);
             }
             else
@@ -105,12 +102,11 @@ namespace GearUp.Application.Services.Posts
                 var postLike = PostLike.CreateLike(postId, userId);
                 await _likeRepository.AddPostLikeAsync(postLike);
                 message = "Post liked successfully";
-                isNowLiked = true;
                 _logger.LogInformation("Post with Id: {PostId} liked successfully by user with Id: {UserId}", postId, userId);
             }
 
             await _commonRepository.SaveChangesAsync();
-
+            await _realTimeNotifier.BroadCastLikesToPostViewers(postId);
             var likeCount = await _likeRepository.GetPostLikeCountAsync(postId);
 
             return Result<int>.Success(likeCount, message, 200);

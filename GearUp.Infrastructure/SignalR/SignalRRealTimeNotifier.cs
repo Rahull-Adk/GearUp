@@ -10,19 +10,19 @@ namespace GearUp.Infrastructure.SignalR
         {
             _postHub = postHub;
         }
-        public async Task BroadCastCommentToPostViewers(Guid postId, string comment)
+        public async Task BroadCastCommentToPostViewers(Guid postId)
         {
-           await _postHub.Clients.Group($"post-{postId}").SendAsync("ReceiveComment", comment);
+           await _postHub.Clients.Group($"post-{postId}").SendAsync("CommentAdded");
         }
 
-        public async Task BroadCastLikesToCommentViewers(Guid commentId, int likeCount)
+        public async Task BroadCastCommentLikesToPostViewers(Guid postId)
         {
-            await _postHub.Clients.Group($"comment-{commentId}").SendAsync("ReceiveCommentLike", likeCount);
+            await _postHub.Clients.Group($"post-{postId}").SendAsync("UpdatedCommentLike");
         }
 
-        public async Task BroadCastLikeToPostViewers(Guid postId, int likeCount)
+        public async Task BroadCastLikesToPostViewers(Guid postId)
         {
-            await _postHub.Clients.Group($"post-{postId}").SendAsync("ReceiveLike", likeCount);
+            await _postHub.Clients.Group($"post-{postId}").SendAsync("UpdatedPostLike");
         }
     }
 }
