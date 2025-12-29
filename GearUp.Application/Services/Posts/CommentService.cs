@@ -68,7 +68,18 @@ namespace GearUp.Application.Services.Posts
             var postComment = PostComment.CreateComment(comment.PostId, userId, comment.Text, comment.ParentCommentId);
             await _commentRepository.AddCommentAsync(postComment);
             await _commonRepository.SaveChangesAsync();
-            await _realTimeNotifier.BroadCastCommentToPostViewers(comment.PostId);
+            await _realTimeNotifier.BroadCastComments(comment.PostId, new CommentDto
+            {
+                ParentCommentId = comment.ParentCommentId,
+                PostId = comment.PostId,
+                CommentedUserId = userId,
+                Content = comment.Text,
+                CreatedAt = postComment.CreatedAt,
+                Id = postComment.Id,
+                CommentedUserName = user.Username,
+                CommentedUserProfilePictureUrl = user.AvatarUrl,
+                LikeCount = 0
+            });
             _logger.LogInformation("User with Id: {UserId} commented successfully on post with Id: {PostId}", userId, comment.PostId);
 
             return Result<CommentDto>.Success(null!, "Comment added successfully", 201);

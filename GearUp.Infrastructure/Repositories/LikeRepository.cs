@@ -22,7 +22,7 @@ namespace GearUp.Infrastructure.Repositories
         {
             await _db.PostLikes.AddAsync(pl);
         }
-        public void RemovePostLikeAsync(Guid userId, Guid postId)
+        public void RemovePostLike(Guid userId, Guid postId)
         {
             _db.PostLikes.RemoveRange(_db.PostLikes.Where(p => p.PostId == postId && p.LikedUserId == userId));
         }
@@ -34,7 +34,7 @@ namespace GearUp.Infrastructure.Repositories
         {
             await _db.CommentLikes.AddAsync(cl);
         }
-        public void RemoveCommentLikeAsync(Guid userId, Guid commentId)
+        public void RemoveCommentLike(Guid userId, Guid commentId)
         {
             _db.CommentLikes.RemoveRange(_db.CommentLikes.Where(c => c.CommentId == commentId && c.LikedUserId == userId));
         }

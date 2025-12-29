@@ -78,17 +78,6 @@ namespace GearUp.Infrastructure.Repositories
             }).FirstAsync();
 
         }
-        public async Task<Dictionary<Guid, PostCountsDto>> GetCountsForPostsById(List<Guid> postIds, Guid userId)
-        {
-            return await _db.Posts.Where(p => postIds.Contains(p.Id)).Select(p => new PostCountsDto
-            {
-                PostId = p.Id,
-                LikeCount = p.Likes.Count(),
-                CommentCount = p.Comments.Count(),
-                ViewCount = p.Views.Count(),
-                IsLikedByCurrentUser = p.Likes.Any(pl => pl.LikedUserId == userId)
-            }).ToDictionaryAsync(k => k.PostId);
-        }
         public async Task<int> GetPostViewCountAsync(Guid postId)
         {
             return await _db.PostViews.CountAsync(pv => pv.PostId == postId);

@@ -8,7 +8,6 @@ namespace GearUp.Application.Interfaces.Repositories
     {
         Task AddPostAsync(Post post);
         Task<PageResult<PostResponseDto>> GetAllPostsAsync(int pageNum, Guid currUserId);
-        Task<Dictionary<Guid, PostCountsDto>> GetCountsForPostsById(List<Guid> postIds, Guid userId);
         Task<PostResponseDto?> GetPostByIdAsync(Guid postId, Guid currUserId);
         Task<PostCountsDto> GetCountsForPostById(Guid postId, Guid userId);
         Task<int> GetPostViewCountAsync(Guid postId);

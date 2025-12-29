@@ -11,9 +11,14 @@ namespace GearUp.Infrastructure.SignalR
             await Groups.AddToGroupAsync(Context.ConnectionId, $"post-{postId}");
         }
 
-        public async Task JoinCommentsGroup(Guid commentId)
+        public async Task JoinCommentsGroup(Guid postId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"comment-{commentId}-replies");
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"post-{postId}-comments");
+        }
+
+        public async Task LeaveCommentsGroup(Guid postId)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"post-{postId}-comments");
         }
 
         public async Task LeaveGroup(Guid postId)
