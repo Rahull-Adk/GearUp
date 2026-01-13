@@ -65,6 +65,7 @@ namespace GearUp.Application.Services.Posts
                 }
             }
 
+            var user = await _userRepository.GetUserByIdAsync(userId);
             var postComment = PostComment.CreateComment(comment.PostId, userId, comment.Text, comment.ParentCommentId);
             await _commentRepository.AddCommentAsync(postComment);
             await _commonRepository.SaveChangesAsync();
