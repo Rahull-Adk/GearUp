@@ -1,4 +1,5 @@
 using GearUp.Application.Common;
+using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.ServiceDtos.Post;
@@ -15,19 +16,23 @@ namespace GearUp.Application.Services.Posts
         private readonly ICommonRepository _commonRepository;
         private readonly IPostRepository _postRepository;
         private readonly ICommentRepository _commentRepository;
+        private readonly IRealTimeNotifier _realTimeNotifier;
 
-        public CommentService(ILogger<ICommentService> logger, ICommonRepository commonRepository, IPostRepository postRepository, IUserRepository userRepository, ICommentRepository commentRepository)
+        public CommentService(ILogger<ICommentService> logger, ICommonRepository commonRepository, IPostRepository postRepository, IUserRepository userRepository, ICommentRepository commentRepository,
+            IRealTimeNotifier  realTimeNotifier
+            )
         {
             _logger = logger;
             _commonRepository = commonRepository;
             _postRepository = postRepository;
             _userRepository = userRepository;
             _commentRepository = commentRepository;
+            _realTimeNotifier = realTimeNotifier;
         }
 
         public async Task<Result<CommentDto>> PostCommentAsync(CreateCommentDto comment, Guid userId)
         {
-           
+
             _logger.LogInformation("User with Id: {UserId} is commenting on post with Id: {PostId}", userId, comment.PostId);
 
             var postExist = await _postRepository.PostExistAsync(comment.PostId);
@@ -60,9 +65,22 @@ namespace GearUp.Application.Services.Posts
                 }
             }
 
+            var user = await _userRepository.GetUserByIdAsync(userId);
             var postComment = PostComment.CreateComment(comment.PostId, userId, comment.Text, comment.ParentCommentId);
             await _commentRepository.AddCommentAsync(postComment);
             await _commonRepository.SaveChangesAsync();
+            await _realTimeNotifier.BroadCastComments(comment.PostId, new CommentDto
+            {
+                ParentCommentId = comment.ParentCommentId,
+                PostId = comment.PostId,
+                CommentedUserId = userId,
+                Content = comment.Text,
+                CreatedAt = postComment.CreatedAt,
+                Id = postComment.Id,
+                CommentedUserName = user.Username,
+                CommentedUserProfilePictureUrl = user.AvatarUrl,
+                LikeCount = 0
+            });
             _logger.LogInformation("User with Id: {UserId} commented successfully on post with Id: {PostId}", userId, comment.PostId);
 
             return Result<CommentDto>.Success(null!, "Comment added successfully", 201);

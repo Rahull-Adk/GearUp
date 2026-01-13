@@ -1,9 +1,11 @@
+using GearUp.Application.ServiceDtos.Post;
+
 namespace GearUp.Application.Interfaces
 {
     public interface IRealTimeNotifier
     {
-        Task BroadCastLikeToPostViewers(Guid postId, int likeCount);
-        Task BroadCastCommentToPostViewers(Guid postId, string comment);
-        Task BroadCastLikesToCommentViewers(Guid commentId, int likeCount);
+        Task BroadCastComments(Guid postId, CommentDto comment);
+        Task BroadCastCommentLikes(Guid postId, Guid commentId, int likeCount);
+        Task BroadCastPostLikes(Guid postId, int likeCount);
     }
 }

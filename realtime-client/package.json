@@ -1,0 +1,19 @@
+{
+  "name": "gearup-realtime-client",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "@microsoft/signalr": "7.0.9"
+  },
+  "devDependencies": {
+    "vite": "5.2.0"
+  }
+}
+

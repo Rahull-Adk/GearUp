@@ -59,6 +59,13 @@ namespace GearUp.Presentation.Controllers
 
         }
 
+        [Authorize]
+        [HttpGet("{postId:guid}/like")]
+        public async Task<IActionResult> GetLikedUsers([FromRoute] Guid postId, [FromQuery] int pageNum)
+        {
+            var likedUsers = await _postService.GetPostLikersAsync(postId, pageNum);
+            return StatusCode(likedUsers.Status, likedUsers);
+        }
 
     }
 

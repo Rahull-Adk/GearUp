@@ -1,11 +1,7 @@
-using System.Net.Mail;
 using System.Text;
 using System.Threading.RateLimiting;
 using AutoMapper;
 using CloudinaryDotNet;
-using sib_api_v3_sdk.Api;
-using sib_api_v3_sdk.Client;
-using sib_api_v3_sdk.Model;
 using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces;
@@ -37,7 +33,7 @@ using GearUp.Infrastructure.Seed;
 using GearUp.Infrastructure.SignalR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 
@@ -141,9 +137,9 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IPostRepository, PostRepository>();
             services.AddScoped<ICommentRepository, CommentRepository>();
             services.AddScoped<ILikeRepository, LikeRepository>();
+            services.AddScoped<IViewRepository, ViewRepository>();
             services.AddScoped<ICommonRepository, CommonRepository>();
             services.AddScoped<ITokenRepository, TokenRepository>();
-
 
             // Validator Injections
             services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestDtoValidator>();
@@ -195,6 +191,7 @@ namespace GearUp.Presentation.Extensions
                 opt.AddPolicy("AllowFrontend", builder =>
                 {
                     builder.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+                    builder.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
                 });
             });
 
