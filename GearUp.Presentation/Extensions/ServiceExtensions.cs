@@ -33,6 +33,7 @@ using GearUp.Infrastructure.Seed;
 using GearUp.Infrastructure.SignalR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 
@@ -136,9 +137,9 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IPostRepository, PostRepository>();
             services.AddScoped<ICommentRepository, CommentRepository>();
             services.AddScoped<ILikeRepository, LikeRepository>();
+            services.AddScoped<IViewRepository, ViewRepository>();
             services.AddScoped<ICommonRepository, CommonRepository>();
             services.AddScoped<ITokenRepository, TokenRepository>();
-
 
             // Validator Injections
             services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestDtoValidator>();

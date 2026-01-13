@@ -1,5 +1,6 @@
 using GearUp.Application.Common;
 using GearUp.Application.ServiceDtos.Post;
+using GearUp.Application.ServiceDtos.Socials;
 using GearUp.Domain.Entities.Posts;
 
 namespace GearUp.Application.Interfaces.Repositories
@@ -12,5 +13,6 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<PostCountsDto> GetCountsForPostById(Guid postId, Guid userId);
         Task<int> GetPostViewCountAsync(Guid postId);
         Task<Post?> GetPostEntityByIdAsync(Guid postId);
+        Task<PageResult<UserEngagementDto>> GetPostLikersAsync(Guid postId, int pageNum);
     }
 }

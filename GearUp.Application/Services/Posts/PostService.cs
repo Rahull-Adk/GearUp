@@ -5,8 +5,8 @@ using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
-using GearUp.Application.ServiceDtos.Car;
 using GearUp.Application.ServiceDtos.Post;
+using GearUp.Application.ServiceDtos.Socials;
 using GearUp.Domain.Entities.Posts;
 using Microsoft.Extensions.Logging;
 
@@ -20,10 +20,15 @@ namespace GearUp.Application.Services.Posts
         private readonly ICommonRepository _commonRepository;
         private readonly ICarRepository _carRepository;
         private readonly IPostRepository _postRepository;
+        private readonly IViewRepository _viewRepository;
         private readonly IMapper _mapper;
 
 
-        public PostService(ILogger<IPostService> logger, ICacheService cache, IValidator<CreatePostRequestDto> createPostValidator, ICommonRepository commonRepository, ICarRepository carRepository, IPostRepository postRepository, IMapper mapper, IUserRepository userRepository, IRealTimeNotifier realTimeNotifier)
+        public PostService(ILogger<IPostService> logger, ICacheService cache,
+            IValidator<CreatePostRequestDto> createPostValidator, ICommonRepository commonRepository,
+            ICarRepository carRepository, IPostRepository postRepository, IMapper mapper,
+            IUserRepository userRepository, IRealTimeNotifier realTimeNotifier
+            , IViewRepository viewRepository)
         {
             _logger = logger;
             _createPostValidator = createPostValidator;
@@ -32,12 +37,12 @@ namespace GearUp.Application.Services.Posts
             _postRepository = postRepository;
             _mapper = mapper;
             _userRepository = userRepository;
+            _viewRepository = viewRepository;
         }
+
         public async Task<Result<PageResult<PostResponseDto>>> GetAllPostsAsync(Guid userId, int pageNum)
         {
             _logger.LogInformation("Fetching page {PageNum} of posts for user: {UserId}", pageNum, userId);
-           
-          
             var postsPaged = await _postRepository.GetAllPostsAsync(pageNum, userId);
             if (postsPaged.TotalCount == 0)
                 return Result<PageResult<PostResponseDto>>.Success(postsPaged, "No post yet.");
@@ -51,14 +56,13 @@ namespace GearUp.Application.Services.Posts
         public async Task<Result<PostResponseDto>> GetPostByIdAsync(Guid id, Guid currUserId)
         {
             _logger.LogInformation("Fetching post with Id: {PostId}", id);
-           
-
             var post = await _postRepository.GetPostByIdAsync(id, currUserId);
             if (post == null)
             {
                 _logger.LogWarning("Post with Id: {PostId} not found", id);
                 return Result<PostResponseDto>.Failure("Post not found", 404);
             }
+
             var car = post.CarDto;
 
             if (car == null)
@@ -66,6 +70,17 @@ namespace GearUp.Application.Services.Posts
                 _logger.LogWarning("Car associated with Post Id: {PostId} not found", id);
                 return Result<PostResponseDto>.Failure("Car associated with the post not found", 404);
             }
+
+            bool viewTimeElapsed = await _viewRepository.HasViewTimeElapsedAsync(id, currUserId);
+
+            if (viewTimeElapsed)
+            {
+                var view = PostView.CreatePostView(post.Id, currUserId);
+                await _viewRepository.CreatePostViewAsync(view);
+            }
+
+            await _commonRepository.SaveChangesAsync();
+            post.ViewCount = await _postRepository.GetPostViewCountAsync(post.Id);
             _logger.LogInformation("Post with Id: {PostId} fetched successfully", id);
             return Result<PostResponseDto>.Success(post, "Post fetched successfully", 200);
         }
@@ -90,7 +105,8 @@ namespace GearUp.Application.Services.Posts
 
             if (refrencedCar == null || refrencedCar.DealerId != dealerId)
             {
-                return Result<PostResponseDto>.Failure("Referenced car not found or does not belong to the dealer", 404);
+                return Result<PostResponseDto>.Failure("Referenced car not found or does not belong to the dealer",
+                    404);
             }
 
             var user = await _userRepository.GetUserByIdAsync(dealerId);
@@ -100,12 +116,23 @@ namespace GearUp.Application.Services.Posts
             }
 
             var post = Post.CreatePost(req.Caption, req.Content, req.Visibility, dealerId, req.CarId);
-            var mappedCar = _mapper.Map<CreateCarResponseDto>(refrencedCar);
             await _postRepository.AddPostAsync(post);
             await _commonRepository.SaveChangesAsync();
             _logger.LogInformation("Post created successfully with Id: {PostId}", post.Id);
 
             return Result<PostResponseDto>.Success(null!, "Post created successfully", 201);
+        }
+
+        public async Task<Result<PageResult<UserEngagementDto>>> GetPostLikersAsync(Guid postId, int pageNum)
+        {
+            _logger.LogInformation("Getting all users liked for Post with Id: {PostId}", postId);
+            var postEntity = await _postRepository.GetPostEntityByIdAsync(postId);
+            if (postEntity == null)
+                return Result<PageResult<UserEngagementDto>>.Failure("Post not found", 404);
+
+            var likedUsers = await _postRepository.GetPostLikersAsync(postId, pageNum);
+
+            return Result<PageResult<UserEngagementDto>>.Success(likedUsers);
         }
 
         public async Task<Result<bool>> DeletePostAsync(Guid id)
@@ -136,6 +163,5 @@ namespace GearUp.Application.Services.Posts
             _logger.LogInformation("Post with Id: {PostId} updated", id);
             return Result<string>.Success(null!, "Post updated successfully", 200);
         }
-
     }
 }

@@ -3,7 +3,7 @@ using GearUp.Domain.Entities.Users;
 
 namespace GearUp.Domain.Entities.Posts
 {
-    public class PostComment
+    public class  PostComment
     {
         public Guid Id { get; private set; }
         public Guid PostId { get; private set; }
@@ -51,7 +51,7 @@ namespace GearUp.Domain.Entities.Posts
         {
             IsDeleted = true;
             UpdatedAt = DateTime.UtcNow;
-            
+
         }
 
         public void UpdateContent(string content)
@@ -60,7 +60,7 @@ namespace GearUp.Domain.Entities.Posts
                 throw new ArgumentException("Content cannot be null or empty.", nameof(content));
             Content = content;
             UpdatedAt = DateTime.UtcNow;
-            
+
         }
     }
 }
