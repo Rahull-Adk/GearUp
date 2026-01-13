@@ -23,15 +23,7 @@ namespace GearUp.Application.Services.Posts
         private readonly IViewRepository _viewRepository;
         private readonly IMapper _mapper;
 
-
-        public PostService(ILogger<IPostService> logger, ICacheService cache,
-            IValidator<CreatePostRequestDto> createPostValidator, ICommonRepository commonRepository,
-            ICarRepository carRepository, IPostRepository postRepository, IMapper mapper,
-            IUserRepository userRepository, IRealTimeNotifier realTimeNotifier
-            , IViewRepository viewRepository)
-
-
-        public PostService(ILogger<IPostService> logger, IValidator<CreatePostRequestDto> createPostValidator, ICommonRepository commonRepository, ICarRepository carRepository, IPostRepository postRepository,  IUserRepository userRepository)
+        public PostService(ILogger<IPostService> logger, IValidator<CreatePostRequestDto> createPostValidator, ICommonRepository commonRepository, ICarRepository carRepository, IPostRepository postRepository,  IUserRepository userRepository, IViewRepository viewRepository)
         {
             _logger = logger;
             _createPostValidator = createPostValidator;

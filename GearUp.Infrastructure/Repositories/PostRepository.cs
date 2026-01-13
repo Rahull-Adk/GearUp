@@ -14,6 +14,7 @@ namespace GearUp.Infrastructure.Repositories
     public class PostRepository : IPostRepository
     {
         private readonly GearUpDbContext _db;
+
         public PostRepository(GearUpDbContext db)
         {
             _db = db;
@@ -41,29 +42,28 @@ namespace GearUp.Infrastructure.Repositories
                     IsLikedByCurrentUser = p.Likes.Any(pl => pl.LikedUserId == currUserId),
                     AuthorUsername = p.User!.Username,
                     AuthorAvatarUrl = p.User.AvatarUrl,
-                    CarDto = p.CarId == null ? null : new CarResponseDto
-                    {
-                        Id = p.Car!.Id,
-                        Make = p.Car.Make,
-                        Model = p.Car.Model,
-                        Year = p.Car.Year,
-                        Description = p.Car.Description,
-                        Title = p.Car.Title,
-                        Price = p.Car.Price,
-                        Color = p.Car.Color,
-                        Mileage = p.Car.Mileage,
-                        SeatingCapacity = p.Car.SeatingCapacity,
-                        CarImages = p.Car.Images.Select(ci => new CarImageDto
+                    CarDto = p.CarId == null
+                        ? null
+                        : new CarResponseDto
                         {
-                            Id = ci.Id,
-                            Url = ci.Url
-                        }).ToList(),
-                        EngineCapacity = p.Car.EngineCapacity,
-                        FuelType = p.Car.FuelType,
-                        CarCondition = p.Car.Condition,
-                        TransmissionType = p.Car.Transmission,
-                        VIN = p.Car.VIN,
-                    },
+                            Id = p.Car!.Id,
+                            Make = p.Car.Make,
+                            Model = p.Car.Model,
+                            Year = p.Car.Year,
+                            Description = p.Car.Description,
+                            Title = p.Car.Title,
+                            Price = p.Car.Price,
+                            Color = p.Car.Color,
+                            Mileage = p.Car.Mileage,
+                            SeatingCapacity = p.Car.SeatingCapacity,
+                            CarImages =
+                                p.Car.Images.Select(ci => new CarImageDto { Id = ci.Id, Url = ci.Url }).ToList(),
+                            EngineCapacity = p.Car.EngineCapacity,
+                            FuelType = p.Car.FuelType,
+                            CarCondition = p.Car.Condition,
+                            TransmissionType = p.Car.Transmission,
+                            VIN = p.Car.VIN,
+                        },
                     LikeCount = p.Likes.Count,
                     CommentCount = p.Comments.Count,
                     ViewCount = p.Views.Count
@@ -112,36 +112,32 @@ namespace GearUp.Infrastructure.Repositories
                     AuthorAvatarUrl = p.User.AvatarUrl,
                     IsLikedByCurrentUser =
                         p.Likes.Any(l => l.LikedUserId == currUserId),
-
                     LikeCount = p.Likes.Count,
                     CommentCount = p.Comments.Count,
                     ViewCount = p.Views.Count,
-
-                    CarDto = p.CarId == null ? null : new CarResponseDto
-                    {
-                        Id = p.Car!.Id,
-                        Make = p.Car.Make,
-                        Model = p.Car.Model,
-                        Year = p.Car.Year,
-                        Description = p.Car.Description,
-                        Title = p.Car.Title,
-                        Price = p.Car.Price,
-                        Color = p.Car.Color,
-                        Mileage = p.Car.Mileage,
-                        SeatingCapacity = p.Car.SeatingCapacity,
-                        EngineCapacity = p.Car.EngineCapacity,
-                        FuelType = p.Car.FuelType,
-                        CarCondition = p.Car.Condition,
-                        TransmissionType = p.Car.Transmission,
-                        VIN = p.Car.VIN,
-                        CarImages = p.Car.Images
-                            .Select(i => new CarImageDto
-                            {
-                                Id = i.Id,
-                                Url = i.Url
-                            })
-                            .ToList()
-                    }
+                    CarDto = p.CarId == null
+                        ? null
+                        : new CarResponseDto
+                        {
+                            Id = p.Car!.Id,
+                            Make = p.Car.Make,
+                            Model = p.Car.Model,
+                            Year = p.Car.Year,
+                            Description = p.Car.Description,
+                            Title = p.Car.Title,
+                            Price = p.Car.Price,
+                            Color = p.Car.Color,
+                            Mileage = p.Car.Mileage,
+                            SeatingCapacity = p.Car.SeatingCapacity,
+                            EngineCapacity = p.Car.EngineCapacity,
+                            FuelType = p.Car.FuelType,
+                            CarCondition = p.Car.Condition,
+                            TransmissionType = p.Car.Transmission,
+                            VIN = p.Car.VIN,
+                            CarImages = p.Car.Images
+                                .Select(i => new CarImageDto { Id = i.Id, Url = i.Url })
+                                .ToList()
+                        }
                 })
                 .ToListAsync();
 
@@ -164,7 +160,7 @@ namespace GearUp.Infrastructure.Repositories
         {
             var postLikes = await _db.PostLikes.Where(pl => pl.PostId == postId).Select(pl => new
             {
-                pl.LikedUser.Username,pl.LikedUser.AvatarUrl, pl.LikedUserId, pl.UpdatedAt
+                pl.LikedUser.Username, pl.LikedUser.AvatarUrl, pl.LikedUserId, pl.UpdatedAt
             }).ToListAsync();
             return new PageResult<UserEngagementDto>
             {
@@ -177,15 +173,16 @@ namespace GearUp.Infrastructure.Repositories
                     .Take(20)
                     .Select(pl => new UserEngagementDto
                     {
-                        UserId = pl.LikedUserId,
-                        UserName = pl.Username,
-                        ProfilePictureUrl = pl.AvatarUrl
-                     }).ToList(),
-                TotalPages =  (int)Math.Ceiling((double)postLikes.Count / 20)
+                        UserId = pl.LikedUserId, UserName = pl.Username, ProfilePictureUrl = pl.AvatarUrl
+                    }).ToList(),
+                TotalPages = (int)Math.Ceiling((double)postLikes.Count / 20)
             };
+
+        }
+
         public async Task<bool> PostExistAsync(Guid PostId)
         {
-           return await _db.Posts.AnyAsync(p => p.Id == PostId);
+            return await _db.Posts.AnyAsync(p => p.Id == PostId);
         }
     }
 }
