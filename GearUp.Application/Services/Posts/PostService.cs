@@ -29,13 +29,15 @@ namespace GearUp.Application.Services.Posts
             ICarRepository carRepository, IPostRepository postRepository, IMapper mapper,
             IUserRepository userRepository, IRealTimeNotifier realTimeNotifier
             , IViewRepository viewRepository)
+
+
+        public PostService(ILogger<IPostService> logger, IValidator<CreatePostRequestDto> createPostValidator, ICommonRepository commonRepository, ICarRepository carRepository, IPostRepository postRepository,  IUserRepository userRepository)
         {
             _logger = logger;
             _createPostValidator = createPostValidator;
             _commonRepository = commonRepository;
             _carRepository = carRepository;
             _postRepository = postRepository;
-            _mapper = mapper;
             _userRepository = userRepository;
             _viewRepository = viewRepository;
         }
@@ -99,7 +101,6 @@ namespace GearUp.Application.Services.Posts
                 var errors = string.Join(", ", validator.Errors.Select(e => e.ErrorMessage));
                 return Result<PostResponseDto>.Failure($"Post creation failed due to validation errors: {errors}", 400);
             }
-
 
             var refrencedCar = await _carRepository.GetCarByIdAsync(req.CarId);
 

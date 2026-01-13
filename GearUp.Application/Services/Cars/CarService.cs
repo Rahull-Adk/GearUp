@@ -1,4 +1,3 @@
-using AutoMapper;
 using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
@@ -15,7 +14,6 @@ namespace GearUp.Application.Services.Cars
         private readonly IValidator<UpdateCarDto> _updateCarValidator;
         private readonly ILogger<CarService> _logger;
         private readonly ICarRepository _carRepository;
-        private readonly IMapper _mapper;
         private readonly ICommonRepository _commonRepository;
         private readonly ICarImageService _carImageService;
         private readonly IUserRepository _userRepository;
@@ -24,7 +22,6 @@ namespace GearUp.Application.Services.Cars
             IValidator<CreateCarRequestDto> createCarValidator,
             ILogger<CarService> logger,
             ICarRepository carRepository,
-            IMapper mapper,
             ICommonRepository commonRepository,
             ICarImageService carImageService,
             IValidator<UpdateCarDto> updateCarDtoValiator,
@@ -32,7 +29,6 @@ namespace GearUp.Application.Services.Cars
         {
             _createCarValidator = createCarValidator;
             _logger = logger;
-            _mapper = mapper;
             _carRepository = carRepository;
             _commonRepository = commonRepository;
             _carImageService = carImageService;
@@ -40,44 +36,44 @@ namespace GearUp.Application.Services.Cars
             _userRepository = userRepository;
         }
 
-        public async Task<Result<CreateCarResponseDto>> CreateCarAsync(CreateCarRequestDto request, Guid dealerId)
+        public async Task<Result<CarResponseDto>> CreateCarAsync(CreateCarRequestDto request, Guid dealerId)
         {
             _logger.LogInformation("Car creation initiated for dealer ID: {DealerId}", dealerId);
 
             if (dealerId == Guid.Empty)
-                return Result<CreateCarResponseDto>.Failure("Invalid dealer ID.", 400);
+                return Result<CarResponseDto>.Failure("Invalid dealer ID.", 400);
 
             var validationResult = _createCarValidator.Validate(request);
             if (!validationResult.IsValid)
             {
                 var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
                 _logger.LogWarning("Car creation failed validation for dealer ID: {DealerId}. Errors: {Errors}", dealerId, errors);
-                return Result<CreateCarResponseDto>.Failure(errors, 422);
+                return Result<CarResponseDto>.Failure(errors, 422);
             }
 
-            var dealer = await _userRepository.GetUserByIdAsync(dealerId);
-            if (dealer == null)
+            var dealerExist = await _userRepository.UserExistAsync(dealerId);
+            if (!dealerExist)
                 {
                 _logger.LogWarning("Car creation failed: Dealer not found for ID: {DealerId}", dealerId);
-                return Result<CreateCarResponseDto>.Failure("Dealer not found.", 404);
+                return Result<CarResponseDto>.Failure("Dealer not found.", 404);
             }
 
             if (request.CarImages == null || request.CarImages.Count == 0)
             {
                 _logger.LogWarning("Car creation failed: No images provided for dealer ID: {DealerId}", dealerId);
-                return Result<CreateCarResponseDto>.Failure("At least one car image is required.", 422);
+                return Result<CarResponseDto>.Failure("At least one car image is required.", 422);
             }
 
             if (await _carRepository.IsUniqueVin(request.VIN))
             {
                 _logger.LogWarning("Car creation failed: VIN {VIN} already exists for dealer ID: {DealerId}", request.VIN, dealerId);
-                return Result<CreateCarResponseDto>.Failure("A car with the provided VIN already exists.", 409);
+                return Result<CarResponseDto>.Failure("A car with the provided VIN already exists.", 409);
             }
             Guid carId = Guid.NewGuid();
             var imagesResult = await _carImageService.ProcessForCreateAsync(request.CarImages, dealerId, carId);
             if (!imagesResult.IsSuccess)
             {
-                return Result<CreateCarResponseDto>.Failure(imagesResult.ErrorMessage, imagesResult.Status);
+                return Result<CarResponseDto>.Failure(imagesResult.ErrorMessage, imagesResult.Status);
             }
 
             var newCar = Car.CreateForSale(
@@ -105,56 +101,46 @@ namespace GearUp.Application.Services.Cars
             await _commonRepository.SaveChangesAsync();
             _logger.LogInformation("Car created successfully for dealer ID: {DealerId}", dealerId);
 
-            return Result<CreateCarResponseDto>.Success(null!, "Car added successfully.", 201);
+            return Result<CarResponseDto>.Success(null!, "Car added successfully.", 201);
         }
 
-        public async Task<Result<PageResult<CreateCarResponseDto>>> GetAllCarsAsync(int pageNum)
+        public async Task<Result<PageResult<CarResponseDto>>> GetAllCarsAsync(int pageNum)
         {
             if(pageNum < 1)
             {
-                return Result<PageResult<CreateCarResponseDto>>.Failure("Page number must be greater than zero", 400);
+                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than zero", 400);
             }
             var cars = await _carRepository.GetAllCarsAsync(pageNum);
 
-            var dto = new PageResult<CreateCarResponseDto>
-            {
-                TotalCount = cars.TotalCount,
-                CurrentPage = cars.CurrentPage,
-                PageSize = cars.PageSize,
-                TotalPages = cars.TotalPages,
-                Items = _mapper.Map<List<CreateCarResponseDto>>(cars.Items),
-            };
-
-            return Result<PageResult<CreateCarResponseDto>>.Success(dto, "Cars fetched successfully", 200);
+            return Result<PageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
         }
 
-        public async Task<Result<CreateCarResponseDto>> GetCarByIdAsync(Guid carId)
+        public async Task<Result<CarResponseDto>> GetCarByIdAsync(Guid carId)
         { 
             var car = await _carRepository.GetCarByIdAsync(carId);
             if (car == null)
             {
                 _logger.LogWarning("Car ID: {CarId} not found.", carId);
-                return Result<CreateCarResponseDto>.Failure("Car not found", 404);
+                return Result<CarResponseDto>.Failure("Car not found", 404);
             }
-            var responseData = _mapper.Map<CreateCarResponseDto>(car);
-            return Result<CreateCarResponseDto>.Success(responseData, "Car fetched successfully", 200);
+            return Result<CarResponseDto>.Success(car, "Car fetched successfully", 200);
         }
 
-        public async Task<Result<CreateCarResponseDto>> UpdateCarAsync(Guid carId, UpdateCarDto request, Guid dealerId)
+        public async Task<Result<CarResponseDto>> UpdateCarAsync(Guid carId, UpdateCarDto request, Guid dealerId)
         {
             _logger.LogInformation("Car Update initiated for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
 
-            var existingCar = await _carRepository.GetCarByIdAsync(carId);
+            var existingCar = await _carRepository.GetCarEntityByIdAsync(carId);
             if (existingCar is null)
             {
                 _logger.LogWarning("No existing car found for car ID: {CarId}", carId);
-                return Result<CreateCarResponseDto>.Failure("Car not found", 404);
+                return Result<CarResponseDto>.Failure("Car not found", 404);
             }
 
             if (existingCar.DealerId != dealerId)
             {
                 _logger.LogWarning("Unauthorized deletion attempt for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
-                return Result<CreateCarResponseDto>.Failure("Unauthorized to delete this car", 403);
+                return Result<CarResponseDto>.Failure("Unauthorized to delete this car", 403);
             }
 
             var validation = ValidateCarUpdate(existingCar, request, dealerId);
@@ -163,7 +149,7 @@ namespace GearUp.Application.Services.Cars
 
             var imagesResult = await _carImageService.ProcessForUpdateAsync(existingCar!, request.CarImages, dealerId);
             if (!imagesResult.IsSuccess)
-                return Result<CreateCarResponseDto>.Failure(imagesResult.ErrorMessage, imagesResult.Status);
+                return Result<CarResponseDto>.Failure(imagesResult.ErrorMessage, imagesResult.Status);
 
             existingCar!.UpdateDetails(
                 request.Title,
@@ -185,14 +171,14 @@ namespace GearUp.Application.Services.Cars
             await _commonRepository.SaveChangesAsync();
             _logger.LogInformation("Car updated successfully for car ID: {CarId}", carId);
 
-            return Result<CreateCarResponseDto>.Success(null!, "Car updated successfully", 200);
+            return Result<CarResponseDto>.Success(null!, "Car updated successfully", 200);
         }
 
         public async Task<Result<string>> DeleteCarByIdAsync(Guid carId, Guid dealerId)
         {
             _logger.LogInformation("Car Deletion initiated for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
 
-            var existingCar = await _carRepository.GetCarByIdAsync(carId);
+            var existingCar = await _carRepository.GetCarEntityByIdAsync(carId);
             if (existingCar is null)
             {
                 _logger.LogWarning("No existing car found for car ID: {CarId}", carId);
@@ -219,44 +205,44 @@ namespace GearUp.Application.Services.Cars
 
         }
 
-        private Result<CreateCarResponseDto> ValidateCarUpdate(Car? existingCar, UpdateCarDto request, Guid dealerId)
+        private Result<CarResponseDto> ValidateCarUpdate(Car? existingCar, UpdateCarDto request, Guid dealerId)
         {
             if (existingCar == null)
-                return Result<CreateCarResponseDto>.Failure("Car not found", 404);
+                return Result<CarResponseDto>.Failure("Car not found", 404);
 
             if (existingCar.DealerId != dealerId)
-                return Result<CreateCarResponseDto>.Failure("Unauthorized to update this car", 403);
+                return Result<CarResponseDto>.Failure("Unauthorized to update this car", 403);
 
             var validationResult = _updateCarValidator.Validate(request);
             if (!validationResult.IsValid)
             {
                 var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                return Result<CreateCarResponseDto>.Failure(errors, 422);
+                return Result<CarResponseDto>.Failure(errors, 422);
             }
 
-            return Result<CreateCarResponseDto>.Success(null!, "Validation passed", 200);
+            return Result<CarResponseDto>.Success(null!, "Validation passed", 200);
         }
 
-        public async Task<Result<PageResult<CreateCarResponseDto>>> SearchCarsAsync(CarSearchDto searchDto)
+        public async Task<Result<PageResult<CarResponseDto>>> SearchCarsAsync(CarSearchDto searchDto)
         {
             if (searchDto == null)
             {
-                return Result<PageResult<CreateCarResponseDto>>.Failure("Search criteria cannot be null", 400);
+                return Result<PageResult<CarResponseDto>>.Failure("Search criteria cannot be null", 400);
             }
 
             if(searchDto.Query == null && searchDto.Color == null && searchDto.MinPrice == null && searchDto.MaxPrice == null)
             {
-                return Result<PageResult<CreateCarResponseDto>>.Failure("At least one search criteria must be provided", 400);
+                return Result<PageResult<CarResponseDto>>.Failure("At least one search criteria must be provided", 400);
             }
 
             if(searchDto.Page < 1)
             {
-                return Result<PageResult<CreateCarResponseDto>>.Failure("Page number must be greater than zero", 400);
+                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than zero", 400);
             }
 
             if(searchDto.MinPrice != null && searchDto.MaxPrice != null && searchDto.MinPrice > searchDto.MaxPrice)
             {
-                return Result<PageResult<CreateCarResponseDto>>.Failure("MinPrice cannot be greater than MaxPrice", 400);
+                return Result<PageResult<CarResponseDto>>.Failure("MinPrice cannot be greater than MaxPrice", 400);
             }
 
             if(searchDto.SortBy != null)
@@ -264,7 +250,7 @@ namespace GearUp.Application.Services.Cars
                 var validSortBy = new List<string> { "price", "year", "make", "model" };
                 if(!validSortBy.Contains(searchDto.SortBy.ToLower()))
                 {
-                    return Result<PageResult<CreateCarResponseDto>>.Failure($"Invalid SortBy value. Valid values are: {string.Join(", ", validSortBy)}", 400);
+                    return Result<PageResult<CarResponseDto>>.Failure($"Invalid SortBy value. Valid values are: {string.Join(", ", validSortBy)}", 400);
                 }
             }
 
@@ -273,22 +259,12 @@ namespace GearUp.Application.Services.Cars
                 var validSortOrder = new List<string> { "asc", "desc" };
                 if(!validSortOrder.Contains(searchDto.SortOrder.ToLower()))
                 {
-                    return Result<PageResult<CreateCarResponseDto>>.Failure($"Invalid SortOrder value. Valid values are: {string.Join(", ", validSortOrder)}", 400);
+                    return Result<PageResult<CarResponseDto>>.Failure($"Invalid SortOrder value. Valid values are: {string.Join(", ", validSortOrder)}", 400);
                 }
             }
 
             var cars = await _carRepository.SearchCarsAsync(searchDto);
-
-            var dto = new PageResult<CreateCarResponseDto>
-            {
-                TotalCount = cars.TotalCount,
-                CurrentPage = cars.CurrentPage,
-                PageSize = cars.PageSize,
-                TotalPages = cars.TotalPages,
-                Items = _mapper.Map<List<CreateCarResponseDto>>(cars.Items),
-            };
-
-            return Result<PageResult<CreateCarResponseDto>>.Success(dto, "Cars fetched successfully", 200);
+            return Result<PageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
         }
     }
 }

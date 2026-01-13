@@ -1,4 +1,4 @@
-﻿using GearUp.Application.Common;
+using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
 using GearUp.Application.Interfaces.Services.EmailServiceInterface;
@@ -30,7 +30,7 @@ namespace GearUp.Application.Services.Auth
         public async Task<Result<string>> ResendVerificationEmail(string email)
         {
             _logger.LogInformation("Resend verification email requested for {Email}", email);
-            var user = await _userRepository.GetUserByEmailAsync(email);
+            var user = await _userRepository.GetUserEntityByEmailAsync(email);
             if (user == null)
             {
                 return Result<string>.Failure("User not found", 404);
@@ -67,7 +67,7 @@ namespace GearUp.Application.Services.Auth
             if (string.IsNullOrEmpty(userId))
                 return Result<string>.Failure("User ID not found in token", 404);
 
-            var user = await _userRepository.GetUserByIdAsync(Guid.Parse(userId));
+            var user = await _userRepository.GetUserEntityByIdAsync(Guid.Parse(userId));
             if (user == null)
                 return Result<string>.Failure("User not found", 404);
 

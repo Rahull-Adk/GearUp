@@ -41,7 +41,7 @@ namespace GearUp.Infrastructure.Repositories
                     IsLikedByCurrentUser = p.Likes.Any(pl => pl.LikedUserId == currUserId),
                     AuthorUsername = p.User!.Username,
                     AuthorAvatarUrl = p.User.AvatarUrl,
-                    CarDto = p.CarId == null ? null : new CreateCarResponseDto
+                    CarDto = p.CarId == null ? null : new CarResponseDto
                     {
                         Id = p.Car!.Id,
                         Make = p.Car.Make,
@@ -70,6 +70,7 @@ namespace GearUp.Infrastructure.Repositories
                 })
                 .FirstOrDefaultAsync();
         }
+
         public async Task<PostCountsDto> GetCountsForPostById(Guid postId, Guid userId)
         {
             return await _db.Posts.Where(p => p.Id == postId).Select(p => new PostCountsDto
@@ -81,10 +82,12 @@ namespace GearUp.Infrastructure.Repositories
             }).FirstAsync();
 
         }
+
         public async Task<int> GetPostViewCountAsync(Guid postId)
         {
             return await _db.PostViews.CountAsync(pv => pv.PostId == postId);
         }
+
         public async Task<PageResult<PostResponseDto>> GetAllPostsAsync(int pageNum, Guid currUserId)
         {
             const int pageSize = 10;
@@ -114,7 +117,7 @@ namespace GearUp.Infrastructure.Repositories
                     CommentCount = p.Comments.Count,
                     ViewCount = p.Views.Count,
 
-                    CarDto = p.CarId == null ? null : new CreateCarResponseDto
+                    CarDto = p.CarId == null ? null : new CarResponseDto
                     {
                         Id = p.Car!.Id,
                         Make = p.Car.Make,
@@ -152,7 +155,6 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-
         public async Task<Post?> GetPostEntityByIdAsync(Guid postId)
         {
             return await _db.Posts.FirstOrDefaultAsync(p => p.Id == postId);
@@ -181,6 +183,9 @@ namespace GearUp.Infrastructure.Repositories
                      }).ToList(),
                 TotalPages =  (int)Math.Ceiling((double)postLikes.Count / 20)
             };
+        public async Task<bool> PostExistAsync(Guid PostId)
+        {
+           return await _db.Posts.AnyAsync(p => p.Id == PostId);
         }
     }
 }

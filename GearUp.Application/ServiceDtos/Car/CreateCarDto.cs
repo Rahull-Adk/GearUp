@@ -25,7 +25,7 @@ namespace GearUp.Application.ServiceDtos.Car
         public string LicensePlate { get; init; } = string.Empty;
     }
 
-    public class CreateCarResponseDto
+    public class CarResponseDto
     {
         public Guid Id { get; init; }
         public string Title { get; init; } = string.Empty;
@@ -36,6 +36,7 @@ namespace GearUp.Application.ServiceDtos.Car
         public double Price { get; init; }
         public string Color { get; init; } = string.Empty;
         public int Mileage { get; init; }
+        public Guid DealerId { get; init; }
         public int SeatingCapacity { get; init; }
         public int EngineCapacity { get; init; }
         public ICollection<CarImageDto>? CarImages { get; set; }
@@ -46,5 +47,7 @@ namespace GearUp.Application.ServiceDtos.Car
         public CarValidationStatus CarValidationStatus { get; init; }
         public string VIN { get; init; } = string.Empty;
         public string LicensePlate { get; init; } = string.Empty;
+        public DateTime CreatedAt { get; init; }
+        public DateTime UpdatedAt { get; init; }
     }
 }

@@ -40,7 +40,7 @@ namespace GearUp.Application.Services.Users
             if (string.IsNullOrEmpty(userId))
                 return Result<UpdateUserResponseDto>.Failure("Unauthorized", 401);
 
-            var user = await _userRepo.GetUserByIdAsync(Guid.Parse(userId));
+            var user = await _userRepo.GetUserEntityByIdAsync(Guid.Parse(userId));
             if (user == null)
                 return Result<UpdateUserResponseDto>.Failure("User not found", 404);
 
@@ -156,7 +156,7 @@ namespace GearUp.Application.Services.Users
             if (string.Equals(user.Email, reqDto.NewEmail, StringComparison.OrdinalIgnoreCase))
                 return Result<UpdateUserResponseDto>.Failure("New email cannot be same with the old one.", 400);
 
-            var existingUser = await _userRepo.GetUserByEmailAsync(reqDto.NewEmail);
+            var existingUser = await _userRepo.GetUserEntityByEmailAsync(reqDto.NewEmail);
             if (existingUser != null)
                 return Result<UpdateUserResponseDto>.Failure("Email is already in use", 400);
 

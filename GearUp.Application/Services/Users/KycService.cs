@@ -1,4 +1,3 @@
-using AutoMapper;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
@@ -12,14 +11,12 @@ namespace GearUp.Application.Services.Users
     public class KycService : IKycService
     {
         private readonly IUserRepository _userRepo;
-        private readonly IMapper _mapper;
         private readonly IDocumentProcessor _documentProcessor;
         private readonly ICloudinaryImageUploader _cloudinaryImageUploader;
         private readonly ILogger<KycService> _logger;
-        public KycService(IUserRepository userRepo, IMapper mapper, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader, ILogger<KycService> logger)
+        public KycService(IUserRepository userRepo, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader, ILogger<KycService> logger)
         {
             _userRepo = userRepo;
-            _mapper = mapper;
             _documentProcessor = documentProcessor;
             _cloudinaryImageUploader = cloudinaryImageUploader;
             _logger = logger;
@@ -32,7 +29,7 @@ namespace GearUp.Application.Services.Users
             if (string.IsNullOrEmpty(userId))
                 return Result<KycUserResponseDto>.Failure("Unauthorized", 401);
 
-            var user = await _userRepo.GetUserByIdAsync(Guid.Parse(userId));
+            var user = await _userRepo.GetUserEntityByIdAsync(Guid.Parse(userId));
             if (user == null)
                 return Result<KycUserResponseDto>.Failure("User not found", 404);
 

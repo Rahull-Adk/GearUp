@@ -33,13 +33,34 @@ namespace GearUp.Infrastructure.Repositories
             await _db.CarImages.AddRangeAsync(carImages);
         }
 
-        public async Task<PageResult<Car>> GetAllCarsAsync(int pageNum)
+        public async Task<PageResult<CarResponseDto>> GetAllCarsAsync(int pageNum)
         {
             var query = _db.Cars
                 .AsNoTracking()
                 .Where(car => car.IsDeleted == false && car.ValidationStatus == CarValidationStatus.Approved && car.Status == CarStatus.Available)
                 .Include(c => c.Images)
-                .OrderByDescending(c => c.CreatedAt);
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new CarResponseDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    Description = c.Description,
+                    Make = c.Make,
+                    Model = c.Model,
+                    Year = c.Year,
+                    Color = c.Color,
+                    Price = c.Price,
+                    VIN = c.VIN,
+                    CarStatus = c.Status,
+                    CarValidationStatus = c.ValidationStatus,
+                    CreatedAt = c.CreatedAt,
+                    CarImages = c.Images.Select(img => new CarImageDto
+                    {
+                        Id = img.Id,
+                        CarId = img.CarId,
+                        Url = img.Url
+                    }).ToList()
+                });
 
             var totalCars = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalCars / 10.0);
@@ -48,18 +69,17 @@ namespace GearUp.Infrastructure.Repositories
                 .Take(10)
                 .ToListAsync();
 
-            return new PageResult<Car>
+            return new PageResult<CarResponseDto>
             {
                 TotalCount = totalCars,
                 PageSize = 10,
                 CurrentPage = pageNum,
                 TotalPages = totalPages,
                 Items = cars
-
             };
         }
 
-        public async Task<PageResult<Car>> SearchCarsAsync(CarSearchDto dto)
+        public async Task<PageResult<CarResponseDto>> SearchCarsAsync(CarSearchDto dto)
         {
             IQueryable<Car> query = _db.Cars.AsQueryable();
             query = query.Where(car => car.ValidationStatus == CarValidationStatus.Approved && car.Status == CarStatus.Available);
@@ -105,8 +125,29 @@ namespace GearUp.Infrastructure.Repositories
                 .Include(c => c.Images)
                 .Skip((dto.Page - 1) * 10)
                 .Take(10)
+                .Select(c => new CarResponseDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    Description = c.Description,
+                    Make = c.Make,
+                    Model = c.Model,
+                    Year = c.Year,
+                    Color = c.Color,
+                    Price = c.Price,
+                    VIN = c.VIN,
+                    CarStatus = c.Status,
+                    CarValidationStatus = c.ValidationStatus,
+                    CreatedAt = c.CreatedAt,
+                    CarImages = c.Images.Select(img => new CarImageDto
+                    {
+                        Id = img.Id,
+                        CarId = img.CarId,
+                        Url = img.Url
+                    }).ToList()
+                })
                 .ToListAsync();
-            return new PageResult<Car>
+            return new PageResult<CarResponseDto>
             {
                 TotalCount = totalCars,
                 PageSize = 10,
@@ -116,17 +157,9 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<Car?> GetCarByIdAsync(Guid carId)
+        public async Task<Car?> GetCarEntityByIdAsync(Guid carId)
         {
             return await _db.Cars.Where(c => c.ValidationStatus == CarValidationStatus.Approved && c.Status == CarStatus.Available).Include(c => c.Images).FirstOrDefaultAsync(c => c.Id == carId);
-        }
-
-        public async Task<Dictionary<Guid, Car>> GetCarsByIdsAsync(List<Guid> carIds)
-        {
-            return await _db.Cars
-                .Where(c => carIds.Contains(c.Id) && c.ValidationStatus == CarValidationStatus.Approved && c.Status == CarStatus.Available)
-                .Include(c => c.Images)
-                .ToDictionaryAsync(k => k.Id, v => v);
         }
 
         public async Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId)
@@ -144,5 +177,33 @@ namespace GearUp.Infrastructure.Repositories
             _db.CarImages.RemoveRange(car.Images);
         }
 
+        public async Task<CarResponseDto?> GetCarByIdAsync(Guid carId)
+        {
+            return await _db.Cars.Where(c => c.Id == carId)
+                .AsNoTracking()
+                .Include(c => c.Images)
+                .Select(c => new CarResponseDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    Description = c.Description,
+                    Make = c.Make,
+                    Model = c.Model,
+                    Year = c.Year,
+                    Color = c.Color,
+                    Price = c.Price,
+                    VIN = c.VIN,
+                    CarStatus = c.Status,
+                    CarValidationStatus = c.ValidationStatus,
+                    CreatedAt = c.CreatedAt,
+                    CarImages = c.Images.Select(img => new CarImageDto
+                    {
+                        Id = img.Id,
+                        CarId = img.CarId,
+                        Url = img.Url
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync();
+        }
     }
 }

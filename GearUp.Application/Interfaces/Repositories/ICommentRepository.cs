@@ -6,6 +6,7 @@ namespace GearUp.Application.Interfaces.Repositories
     public interface ICommentRepository
     {
         Task AddCommentAsync(PostComment comment);
+        Task<bool> CommentExistAsync(Guid commentId);
         Task<IEnumerable<CommentDto>> GetTopLevelCommentsByPostIdAsync(Guid postId);
         Task<int> GetCommentLikeCountByIdAysnc(Guid commentId);
         Task<IEnumerable<CommentDto>> GetChildCommentsByParentIdAsync(Guid parentCommentId);

@@ -17,9 +17,8 @@ namespace GearUp.Application.Services.Posts
         private readonly IPostRepository _postRepository;
         private readonly IRealTimeNotifier _realTimeNotifier;
 
-        public LikeService(ILogger<IPostService> logger, ICommonRepository commonRepository,
-            IPostRepository postRepository, IUserRepository userRepository, IRealTimeNotifier realTimeNotifier,
-            ILikeRepository likeRepository, ICommentRepository commentRepository)
+
+        public LikeService(ILogger<IPostService> logger,ICommonRepository commonRepository, IPostRepository postRepository, IUserRepository userRepository, ILikeRepository likeRepository, ICommentRepository commentRepository)
         {
             _logger = logger;
             _commonRepository = commonRepository;
@@ -37,14 +36,19 @@ namespace GearUp.Application.Services.Posts
             string message = "";
             var user = await _userRepository.GetUserByIdAsync(userId);
             if (user == null)
+        { 
+            _logger.LogInformation("User with id: {UserId} is liking/unliking the Comment with id: {CommentId}", userId, commentId);
+            var userExist = await _userRepository.UserExistAsync(userId);
+            if (!userExist)
             {
                 _logger.LogWarning("User with Id: {UserId} not found", userId);
                 return Result<int>.Failure("User not found", 404);
             }
 
             var comment = await _commentRepository.GetCommentByIdAsync(commentId);
+            var commentExist = await _commentRepository.CommentExistAsync(commentId);
 
-            if (comment == null)
+            if (!commentExist)
             {
                 _logger.LogWarning("Comment with Id: {CommentId} not found", commentId);
                 return Result<int>.Failure("Comment not found", 404);
@@ -52,6 +56,7 @@ namespace GearUp.Application.Services.Posts
 
             var isCommentAlreadyLiked = await _commentRepository.IsCommentAlreadyLikedByUserAsync(commentId, userId);
 
+            string message;
             if (isCommentAlreadyLiked)
             {
                 _likeRepository.RemoveCommentLike(userId, commentId);
@@ -59,6 +64,7 @@ namespace GearUp.Application.Services.Posts
 
                 _logger.LogInformation("Comment with Id: {CommentId} unliked successfully by user with Id: {UserId}",
                     commentId, userId);
+                _logger.LogInformation("Comment with Id: {CommentId} unliked successfully by user with Id: {UserId}", commentId, userId);
             }
 
             else
@@ -68,6 +74,7 @@ namespace GearUp.Application.Services.Posts
                 message = "Comment liked successfully";
                 _logger.LogInformation("Comment with Id: {CommentId} liked successfully by user with Id: {UserId}",
                     commentId, userId);
+                _logger.LogInformation("Comment with Id: {CommentId} liked successfully by user with Id: {UserId}", commentId, userId);
             }
 
             await _commonRepository.SaveChangesAsync();
@@ -80,15 +87,15 @@ namespace GearUp.Application.Services.Posts
         {
             _logger.LogInformation("User with Id: {UserId} is liking post with Id: {PostId}", userId, postId);
             string message;
-            var post = await _postRepository.GetPostByIdAsync(postId, userId);
-            if (post == null)
+            var postExist = await _postRepository.PostExistAsync(postId);
+            if (!postExist)
             {
                 _logger.LogWarning("Post with Id: {PostId} not found", postId);
                 return Result<int>.Failure("Post not found", 404);
             }
 
-            var user = await _userRepository.GetUserByIdAsync(userId);
-            if (user == null)
+            var userExist = await _userRepository.UserExistAsync(userId);
+            if (!userExist)
             {
                 _logger.LogWarning("User with Id: {UserId} not found", userId);
                 return Result<int>.Failure("User not found", 404);
@@ -104,6 +111,7 @@ namespace GearUp.Application.Services.Posts
 
                 _logger.LogInformation("Post with Id: {PostId} unliked successfully by user with Id: {UserId}", postId,
                     userId);
+                _logger.LogInformation("Post with Id: {PostId} unliked successfully by user with Id: {UserId}", postId, userId);
             }
             else
             {
@@ -112,6 +120,7 @@ namespace GearUp.Application.Services.Posts
                 message = "Post liked successfully";
                 _logger.LogInformation("Post with Id: {PostId} liked successfully by user with Id: {UserId}", postId,
                     userId);
+                _logger.LogInformation("Post with Id: {PostId} liked successfully by user with Id: {UserId}", postId, userId);
             }
 
             await _commonRepository.SaveChangesAsync();

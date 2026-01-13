@@ -1,4 +1,5 @@
 using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Users;
 using GearUp.Infrastructure.Persistence;
@@ -24,24 +25,66 @@ namespace GearUp.Infrastructure.Repositories
             await _db.KycSubmissions.AddAsync(kyc);
         }
 
-        public async Task<User?> GetUserByUsernameOrEmailAsync(string usernameOrEmail)
-        {
-            return await _db.Users.SingleOrDefaultAsync(u => u.Username == usernameOrEmail || u.Email == usernameOrEmail);
 
+        public async Task<bool> UserExistAsync(Guid userId)
+        {
+            return await _db.Users.AnyAsync(u => u.Id == userId);
         }
-        public async Task<User?> GetUserByEmailAsync(string email)
+        public async Task<User?> GetUserEntityByEmailAsync(string email)
         {
             return await _db.Users.SingleOrDefaultAsync(u => u.Email == email);
         }
-
-        public async Task<User?> GetUserByIdAsync(Guid id)
+        public async Task<RegisterResponseDto?> GetUserByEmailAsync(string email)
         {
-            return await _db.Users.SingleOrDefaultAsync(u => u.Id == id);
+            return await _db.Users.Where(u => u.Email == email)
+                .Select(u => new RegisterResponseDto(
+                    u.Id,
+                    u.Provider,
+                    u.Username,
+                    u.Email,
+                    u.Name,
+                    u.Role,
+                    u.DateOfBirth,
+                    u.PhoneNumber,
+                    u.AvatarUrl
+                )).FirstOrDefaultAsync();
         }
 
-        public async Task<User?> GetUserByUsernameAsync(string username)
+        public async Task<RegisterResponseDto?> GetUserByIdAsync(Guid id)
         {
-            return await _db.Users.SingleOrDefaultAsync(u => u.Username == username);
+            return await _db.Users.Where(u => u.Id == id)
+                .Select(u => new RegisterResponseDto(
+                    u.Id,
+                    u.Provider,
+                    u.Username,
+                    u.Email,
+                    u.Name,
+                    u.Role,
+                    u.DateOfBirth,
+                    u.PhoneNumber,
+                    u.AvatarUrl
+                )).FirstOrDefaultAsync();
+        }
+
+        public async Task<RegisterResponseDto?> GetUserByUsernameAsync(string username)
+        {
+            return await _db.Users.Where(u => u.Username == username)
+                  .Select(u => new RegisterResponseDto(
+                      u.Id,
+                      u.Provider,
+                      u.Username,
+                      u.Email,
+                      u.Name,
+                      u.Role,
+                      u.DateOfBirth,
+                      u.PhoneNumber,
+                      u.AvatarUrl
+                  )).FirstOrDefaultAsync();
+        }
+
+        public async Task<User?> GetUserEntityByUsernameAsync(string username)
+        {
+            return await _db.Users.Where(u => u.Username == username).FirstOrDefaultAsync();
         }
 
         public async Task SaveChangesAsync()
@@ -49,11 +92,9 @@ namespace GearUp.Infrastructure.Repositories
             await _db.SaveChangesAsync();
         }
 
-        public async Task<Dictionary<Guid, User>> GetAllUserWithIds(List<Guid> userIds)
+        public async Task<User?> GetUserEntityByIdAsync(Guid id)
         {
-            return await _db.Users.Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id);
+            return await _db.Users.SingleOrDefaultAsync(u => u.Id == id);
         }
-
-
     }
 }
