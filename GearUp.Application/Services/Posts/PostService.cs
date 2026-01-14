@@ -44,8 +44,31 @@ namespace GearUp.Application.Services.Posts
             return Result<PageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
         }
 
+        public async Task<Result<PageResult<PostResponseDto>>> GetMyPosts(Guid userId, int pageNum)
+        {
+            _logger.LogInformation("Fetching page {PageNum} of posts for user: {UserId}", pageNum, userId);
+            var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(userId, pageNum);
+            if (postsPaged.TotalCount == 0)
+                return Result<PageResult<PostResponseDto>>.Success(postsPaged, "No post yet.");
 
-        public async Task<Result<PostResponseDto>> GetPostByIdAsync(Guid id, Guid currUserId)
+            _logger.LogInformation("Posts fetched successfully from database");
+
+            return Result<PageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
+        }
+
+        public async Task<Result<PageResult<PostResponseDto>>> GetPostsByUserId(Guid userId, int pageNum)
+        {
+            _logger.LogInformation("Fetching page {PageNum} of posts for user: {UserId}", pageNum, userId);
+            var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(userId, pageNum);
+            if (postsPaged.TotalCount == 0)
+                return Result<PageResult<PostResponseDto>>.Success(postsPaged, "No post yet.");
+
+            _logger.LogInformation("Posts fetched successfully from database");
+
+            return Result<PageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
+        }
+
+  public async Task<Result<PostResponseDto>> GetPostByIdAsync(Guid id, Guid currUserId)
         {
             _logger.LogInformation("Fetching post with Id: {PostId}", id);
             var post = await _postRepository.GetPostByIdAsync(id, currUserId);
