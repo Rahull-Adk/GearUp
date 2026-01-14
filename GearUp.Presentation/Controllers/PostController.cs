@@ -67,6 +67,24 @@ namespace GearUp.Presentation.Controllers
             return StatusCode(likedUsers.Status, likedUsers);
         }
 
+        [Authorize]
+        [HttpDelete("{postId:guid}")]
+        public async Task<IActionResult> DeletePost([FromRoute] Guid postId)
+        {
+            var currentUserId = User.FindFirst((u => u.Type == "id"))?.Value;
+            var result = await _postService.DeletePostAsync(postId, Guid.Parse(currentUserId!));
+            return StatusCode(result.Status, result);
+        }
+
+        [Authorize]
+        [HttpPut("{postId:guid}")]
+        public async Task<IActionResult> UpdatePost([FromRoute] Guid postId, [FromBody] UpdatePostDto dto)
+        {
+            var currentUserId = User.FindFirst((u => u.Type == "id"))?.Value;
+            var result = await _postService.UpdatePostAsync(postId, Guid.Parse(currentUserId!), dto);
+            return StatusCode(result.Status, result);
+        }
+
     }
 
 }

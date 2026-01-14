@@ -1,9 +1,7 @@
 using AutoMapper;
 using FluentValidation;
 using GearUp.Application.Common;
-using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
-using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.ServiceDtos.Post;
 using GearUp.Application.ServiceDtos.Socials;
@@ -128,11 +126,22 @@ namespace GearUp.Application.Services.Posts
             return Result<PageResult<UserEngagementDto>>.Success(likedUsers);
         }
 
-        public async Task<Result<bool>> DeletePostAsync(Guid id)
+        public async Task<Result<bool>> DeletePostAsync(Guid id, Guid userId)
         {
             var postEntity = await _postRepository.GetPostEntityByIdAsync(id);
             if (postEntity == null)
                 return Result<bool>.Failure("Post not found", 404);
+
+            bool userExists = await _userRepository.UserExistAsync(userId);
+            if (!userExists)
+            {
+                return Result<bool>.Failure("User not found", 404);
+            }
+
+            if (postEntity.UserId != userId)
+            {
+                return Result<bool>.Failure("Unauthorized", 403);
+            }
 
             postEntity.SoftDelete();
             await _commonRepository.SaveChangesAsync();
