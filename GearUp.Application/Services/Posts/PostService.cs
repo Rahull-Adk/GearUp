@@ -150,16 +150,27 @@ namespace GearUp.Application.Services.Posts
             return Result<bool>.Success(true, "Post deleted successfully", 200);
         }
 
-        public async Task<Result<string>> UpdatePostAsync(Guid id, string updatedContent)
+        public async Task<Result<string>> UpdatePostAsync(Guid id, Guid currUserId, UpdatePostDto dto)
         {
-            if (string.IsNullOrWhiteSpace(updatedContent))
-                return Result<string>.Failure("Updated content is invalid", 400);
+            if (string.IsNullOrWhiteSpace(dto.Caption) && string.IsNullOrWhiteSpace(dto.Content) &&
+                dto.Visibility == PostVisibility.Default)
+                return Result<string>.Failure("Atleast 1 field is required to update.", 400);
 
             var postEntity = await _postRepository.GetPostEntityByIdAsync(id);
             if (postEntity == null)
                 return Result<string>.Failure("Post not found", 404);
+            bool userExists = await _userRepository.UserExistAsync(currUserId);
+            if (!userExists)
+            {
+                return Result<string>.Failure("User not found", 404);
+            }
 
-            postEntity.UpdateContent(postEntity.Caption, updatedContent);
+            if (postEntity.UserId != currUserId)
+            {
+                return Result<string>.Failure("Unauthorized", 403);
+            }
+
+            postEntity.UpdateContent(dto.Caption, dto.Content, dto.Visibility);
             await _commonRepository.SaveChangesAsync();
 
             _logger.LogInformation("Post with Id: {PostId} updated", id);

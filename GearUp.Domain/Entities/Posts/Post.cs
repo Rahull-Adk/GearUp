@@ -59,13 +59,14 @@ namespace GearUp.Domain.Entities.Posts
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public void UpdateContent(string caption, string content)
+        public void UpdateContent(string caption, string content, PostVisibility visibility)
         {
-            if (string.IsNullOrWhiteSpace(content))
-                throw new ArgumentException("Content cannot be empty", nameof(content));
+            if (!string.IsNullOrWhiteSpace(content))
+                Content = content;
             if (!string.IsNullOrWhiteSpace(caption))
                 Caption = caption;
-            Content = content;
+            if (visibility != PostVisibility.Default)
+                Visibility = visibility;
             UpdatedAt = DateTime.UtcNow;
         }
     }

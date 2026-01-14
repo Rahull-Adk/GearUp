@@ -14,17 +14,17 @@ export default function App() {
             .configureLogging(signalR.LogLevel.Information)
             .build()
 
-        conn.on('CommentAdded', () => {
+        conn.on('CommentCreated', () => {
             setMessages(m => [...m, {type: 'CommentAdded', text: 'A new comment was added'}])
             console.info('CommentAdded received')
         })
 
-        conn.on('UpdatedCommentLike', () => {
+        conn.on('CommentLikeUpdated', () => {
             setMessages(m => [...m, {type: 'UpdatedCommentLike', text: 'Comment like updated'}])
             console.info('UpdatedCommentLike received')
         })
 
-        conn.on('UpdatedPostLike', () => {
+        conn.on('PostLikeUpdated', () => {
             setMessages(m => [...m, {type: 'UpdatedPostLike', text: 'Post like updated'}])
             console.info('UpdatedPostLike received')
         })

@@ -11,7 +11,7 @@ namespace GearUp.Application.Interfaces.Services.PostServiceInterface
         Task<Result<PageResult<PostResponseDto>>> GetAllPostsAsync(Guid userId, int pageNum);
         Task<Result<PostResponseDto>> CreatePostAsync(CreatePostRequestDto req, Guid dealerId);
         Task<Result<PageResult<UserEngagementDto>>> GetPostLikersAsync(Guid postId, int pageNum);
-        Task<Result<string>> UpdatePostAsync(Guid id, string updatedContent);
+        Task<Result<string>> UpdatePostAsync(Guid id, Guid currUserId, UpdatePostDto dto);
         Task<Result<bool>> DeletePostAsync(Guid id, Guid currUserId);
 
 
