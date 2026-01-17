@@ -17,8 +17,6 @@ services:
         retries: 10
 
   api:
-    image: rahulladk/gearupweb-api:RealTime
-    container_name: gearup-api
     build:
       context: .
       dockerfile: Dockerfile

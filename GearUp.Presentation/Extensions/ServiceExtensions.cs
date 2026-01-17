@@ -197,16 +197,36 @@ namespace GearUp.Presentation.Extensions
 
 
             // JWT Authentication Injection
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(ops => ops.TokenValidationParameters = new TokenValidationParameters
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(ops =>
             {
-                ValidateAudience = true,
-                ValidateIssuer = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = issuer,
-                ValidAudience = audience,
-                RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
-                NameClaimType = "id",
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(accessToken_SecretKey))
+                ops.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+
+
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) &&
+                            (path.StartsWithSegments("/hubs/post")))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+                ops.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateAudience = true,
+                    ValidateIssuer = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = issuer,
+                    ValidAudience = audience,
+                    RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
+                    NameClaimType = "id",
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(accessToken_SecretKey))
+                };
             });
 
 

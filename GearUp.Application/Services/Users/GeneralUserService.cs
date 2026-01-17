@@ -3,6 +3,7 @@ using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.ServiceDtos.Auth;
+using GearUp.Application.ServiceDtos.Post;
 using GearUp.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -11,11 +12,14 @@ namespace GearUp.Application.Services.Users
     public sealed class GeneralUserService : IGeneralUserService
     {
         private readonly IUserRepository _userRepo;
+        private readonly IPostRepository _postRepo;
         private readonly ILogger<GeneralUserService> _logger;
-        public GeneralUserService(IUserRepository userRepo, IMapper mapper, ILogger<GeneralUserService> logger)
+        public GeneralUserService(IUserRepository userRepo, IPostRepository postRepo, ILogger<GeneralUserService> logger)
         {
             _userRepo = userRepo;
             _logger = logger;
+            _postRepo = postRepo;
+
         }
         public async Task<Result<RegisterResponseDto>> GetCurrentUserProfileService(string userId)
         {
@@ -35,7 +39,17 @@ namespace GearUp.Application.Services.Users
             _logger.LogInformation("User profile fetched successfully for user ID: {UserId}", userId);
             return Result<RegisterResponseDto>.Success(user, "User fetched Successfully", 200);
         }
+        public async Task<Result<PageResult<PostResponseDto>>> GetPostsByDealerId(Guid dealerId, int pageNum)
+        {
+            _logger.LogInformation("Fetching page {PageNum} of posts for user: {UserId}", pageNum, dealerId);
+            var postsPaged = await _postRepo.GetAllUserPostByUserIdAsync(dealerId, pageNum);
+            if (postsPaged.TotalCount == 0)
+                return Result<PageResult<PostResponseDto>>.Success(postsPaged, "No post yet.");
 
+            _logger.LogInformation("Posts fetched successfully from database");
+
+            return Result<PageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
+        }
         public async Task<Result<RegisterResponseDto>> GetUserProfile(string username)
         {
             _logger.LogInformation("Fetching profile for username: {Username}", username);
