@@ -12,7 +12,7 @@ namespace GearUp.Infrastructure.Persistence
 {
     public class GearUpDbContext : DbContext
     {
-      
+
         public GearUpDbContext(DbContextOptions<GearUpDbContext> options) : base(options)
         {
         }
@@ -36,7 +36,7 @@ namespace GearUp.Infrastructure.Persistence
         public DbSet<Conversation> Conversations { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<ConversationParticipant> ConversationParticipants { get; set; }
-
+        public DbSet<UserPreference> UserPreferences { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

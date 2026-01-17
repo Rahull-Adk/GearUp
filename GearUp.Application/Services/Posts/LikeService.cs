@@ -3,6 +3,7 @@ using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Domain.Entities.Posts;
+using GearUp.Domain.Entities.Users;
 using Microsoft.Extensions.Logging;
 
 namespace GearUp.Application.Services.Posts
@@ -106,7 +107,6 @@ namespace GearUp.Application.Services.Posts
 
             var counts = await _postRepository.GetCountsForPostById(postId, userId);
 
-
             if (counts.IsLikedByCurrentUser)
             {
                 _likeRepository.RemovePostLike(userId, postId);
@@ -127,7 +127,6 @@ namespace GearUp.Application.Services.Posts
                 _logger.LogInformation("Post with Id: {PostId} liked successfully by user with Id: {UserId}", postId,
                     userId);
             }
-
             await _commonRepository.SaveChangesAsync();
             var likeCount = await _likeRepository.GetPostLikeCountAsync(postId);
             await _realTimeNotifier.BroadCastPostLikes(postId, likeCount);
