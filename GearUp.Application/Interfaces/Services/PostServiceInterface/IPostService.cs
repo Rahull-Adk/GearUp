@@ -8,7 +8,8 @@ namespace GearUp.Application.Interfaces.Services.PostServiceInterface
     public interface IPostService
     {
         Task<Result<PostResponseDto>> GetPostByIdAsync(Guid id, Guid currUserId);
-        Task<Result<PageResult<PostResponseDto>>> GetAllPostsAsync(Guid userId, int pageNum);
+        Task<Result<PageResult<PostResponseDto>>> GetLatestFeedAsync(Guid userId, int pageNum);
+        Task<Result<PageResult<PostResponseDto>>> GetMyPosts(Guid userId, int pageNum);
         Task<Result<PostResponseDto>> CreatePostAsync(CreatePostRequestDto req, Guid dealerId);
         Task<Result<PageResult<UserEngagementDto>>> GetPostLikersAsync(Guid postId, int pageNum);
         Task<Result<string>> UpdatePostAsync(Guid id, Guid currUserId, UpdatePostDto dto);

@@ -17,7 +17,6 @@ namespace GearUp.Presentation.Controllers
         {
             _postService = postService;
             _likeService = likeService;
-
         }
 
         [Authorize]
@@ -27,17 +26,25 @@ namespace GearUp.Presentation.Controllers
             var currUserId = User.FindFirst(u => u.Type == "id")?.Value ?? Guid.Empty.ToString();
             var result = await _postService.GetPostByIdAsync(postId, Guid.Parse(currUserId));
             return StatusCode(result.Status, result);
-
         }
 
         [Authorize]
         [HttpGet("")]
-        public async Task<IActionResult> GetAllPosts([FromQuery] int pageNumber = 1)
+        public async Task<IActionResult> GetFeed([FromQuery] string mode, [FromQuery] int pageNumber = 1)
         {
             var currUserId = User.FindFirst(u => u.Type == "id")?.Value ?? Guid.Empty.ToString();
-            var pageResult = await _postService.GetAllPostsAsync(Guid.Parse(currUserId), pageNumber);
+            var pageResult = await _postService.GetLatestFeedAsync(Guid.Parse(currUserId), pageNumber);
             return Ok(pageResult);
+        }
 
+        [Authorize(Policy = "DealerOnly")]
+        [HttpGet("me")]
+
+        public async Task<IActionResult> GetMyPosts([FromQuery] int pageNum = 1)
+        {
+            var currUserId = User.FindFirst(u => u.Type == "id")?.Value ?? Guid.Empty.ToString();
+            var result = await _postService.GetMyPosts(Guid.Parse(currUserId), pageNum);
+            return StatusCode(result.Status, result);
         }
 
         [Authorize(Policy = "DealerOnly")]
@@ -56,7 +63,6 @@ namespace GearUp.Presentation.Controllers
             var currenetUserId = User.FindFirst(u => u.Type == "id")?.Value;
             var result = await _likeService.LikePostAsync(postId, Guid.Parse(currenetUserId!));
             return StatusCode(result.Status, result);
-
         }
 
         [Authorize]
@@ -84,7 +90,5 @@ namespace GearUp.Presentation.Controllers
             var result = await _postService.UpdatePostAsync(postId, Guid.Parse(currentUserId!), dto);
             return StatusCode(result.Status, result);
         }
-
     }
-
 }

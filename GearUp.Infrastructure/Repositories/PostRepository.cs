@@ -6,6 +6,7 @@ using GearUp.Application.ServiceDtos.Socials;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Org.BouncyCastle.Math.EC;
 using sib_api_v3_sdk.Model;
 using Task = System.Threading.Tasks.Task;
 
@@ -26,11 +27,9 @@ namespace GearUp.Infrastructure.Repositories
         }
 
         public async Task<PostResponseDto?> GetPostByIdAsync(Guid postId, Guid currUserId)
-
         {
-            return await _db.Posts
-                .AsNoTracking()
-                .Where(p => p.Id == postId)
+            return await _db.Posts.AsNoTracking()
+                .Where(p => p.Id == postId && (p.UserId == currUserId || p.Visibility == PostVisibility.Public))
                 .Select(p => new PostResponseDto
                 {
                     Id = p.Id,
@@ -71,9 +70,72 @@ namespace GearUp.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<PageResult<PostResponseDto?>> GetAllUserPostByUserIdAsync(Guid currUserId, int pageNum)
+        {
+            const int pageSize = 10;
+
+            var query = _db.Posts.AsNoTracking().Where(p => p.UserId == currUserId);
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(p => p.CreatedAt)
+                .Skip((pageNum - 1) * pageSize)
+                .Take(pageSize)
+                .Select(p => new PostResponseDto
+                {
+                    Id = p.Id,
+                    Caption = p.Caption,
+                    Content = p.Content,
+                    Visibility = p.Visibility,
+                    CreatedAt = p.CreatedAt,
+                    UpdatedAt = p.UpdatedAt,
+                    AuthorUsername = p.User.Username,
+                    AuthorAvatarUrl = p.User.AvatarUrl,
+                    IsLikedByCurrentUser =
+                        p.Likes.Any(l => l.LikedUserId == currUserId),
+                    LikeCount = p.Likes.Count,
+                    CommentCount = p.Comments.Count,
+                    ViewCount = p.Views.Count,
+                    CarDto = p.CarId == null
+                        ? null
+                        : new CarResponseDto
+                        {
+                            Id = p.Car!.Id,
+                            Make = p.Car.Make,
+                            Model = p.Car.Model,
+                            Year = p.Car.Year,
+                            Description = p.Car.Description,
+                            Title = p.Car.Title,
+                            Price = p.Car.Price,
+                            Color = p.Car.Color,
+                            Mileage = p.Car.Mileage,
+                            SeatingCapacity = p.Car.SeatingCapacity,
+                            EngineCapacity = p.Car.EngineCapacity,
+                            FuelType = p.Car.FuelType,
+                            CarCondition = p.Car.Condition,
+                            TransmissionType = p.Car.Transmission,
+                            VIN = p.Car.VIN,
+                            CarImages = p.Car.Images
+                                .Select(i => new CarImageDto { Id = i.Id, Url = i.Url })
+                                .ToList()
+                        }
+                })
+                .ToListAsync();
+
+            return new PageResult<PostResponseDto?>
+            {
+                CurrentPage = pageNum,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                Items = items
+            };
+        }
+
         public async Task<PostCountsDto> GetCountsForPostById(Guid postId, Guid userId)
         {
-            return await _db.Posts.Where(p => p.Id == postId).Select(p => new PostCountsDto
+            return await _db.Posts.Where(p => p.Id == postId && p.Visibility == PostVisibility.Public).Select(p => new PostCountsDto
             {
                 LikeCount = p.Likes.Count,
                 CommentCount = p.Comments.Count,
@@ -88,11 +150,11 @@ namespace GearUp.Infrastructure.Repositories
             return await _db.PostViews.CountAsync(pv => pv.PostId == postId);
         }
 
-        public async Task<PageResult<PostResponseDto>> GetAllPostsAsync(int pageNum, Guid currUserId)
+        public async Task<PageResult<PostResponseDto>> GetLatestFeedAsync(int pageNum, Guid currUserId)
         {
             const int pageSize = 10;
 
-            var query = _db.Posts.AsNoTracking();
+            var query = _db.Posts.AsNoTracking().Where(p => p.Visibility == PostVisibility.Public);
 
             var totalCount = await query.CountAsync();
 

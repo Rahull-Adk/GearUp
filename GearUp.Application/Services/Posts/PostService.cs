@@ -6,6 +6,8 @@ using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.ServiceDtos.Post;
 using GearUp.Application.ServiceDtos.Socials;
 using GearUp.Domain.Entities.Posts;
+using GearUp.Domain.Entities.Users;
+using Microsoft.CSharp.RuntimeBinder;
 using Microsoft.Extensions.Logging;
 
 namespace GearUp.Application.Services.Posts
@@ -21,7 +23,9 @@ namespace GearUp.Application.Services.Posts
         private readonly IViewRepository _viewRepository;
         private readonly IMapper _mapper;
 
-        public PostService(ILogger<IPostService> logger, IValidator<CreatePostRequestDto> createPostValidator, ICommonRepository commonRepository, ICarRepository carRepository, IPostRepository postRepository,  IUserRepository userRepository, IViewRepository viewRepository)
+        public PostService(ILogger<IPostService> logger, IValidator<CreatePostRequestDto> createPostValidator,
+            ICommonRepository commonRepository, ICarRepository carRepository, IPostRepository postRepository,
+            IUserRepository userRepository, IViewRepository viewRepository)
         {
             _logger = logger;
             _createPostValidator = createPostValidator;
@@ -32,10 +36,22 @@ namespace GearUp.Application.Services.Posts
             _viewRepository = viewRepository;
         }
 
-        public async Task<Result<PageResult<PostResponseDto>>> GetAllPostsAsync(Guid userId, int pageNum)
+        public async Task<Result<PageResult<PostResponseDto>>> GetLatestFeedAsync(Guid userId, int pageNum)
         {
             _logger.LogInformation("Fetching page {PageNum} of posts for user: {UserId}", pageNum, userId);
-            var postsPaged = await _postRepository.GetAllPostsAsync(pageNum, userId);
+            var postsPaged = await _postRepository.GetLatestFeedAsync(pageNum, userId);
+            if (postsPaged.TotalCount == 0)
+                return Result<PageResult<PostResponseDto>>.Success(postsPaged, "No post yet.");
+
+            _logger.LogInformation("Posts fetched successfully from database");
+
+            return Result<PageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
+        }
+
+        public async Task<Result<PageResult<PostResponseDto>>> GetMyPosts(Guid userId, int pageNum)
+        {
+            _logger.LogInformation("Fetching page {PageNum} of posts for user: {UserId}", pageNum, userId);
+            var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(userId, pageNum);
             if (postsPaged.TotalCount == 0)
                 return Result<PageResult<PostResponseDto>>.Success(postsPaged, "No post yet.");
 

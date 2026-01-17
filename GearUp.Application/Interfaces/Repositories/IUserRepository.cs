@@ -1,4 +1,6 @@
+using GearUp.Application.Common;
 using GearUp.Application.ServiceDtos.Auth;
+using GearUp.Application.ServiceDtos.Post;
 using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Users;
 
@@ -12,6 +14,7 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<RegisterResponseDto?> GetUserByUsernameAsync(string username);
         Task<RegisterResponseDto?> GetUserByIdAsync(Guid id);
         Task<RegisterResponseDto?> GetUserByEmailAsync(string email);
+
         Task<User?> GetUserEntityByUsernameAsync(string username);
         Task<User?> GetUserEntityByIdAsync(Guid id);
         Task SaveChangesAsync();

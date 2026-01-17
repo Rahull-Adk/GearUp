@@ -13,13 +13,13 @@ namespace GearUp.UnitTests.Application.Users
     public class GeneralUserServiceTests
     {
         private readonly Mock<IUserRepository> _userRepo = new();
-        private readonly Mock<IMapper> _mapper = new();
+        private readonly Mock<IPostRepository> _postRepo = new();
         private readonly Mock<ICacheService> _cache = new();
         private readonly Mock<ILogger<GeneralUserService>> _logger = new();
 
         private GeneralUserService CreateService() => new(
             _userRepo.Object,
-            _mapper.Object,
+            _postRepo.Object,
             _logger.Object);
 
         [Fact]

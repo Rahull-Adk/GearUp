@@ -11,7 +11,7 @@ namespace GearUp.Domain.Entities.Users
     {
         public Guid Id { get; private set; } = default!;
         public string? Provider { get; private set; }
-        public string? ProviderUserId { get; private set; } 
+        public string? ProviderUserId { get; private set; }
         public string Username { get; private set; } = default!;
         public string Email { get; private set; } = default!;
         public string Name { get; private set; } = default!;
@@ -24,17 +24,17 @@ namespace GearUp.Domain.Entities.Users
         public string? PendingEmail { get; private set; }
         public bool IsPendingEmailVerified { get; private set; }
 
-        private readonly List<Post> _posts = new List<Post>();
-        private readonly List<CarRental> _ownedRentals = new List<CarRental>();
-        private readonly List<CarRental> _bookedRentals = new List<CarRental>();
-        private readonly List<Appointment> _receivedAppointments = new List<Appointment>();
-        private readonly List<Appointment> _sentAppointments = [];
-        private readonly List<Notification> _notifications = new List<Notification>();
-        private readonly List<Car> _cars = new List<Car>();
-        private readonly List<ConversationParticipant> _conversationParticipants = new();
-        private readonly List<KycSubmissions> _kycSubmitted = new List<KycSubmissions>();
-        private readonly List<KycSubmissions> _kycSubmissionsReviewed = new List<KycSubmissions>();
-
+        private readonly List<Post> _posts;
+        private readonly List<CarRental> _ownedRentals;
+        private readonly List<CarRental> _bookedRentals;
+        private readonly List<Appointment> _receivedAppointments;
+        private readonly List<Appointment> _sentAppointments;
+        private readonly List<Notification> _notifications;
+        private readonly List<Car> _cars;
+        private readonly List<ConversationParticipant> _conversationParticipants;
+        private readonly List<KycSubmissions> _kycSubmitted;
+        private readonly List<KycSubmissions> _kycSubmissionsReviewed;
+        private readonly List<UserPreference> _preferences;
 
         public IReadOnlyCollection<ConversationParticipant> ConversationParticipants => _conversationParticipants;
         public IReadOnlyCollection<Post> Posts => _posts;
@@ -46,6 +46,7 @@ namespace GearUp.Domain.Entities.Users
         public IReadOnlyCollection<Car> Cars => _cars;
         public IReadOnlyCollection<KycSubmissions> KycSubmitted => _kycSubmitted;
         public IReadOnlyCollection<KycSubmissions> KycSubmissionsReviewed => _kycSubmissionsReviewed;
+        public IReadOnlyCollection<UserPreference> UserPreferences => _preferences;
         public bool IsDeleted { get; private set; } = false;
         public DateTime? DeletedAt { get; private set; }
         public DateTime CreatedAt { get; private set; }
@@ -54,13 +55,17 @@ namespace GearUp.Domain.Entities.Users
         private User()
         {
             Id = Guid.NewGuid();
-            _bookedRentals = new List<CarRental>();
-            _ownedRentals = new List<CarRental>();
-            _receivedAppointments = new List<Appointment>();
-            _cars = new List<Car>();
-            _sentAppointments = new List<Appointment>();
-            _conversationParticipants = new List<ConversationParticipant>();
-            _notifications = new List<Notification>();
+            _posts = [];
+            _bookedRentals = [];
+            _ownedRentals = [];
+            _receivedAppointments = [];
+            _sentAppointments = [];
+            _notifications = [];
+            _cars = [];
+            _conversationParticipants = [];
+            _kycSubmitted = [];
+            _kycSubmissionsReviewed = [];
+            _preferences = [];
             CreatedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
         }
@@ -139,7 +144,6 @@ namespace GearUp.Domain.Entities.Users
 
         public void VerifyEmail()
         {
-
             IsEmailVerified = true;
             UpdatedAt = DateTime.UtcNow;
         }
