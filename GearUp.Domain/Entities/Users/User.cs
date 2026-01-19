@@ -35,7 +35,7 @@ namespace GearUp.Domain.Entities.Users
         private readonly List<KycSubmissions> _kycSubmitted;
         private readonly List<KycSubmissions> _kycSubmissionsReviewed;
         private readonly List<UserPreference> _preferences;
-
+        private readonly List<Notification> _notificationsTriggered;
         public IReadOnlyCollection<ConversationParticipant> ConversationParticipants => _conversationParticipants;
         public IReadOnlyCollection<Post> Posts => _posts;
         public IReadOnlyCollection<CarRental> OwnedRentals => _ownedRentals;
@@ -43,6 +43,7 @@ namespace GearUp.Domain.Entities.Users
         public IReadOnlyCollection<Appointment> ReceivedAppointments => _receivedAppointments;
         public IReadOnlyCollection<Appointment> SentAppointments => _sentAppointments;
         public IReadOnlyCollection<Notification> Notifications => _notifications;
+        public IReadOnlyCollection<Notification> NotificationsTriggered => _notificationsTriggered;
         public IReadOnlyCollection<Car> Cars => _cars;
         public IReadOnlyCollection<KycSubmissions> KycSubmitted => _kycSubmitted;
         public IReadOnlyCollection<KycSubmissions> KycSubmissionsReviewed => _kycSubmissionsReviewed;

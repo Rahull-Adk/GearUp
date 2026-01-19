@@ -33,7 +33,7 @@ using GearUp.Infrastructure.Seed;
 using GearUp.Infrastructure.SignalR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 
@@ -48,22 +48,22 @@ namespace GearUp.Presentation.Extensions
             var connectionString = config.GetConnectionString("DefaultConnection");
             var audience = config["Jwt:Audience"];
             var issuer = config["Jwt:Issuer"];
-            var accessToken_SecretKey = config["Jwt:AccessToken_SecretKey"];
-            var emailVerificationToken_SecretKey = config["Jwt:EmailVerificationToken_SecretKey"];
-            var brevo_api_key = config["BREVO_API_KEY"];
+            var accessTokenSecretKey = config["Jwt:AccessToken_SecretKey"];
+            var emailVerificationTokenSecretKey = config["Jwt:EmailVerificationToken_SecretKey"];
+            var brevoApiKey = config["BREVO_API_KEY"];
             var fromEmail = config["FromEmail"];
             var clientUrl = config["ClientUrl"];
-            var cloudinary_secret = config["CLOUDINARY_URL"];
+            var cloudinarySecret = config["CLOUDINARY_URL"];
 
 
 
-            if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(audience) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(accessToken_SecretKey) || string.IsNullOrEmpty(brevo_api_key) || string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(emailVerificationToken_SecretKey) || string.IsNullOrEmpty(clientUrl))
+            if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(audience) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(accessTokenSecretKey) || string.IsNullOrEmpty(brevoApiKey) || string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(emailVerificationTokenSecretKey) || string.IsNullOrEmpty(clientUrl))
             {
                 throw new InvalidOperationException("Secret keys not found");
             }
             ILogger<EmailSender> logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<EmailSender>();
 
-            services.AddInfrastructure(connectionString, audience, issuer, accessToken_SecretKey, brevo_api_key, fromEmail, emailVerificationToken_SecretKey, clientUrl, logger);
+            services.AddInfrastructure(connectionString, audience, issuer, accessTokenSecretKey, brevoApiKey, fromEmail, emailVerificationTokenSecretKey, clientUrl, logger);
 
 
             // Swagger Injection
@@ -84,6 +84,7 @@ namespace GearUp.Presentation.Extensions
             var mapper = mapperConfig.CreateMapper();
             services.AddSingleton(mapper);
 
+            services.AddScoped<IUserIdProvider, CustomUserIdProvider>();
             services.AddSignalR();
 
             // Service Injection
@@ -154,11 +155,11 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
             services.Configure<Settings>(option =>
             {
-                option.EmailVerificationToken_SecretKey = emailVerificationToken_SecretKey;
+                option.EmailVerificationToken_SecretKey = emailVerificationTokenSecretKey;
             });
 
             // Cloudinary Injection
-            Cloudinary cloudinary = new(cloudinary_secret);
+            Cloudinary cloudinary = new(cloudinarySecret);
             cloudinary.Api.Secure = true;
             services.AddSingleton(cloudinary);
 
@@ -180,9 +181,9 @@ namespace GearUp.Presentation.Extensions
 
             //Role Base Policies
             services.AddAuthorizationBuilder()
-            .AddPolicy("CustomerOnly", policy => policy.RequireRole(UserRole.Customer.ToString()))
-            .AddPolicy("AdminOnly", policy => policy.RequireRole(UserRole.Admin.ToString()))
-            .AddPolicy("DealerOnly", policy => policy.RequireRole(UserRole.Dealer.ToString()));
+            .AddPolicy("CustomerOnly", policy => policy.RequireRole(nameof(UserRole.Customer)))
+            .AddPolicy("AdminOnly", policy => policy.RequireRole(nameof(UserRole.Admin)))
+            .AddPolicy("DealerOnly", policy => policy.RequireRole(nameof(UserRole.Dealer)));
 
 
             // CORS Policy
@@ -204,11 +205,9 @@ namespace GearUp.Presentation.Extensions
                     OnMessageReceived = context =>
                     {
                         var accessToken = context.Request.Query["access_token"];
-
-
                         var path = context.HttpContext.Request.Path;
                         if (!string.IsNullOrEmpty(accessToken) &&
-                            (path.StartsWithSegments("/hubs/post")))
+                            (path.StartsWithSegments("/hubs/post")) || path.StartsWithSegments("/hubs/notification"))
                         {
                             context.Token = accessToken;
                         }
@@ -225,7 +224,7 @@ namespace GearUp.Presentation.Extensions
                     ValidAudience = audience,
                     RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
                     NameClaimType = "id",
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(accessToken_SecretKey))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(accessTokenSecretKey))
                 };
             });
 

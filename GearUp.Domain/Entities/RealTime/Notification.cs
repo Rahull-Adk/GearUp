@@ -1,6 +1,7 @@
 
 
 using GearUp.Domain.Entities.Users;
+using GearUp.Domain.Enums;
 
 namespace GearUp.Domain.Entities.RealTime
 {
@@ -9,28 +10,48 @@ namespace GearUp.Domain.Entities.RealTime
         public Guid Id { get; private set; }
         public string Title { get; private set; }
         public string Content { get; private set; }
-        public Guid UserId { get; private set; }
+        public NotificationEnum NotificationType { get; private set; } = NotificationEnum.Default;
+        public Guid ReceiverUserId { get; private set; }
+        public Guid ActorUserId { get; private set; }
         public bool IsRead { get; private set; }
-        public User? User { get; private set; }
+        public User? ReceiverUser { get; private set; }
+        public User? ActorUser { get; private set; }
+        public Guid? PostId { get; private set; }
+        public Guid? CommentId { get; private set; }
+        public Guid? KycId { get; private set; }
         public DateTime CreatedAt { get; private set; }
 
         private Notification() { }
 
-        public Notification(Guid id, string title, string content, Guid userId, bool isRead, User user)
+
+        public Notification(Guid id)
         {
             Id = id;
-            Title = title;
-            Content = content;
-            UserId = userId;
-            IsRead = isRead;
-            User = user;
-            CreatedAt = DateTime.UtcNow; 
+            IsRead = false;
+            CreatedAt = DateTime.UtcNow;
         }
 
-        public static Notification CreateNotification(string title, string content, Guid userId, User user)
+        public static Notification CreateNotification(
+            string title,
+            NotificationEnum notificationType,
+            Guid actorUserId,
+            Guid receiverUserId,
+            Guid? postId = null,
+            Guid? commentId = null
+        )
         {
-            return new Notification(Guid.NewGuid(), title, content, userId, false, user);
+            return new Notification
+            {
+                Title = title,
+                NotificationType = notificationType,
+                ActorUserId = actorUserId,
+                ReceiverUserId = receiverUserId,
+                PostId = postId,
+                CommentId = commentId,
+                CreatedAt = DateTime.UtcNow
+            };
         }
+
 
         public void MarkAsRead()
         {
