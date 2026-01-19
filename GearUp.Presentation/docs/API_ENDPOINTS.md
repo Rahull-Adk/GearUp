@@ -193,18 +193,28 @@ Client-to-server hub methods (call from client):
   - Call to join viewers of a particular post. Server will add caller to group named `post-{postId}`.
   - Usage: connection.invoke("JoinGroup", postId)
 
+- JoinCommentsGroup(Guid postId)
+  - Call to join comment viewers of a particular post. Server will add caller to group named `post-{postId}-comments`.
+  - Usage: connection.invoke("JoinCommentsGroup", postId)
+
+- LeaveCommentsGroup(Guid postId)
+  - Remove caller from `post-{postId}-comments` group.
+  - Usage: connection.invoke("LeaveCommentsGroup", postId)
+
 - LeaveGroup(Guid postId)
   - Remove caller from `post-{postId}` group.
   - Usage: connection.invoke("LeaveGroup", postId)
 
 Server-to-client events (server broadcasts to group):
-- "CommentAdded" — Sent when a new comment is created on the post. Clients subscribed to `post-{postId}` should refresh comments or fetch the new comment.
-- "UpdatedCommentLike" — Sent when a comment's likes change for that post.
-- "UpdatedPostLike" — Sent when the post's like count changes.
+- "CommentCreated" — Sent when a new comment is created on the post. Clients subscribed to `post-{postId}-comments` should refresh comments or fetch the new comment.
+- "CommentLikeUpdated" — Sent when a comment's likes change for that post. Clients subscribed to `post-{postId}-comments` will receive this event.
+- "PostLikeUpdated" — Sent when the post's like count changes. Clients subscribed to `post-{postId}` will receive this event.
 
 Important notes about the realtime contract:
 - The server currently sends the events without payloads (see SignalRRealTimeNotifier.SendAsync calls which only pass event names). The client should either request fresh data from the API on event receipt, or the backend can be extended to include payloads (e.g., the new comment DTO, updated counts).
-- Group naming: `post-{postId}` — join this group to receive events related to a single post.
+- Group naming: 
+  - `post-{postId}` — join this group to receive post-related events (like PostLikeUpdated)
+  - `post-{postId}-comments` — join this group to receive comment-related events (like CommentCreated, CommentLikeUpdated)
 
 
 Error handling & common response shape
@@ -226,9 +236,10 @@ Example: React client integration (short)
 
 - Example flow for viewing post details:
   1. Establish signalR connection
-  2. Invoke `JoinGroup(postId)`
-  3. Listen for `CommentAdded`, `UpdatedCommentLike`, `UpdatedPostLike` events and refresh post/comments via REST API endpoints.
-  4. When leaving the page, invoke `LeaveGroup(postId)` and stop the connection.
+  2. Invoke `JoinGroup(postId)` to receive post-related events
+  3. Invoke `JoinCommentsGroup(postId)` to receive comment-related events
+  4. Listen for `CommentCreated`, `CommentLikeUpdated`, `PostLikeUpdated` events and refresh post/comments via REST API endpoints.
+  5. When leaving the page, invoke `LeaveGroup(postId)`, `LeaveCommentsGroup(postId)` and stop the connection.
 
 
 Appendix — DTO names used by controllers

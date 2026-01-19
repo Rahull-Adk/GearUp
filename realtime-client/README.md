@@ -11,11 +11,13 @@ How to run:
 By default this connects to https://localhost:5001/hubs/post. Update the URL in `src/App.jsx` if your API runs on a different URL/port.
 
 Signals listened:
-- CommentAdded
-- UpdatedCommentLike
-- UpdatedPostLike
+- CommentCreated
+- CommentLikeUpdated
+- PostLikeUpdated
 
 Client methods invoked on the hub:
 - JoinGroup(postId)
+- JoinCommentsGroup(postId)
+- LeaveCommentsGroup(postId)
 - LeaveGroup(postId)
 
