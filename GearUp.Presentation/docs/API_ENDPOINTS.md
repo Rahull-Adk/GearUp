@@ -198,7 +198,7 @@ Client-to-server hub methods (call from client):
   - Usage: connection.invoke("LeaveGroup", postId)
 
 Server-to-client events (server broadcasts to group):
-- "CommentAdded" — Sent when a new comment is created on the post. Clients subscribed to `post-{postId}` should refresh comments or fetch the new comment.
+- "CommentCreated" — Sent when a new comment is created on the post. Clients subscribed to `post-{postId}` should refresh comments or fetch the new comment.
 - "UpdatedCommentLike" — Sent when a comment's likes change for that post.
 - "UpdatedPostLike" — Sent when the post's like count changes.
 

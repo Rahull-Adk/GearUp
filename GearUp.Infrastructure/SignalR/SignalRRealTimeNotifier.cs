@@ -18,17 +18,17 @@ namespace GearUp.Infrastructure.SignalR
 
         public Task BroadCastComments(Guid postId, CommentDto comment) =>
             _postHub.Clients
-                .Group($"post:{postId}")
+                .Group($"post-{postId}")
                 .SendAsync("CommentCreated", comment);
 
         public Task BroadCastCommentLikes(Guid postId, Guid commentId, int likeCount) =>
             _postHub.Clients
-                .Group($"post:{postId}")
+                .Group($"post-{postId}")
                 .SendAsync("CommentLikeUpdated", new { commentId, likeCount });
 
         public Task BroadCastPostLikes(Guid postId, int likeCount) =>
             _postHub.Clients
-                .Group($"post:{postId}")
+                .Group($"post-{postId}")
                 .SendAsync("PostLikeUpdated", new { postId, likeCount });
 
         public Task PushNotification(Guid receiverId, NotificationDto notification) =>
