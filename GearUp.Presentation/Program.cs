@@ -94,6 +94,7 @@ app.UseCors("AllowFrontend");
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<PostHub>("/hubs/post");
+app.MapHub<NotificationHub>("/hubs/notification");
 
 try
 {

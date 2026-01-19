@@ -14,17 +14,20 @@ export default function App() {
             .configureLogging(signalR.LogLevel.Information)
             .build()
 
-        conn.on('CommentCreated', () => {
+        conn.on('CommentCreated', (payload) => {
+            console.info('CommentCreated payload:', payload)
             setMessages(m => [...m, {type: 'CommentAdded', text: 'A new comment was added'}])
             console.info('CommentAdded received')
         })
 
-        conn.on('CommentLikeUpdated', () => {
+        conn.on('CommentLikeUpdated', (payload) => {
+            console.info('CommentLikeUpdated payload:', payload)
             setMessages(m => [...m, {type: 'UpdatedCommentLike', text: 'Comment like updated'}])
             console.info('UpdatedCommentLike received')
         })
 
-        conn.on('PostLikeUpdated', () => {
+        conn.on('PostLikeUpdated', (payload) => {
+            console.info('PostLikeUpdated payload:', payload)
             setMessages(m => [...m, {type: 'UpdatedPostLike', text: 'Post like updated'}])
             console.info('UpdatedPostLike received')
         })
@@ -47,6 +50,7 @@ export default function App() {
         conn.start().then(() => {
             console.info('Connected to PostHub')
             setIsConnected(true)
+            console.info('Connection started, connection object:', conn)
         }).catch(err => console.error(err))
 
         connectionRef.current = conn
@@ -66,11 +70,15 @@ export default function App() {
         }
 
         try {
+            // Join both the post group and the comments group so the client receives
+            // PostLikeUpdated (post group) and CommentCreated / CommentLikeUpdated (comments group).
+            console.info(`Invoking JoinGroup and JoinCommentsGroup for postId=${postId}`)
             await connectionRef.current.invoke('JoinGroup', postId)
-            setMessages(m => [...m, {type: 'info', text: `Joined group post-${postId}`}])
+            await connectionRef.current.invoke('JoinCommentsGroup', postId)
+            setMessages(m => [...m, {type: 'info', text: `Joined groups post-${postId} and post-${postId}-comments`}])
         } catch (err) {
             console.log(err)
-            alert('Failed to join group')
+            alert('Failed to join group(s)')
         }
     }
 
@@ -79,7 +87,8 @@ export default function App() {
         if (!postId) return alert('Enter post id (guid)')
         try {
             await connectionRef.current.invoke('LeaveGroup', postId)
-            setMessages(m => [...m, {type: 'info', text: `Left group post-${postId}`}])
+            await connectionRef.current.invoke('LeaveCommentsGroup', postId)
+            setMessages(m => [...m, {type: 'info', text: `Left groups post-${postId} and post-${postId}-comments`}])
         } catch (err) {
             console.error(err)
             alert('Failed to leave group')
@@ -107,4 +116,3 @@ export default function App() {
         </div>
     )
 }
-

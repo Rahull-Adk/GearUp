@@ -93,8 +93,8 @@ namespace GearUp.Infrastructure.Persistence.Configurations
 
             //  Notifications
             builder.HasMany(u => u.Notifications)
-                .WithOne(n => n.User)
-                .HasForeignKey(n => n.UserId)
+                .WithOne(n => n.ReceiverUser)
+                .HasForeignKey(n => n.ReceiverUserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
         }
