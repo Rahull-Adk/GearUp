@@ -43,7 +43,6 @@ namespace GearUp.Presentation.Extensions
     {
         public static void AddServices(this IServiceCollection services, IConfiguration config)
         {
-
             // DbContext Injection
             var connectionString = config.GetConnectionString("DefaultConnection");
             var audience = config["Jwt:Audience"];
@@ -56,14 +55,19 @@ namespace GearUp.Presentation.Extensions
             var cloudinarySecret = config["CLOUDINARY_URL"];
 
 
-
-            if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(audience) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(accessTokenSecretKey) || string.IsNullOrEmpty(brevoApiKey) || string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(emailVerificationTokenSecretKey) || string.IsNullOrEmpty(clientUrl))
+            if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(audience) ||
+                string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(accessTokenSecretKey) ||
+                string.IsNullOrEmpty(brevoApiKey) || string.IsNullOrEmpty(fromEmail) ||
+                string.IsNullOrEmpty(emailVerificationTokenSecretKey) || string.IsNullOrEmpty(clientUrl))
             {
                 throw new InvalidOperationException("Secret keys not found");
             }
-            ILogger<EmailSender> logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<EmailSender>();
 
-            services.AddInfrastructure(connectionString, audience, issuer, accessTokenSecretKey, brevoApiKey, fromEmail, emailVerificationTokenSecretKey, clientUrl, logger);
+            ILogger<EmailSender> logger = LoggerFactory.Create(builder => builder.AddConsole())
+                .CreateLogger<EmailSender>();
+
+            services.AddInfrastructure(connectionString, audience, issuer, accessTokenSecretKey, brevoApiKey, fromEmail,
+                emailVerificationTokenSecretKey, clientUrl, logger);
 
 
             // Swagger Injection
@@ -76,7 +80,6 @@ namespace GearUp.Presentation.Extensions
                 cfg.AddProfile(new UserMappingProfile());
                 cfg.AddProfile(new KycMappingProfile());
                 cfg.AddProfile(new CarMappingProfile());
-
             }, NullLoggerFactory.Instance);
 
             mapperConfig.AssertConfigurationIsValid();
@@ -84,7 +87,7 @@ namespace GearUp.Presentation.Extensions
             var mapper = mapperConfig.CreateMapper();
             services.AddSingleton(mapper);
 
-            services.AddScoped<IUserIdProvider, CustomUserIdProvider>();
+            services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();
             services.AddSignalR();
 
             // Service Injection
@@ -130,7 +133,6 @@ namespace GearUp.Presentation.Extensions
                 .AddRedis(config["Redis:ConnectionString"] ?? "localhost:6379", name: "redis");
 
 
-
             // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IAdminRepository, AdminRepository>();
@@ -159,8 +161,7 @@ namespace GearUp.Presentation.Extensions
             });
 
             // Cloudinary Injection
-            Cloudinary cloudinary = new(cloudinarySecret);
-            cloudinary.Api.Secure = true;
+            Cloudinary cloudinary = new(cloudinarySecret) { Api = { Secure = true } };
             services.AddSingleton(cloudinary);
 
             //Rate Limiting
@@ -181,9 +182,9 @@ namespace GearUp.Presentation.Extensions
 
             //Role Base Policies
             services.AddAuthorizationBuilder()
-            .AddPolicy("CustomerOnly", policy => policy.RequireRole(nameof(UserRole.Customer)))
-            .AddPolicy("AdminOnly", policy => policy.RequireRole(nameof(UserRole.Admin)))
-            .AddPolicy("DealerOnly", policy => policy.RequireRole(nameof(UserRole.Dealer)));
+                .AddPolicy("CustomerOnly", policy => policy.RequireRole(nameof(UserRole.Customer)))
+                .AddPolicy("AdminOnly", policy => policy.RequireRole(nameof(UserRole.Admin)))
+                .AddPolicy("DealerOnly", policy => policy.RequireRole(nameof(UserRole.Dealer)));
 
 
             // CORS Policy
@@ -227,8 +228,6 @@ namespace GearUp.Presentation.Extensions
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(accessTokenSecretKey))
                 };
             });
-
-
         }
     }
 }

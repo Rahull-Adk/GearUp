@@ -64,7 +64,7 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize(Policy = "AdminOnly")]
         [HttpPut("kyc/{kycId:guid}")]
-        public async Task<IActionResult> ReviewKyc([FromRoute] Guid kycId, kycRequestDto req)
+        public async Task<IActionResult> ReviewKyc([FromRoute] Guid kycId, [FromBody] kycRequestDto req)
         {
             var reviewerId = User.FindFirst(c => c.Type == "id")?.Value;
             var result = await _generalAdminService.UpdateKycStatus(kycId, req.Status, Guid.Parse(reviewerId!), req.RejectionReason!);

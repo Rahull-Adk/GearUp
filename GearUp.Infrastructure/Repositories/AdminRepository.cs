@@ -16,6 +16,7 @@ namespace GearUp.Infrastructure.Repositories
         public async Task<ToAdminKycListResponseDto> GetAllKycSubmissionsAsync()
         {
             var kycList = await _db.KycSubmissions
+                .OrderByDescending(ks => ks.SubmittedAt)
                 .Select(ks => new ToAdminKycResponseDto
                 {
                     Id = ks.Id,
@@ -66,6 +67,7 @@ namespace GearUp.Infrastructure.Repositories
         {
             return await _db.KycSubmissions
                 .Where(ks => ks.Status == status)
+                .OrderByDescending(ks => ks.SubmittedAt)
                 .Select(ks => new ToAdminKycResponseDto
                 {
                     Id = ks.Id,

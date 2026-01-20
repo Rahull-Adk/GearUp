@@ -135,14 +135,14 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task<PostCountsDto> GetCountsForPostById(Guid postId, Guid userId)
         {
-            return await _db.Posts.Where(p => p.Id == postId && p.Visibility == PostVisibility.Public).Select(p => new PostCountsDto
+            var data =  await _db.Posts.Where(p => p.Id == postId && p.Visibility == PostVisibility.Public).Select(p => new PostCountsDto
             {
                 LikeCount = p.Likes.Count,
                 CommentCount = p.Comments.Count,
                 ViewCount = p.Views.Count,
                 IsLikedByCurrentUser = p.Likes.Any(pl => pl.LikedUserId == userId)
-            }).FirstAsync();
-
+            }).FirstOrDefaultAsync();
+            return data;
         }
 
         public async Task<int> GetPostViewCountAsync(Guid postId)
