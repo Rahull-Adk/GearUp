@@ -60,8 +60,8 @@ namespace GearUp.Presentation.Controllers
         [HttpPost("{postId:guid}/like")]
         public async Task<IActionResult> LikePost([FromRoute] Guid postId)
         {
-            var currenetUserId = User.FindFirst(u => u.Type == "id")?.Value;
-            var result = await _likeService.LikePostAsync(postId, Guid.Parse(currenetUserId!));
+            var currentUserId = User.FindFirst(u => u.Type == "id")?.Value;
+            var result = await _likeService.LikePostAsync(postId, Guid.Parse(currentUserId!));
             return StatusCode(result.Status, result);
         }
 

@@ -1,9 +1,12 @@
 using AutoMapper;
 using GearUp.Application.Common;
+using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AdminServiceInterface;
+using GearUp.Application.ServiceDtos;
 using GearUp.Application.ServiceDtos.Admin;
 using GearUp.Domain.Entities;
+using GearUp.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace GearUp.Application.Services.Admin
@@ -13,11 +16,14 @@ namespace GearUp.Application.Services.Admin
         private readonly IAdminRepository _adminRepository;
         private readonly IUserRepository _userRepository;
         private readonly ILogger<GeneralAdminService> _logger;
-        public GeneralAdminService(IAdminRepository adminRepository, IUserRepository userRepository, ILogger<GeneralAdminService> logger)
+        private readonly IRealTimeNotifier _realTimeNotifier;
+
+        public GeneralAdminService(IAdminRepository adminRepository, IUserRepository userRepository, ILogger<GeneralAdminService> logger, IRealTimeNotifier realTimeNotifier)
         {
             _adminRepository = adminRepository;
             _userRepository = userRepository;
             _logger = logger;
+            _realTimeNotifier = realTimeNotifier;
         }
 
         public async Task<Result<ToAdminKycListResponseDto>> GetAllKycs()
@@ -109,6 +115,28 @@ namespace GearUp.Application.Services.Admin
                 user.SetRole(Domain.Enums.UserRole.Dealer);
 
             await _userRepository.SaveChangesAsync();
+
+            // Send real-time notification to the dealer about their KYC status
+            var statusMessage = status switch
+            {
+                KycStatus.Approved => "Your KYC has been approved! You are now a dealer.",
+                KycStatus.Rejected => $"Your KYC has been rejected. Reason: {rejectionReason ?? "No reason provided"}",
+                _ => "Your KYC status has been updated."
+            };
+
+            var notification = new NotificationDto
+            {
+                Id = Guid.NewGuid(),
+                Title = statusMessage,
+                NotificationType = NotificationEnum.KycInfo,
+                ReceiverUserId = userId,
+                ActorUserId = reviewerId,
+                KycId = kycId,
+                SentAt = DateTime.UtcNow
+            };
+
+            await _realTimeNotifier.PushNotification(userId, notification);
+
             _logger.LogInformation("KYC submission status updated successfully");
             return Result<string>.Success(null!, "KYC status updated successfully", 200);
 

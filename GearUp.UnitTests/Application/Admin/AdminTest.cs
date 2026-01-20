@@ -1,8 +1,10 @@
+using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Admin;
 using GearUp.Application.Services.Admin;
 using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Users;
+using GearUp.Infrastructure.SignalR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -14,11 +16,13 @@ namespace GearUp.UnitTests.Application.Admin
         private readonly Mock<IAdminRepository> _mockAdminRepository = new();
         private readonly Mock<IUserRepository> _mockUserRepository = new();
         private readonly Mock<ILogger<GeneralAdminService>> _mockLogger = new();
+        private readonly Mock<IRealTimeNotifier> _mockNotifier = new();
 
         private GeneralAdminService CreateService() => new(
             _mockAdminRepository.Object,
             _mockUserRepository.Object,
-            _mockLogger.Object
+            _mockLogger.Object,
+            _mockNotifier.Object
         );
 
 

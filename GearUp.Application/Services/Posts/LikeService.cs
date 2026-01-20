@@ -130,7 +130,7 @@ namespace GearUp.Application.Services.Posts
 
 
             var post = await _postRepository.GetPostEntityByIdAsync(postId);
-            if (post is null)
+            if (post is null || (post.Visibility != PostVisibility.Public && post.UserId != userId))
             {
                 _logger.LogWarning("Post with Id: {PostId} not found when fetching", postId);
                 return Result<int>.Failure("Post not found", 404);
