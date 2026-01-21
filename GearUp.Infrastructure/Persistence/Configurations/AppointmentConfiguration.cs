@@ -18,6 +18,9 @@ namespace GearUp.Infrastructure.Persistence.Configurations
             builder.Property(a => a.Notes)
                 .HasMaxLength(1000);
 
+            builder.Property(a => a.RejectionReason)
+                .HasMaxLength(500);
+
             builder.Property(a => a.Status)
                 .IsRequired();
 
@@ -41,6 +44,12 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .HasForeignKey(a => a.RequesterId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .IsRequired();
+
+            builder.HasOne(a => a.Car)
+                .WithMany()
+                .HasForeignKey(a => a.CarId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
         }
     }
 }

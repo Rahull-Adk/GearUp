@@ -19,6 +19,7 @@ namespace GearUp.Domain.Entities.RealTime
         public Guid? PostId { get; private set; }
         public Guid? CommentId { get; private set; }
         public Guid? KycId { get; private set; }
+        public Guid? AppointmentId { get; private set; }
         public DateTime CreatedAt { get; private set; }
 
         private Notification() { }
@@ -37,7 +38,8 @@ namespace GearUp.Domain.Entities.RealTime
             Guid actorUserId,
             Guid receiverUserId,
             Guid? postId = null,
-            Guid? commentId = null
+            Guid? commentId = null,
+            Guid? appointmentId = null
         )
         {
             return new Notification
@@ -48,6 +50,7 @@ namespace GearUp.Domain.Entities.RealTime
                 ReceiverUserId = receiverUserId,
                 PostId = postId,
                 CommentId = commentId,
+                AppointmentId = appointmentId,
                 CreatedAt = DateTime.UtcNow
             };
         }
