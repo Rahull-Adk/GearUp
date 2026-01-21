@@ -7,6 +7,9 @@ namespace GearUp.Domain.Enums
         PostCommented = 2,
         CommentReplied = 3,
         CommentLiked = 4,
-        KycInfo = 5
+        KycInfo = 5,
+        AppointmentRequested = 6,
+        AppointmentAccepted = 7,
+        AppointmentRejected = 8
     }
 }

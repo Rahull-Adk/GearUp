@@ -54,10 +54,12 @@ namespace GearUp.Domain.Enums
     public enum AppointmentStatus
     {
         Default = 0,
-        Scheduled = 1,
-        Completed = 2,
-        Cancelled = 3,
-        NoShow = 4
+        Pending = 1,
+        Scheduled = 2,
+        Completed = 3,
+        Cancelled = 4,
+        Rejected = 5,
+        NoShow = 6
     }
 
 }

@@ -242,9 +242,9 @@ namespace GearUp.Infrastructure.Repositories
 
         }
 
-        public async Task<bool> PostExistAsync(Guid PostId)
+        public async Task<bool> PostExistAsync(Guid postId)
         {
-            return await _db.Posts.AnyAsync(p => p.Id == PostId);
+            return await _db.Posts.AnyAsync(p => p.Id == postId);
         }
     }
 }

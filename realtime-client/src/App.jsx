@@ -119,8 +119,22 @@ export default function App({ initialToken = '' }) {
         conn.on('NotificationCreated', (payload) => {
             console.info('NotificationCreated payload:', payload)
             const title = payload?.title ?? payload?.Title ?? 'New notification'
-            const type = payload?.notificationType ?? payload?.NotificationType ?? 'unknown'
-            pushMessage({type: `Notification (${type})`, text: title, data: payload})
+            const typeNum = payload?.notificationType ?? payload?.NotificationType ?? 0
+
+            // Map notification type numbers to readable names
+            const notificationTypes = {
+                0: 'Default',
+                1: 'PostLiked',
+                2: 'PostCommented',
+                3: 'CommentReplied',
+                4: 'CommentLiked',
+                5: 'KycInfo',
+                6: 'AppointmentRequested',
+                7: 'AppointmentAccepted',
+                8: 'AppointmentRejected'
+            }
+            const typeName = notificationTypes[typeNum] || `Unknown(${typeNum})`
+            pushMessage({type: `🔔 ${typeName}`, text: title, data: payload})
         })
 
         conn.onreconnected(() => {
