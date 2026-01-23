@@ -1,5 +1,3 @@
-
-
 namespace GearUp.Domain.Entities.Users
 {
     public class UserReview
@@ -10,7 +8,7 @@ namespace GearUp.Domain.Entities.Users
         public User? Reviewer { get; private set; }
         public User? Reviewee { get; private set; }
         public string ReviewText { get; private set; }
-        public int Rating { get; private set; } 
+        public double Rating { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
         private UserReview()
@@ -19,7 +17,7 @@ namespace GearUp.Domain.Entities.Users
             CreatedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
         }
-        public static UserReview Create(Guid reviewerId, Guid revieweeId, string reviewText, int rating)
+        public static UserReview Create(Guid reviewerId, Guid revieweeId, string reviewText, double rating)
         {
             if (reviewerId == Guid.Empty)
                 throw new ArgumentException("Reviewer ID cannot be empty.", nameof(reviewerId));
@@ -37,7 +35,7 @@ namespace GearUp.Domain.Entities.Users
                 Rating = rating
             };
         }
-        public void Update(string reviewText, int rating)
+        public void Update(string reviewText, double rating)
         {
             if (string.IsNullOrWhiteSpace(reviewText))
                 throw new ArgumentException("Review text cannot be null or empty.", nameof(reviewText));
@@ -47,10 +45,6 @@ namespace GearUp.Domain.Entities.Users
             Rating = rating;
             UpdatedAt = DateTime.UtcNow;
         }
-
-
-
-
     }
 
 }

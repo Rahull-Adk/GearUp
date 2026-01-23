@@ -215,11 +215,12 @@ namespace GearUp.Application.Services.Posts
                 return Result<IEnumerable<CommentDto>>.Failure("Post not found", 404);
             }
 
-            var comments = await _commentRepository.GetTopLevelCommentsByPostIdAsync(postId);
-            _logger.LogInformation("Fetched {CommentCount} comments for post with Id: {PostId}", comments.Count(),
+            var comments = await _commentRepository.GetTopLevelCommentsByPostIdAsync(postId, userId);
+            IEnumerable<CommentDto> commentDtos = comments as CommentDto[] ?? comments.ToArray();
+            _logger.LogInformation("Fetched {CommentCount} comments for post with Id: {PostId}", commentDtos.Count(),
                 postId);
 
-            return Result<IEnumerable<CommentDto>>.Success(comments, "Comments fetched successfully", 200);
+            return Result<IEnumerable<CommentDto>>.Success(commentDtos, "Comments fetched successfully", 200);
         }
 
         public async Task<Result<IEnumerable<CommentDto>>> GetChildCommentsByParentId(Guid parentCommentId, Guid userId)
@@ -233,7 +234,7 @@ namespace GearUp.Application.Services.Posts
                 return Result<IEnumerable<CommentDto>>.Failure("Parent comment not found", 404);
             }
 
-            var comments = await _commentRepository.GetChildCommentsByParentIdAsync(parentCommentId);
+            var comments = await _commentRepository.GetChildCommentsByParentIdAsync(parentCommentId, userId);
             _logger.LogInformation(
                 "Fetched {CommentCount} child comments for parent comment with Id: {ParentCommentId}", comments.Count(),
                 parentCommentId);

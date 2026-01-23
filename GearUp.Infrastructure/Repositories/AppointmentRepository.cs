@@ -1,6 +1,7 @@
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Appointment;
 using GearUp.Domain.Entities.Cars;
+using GearUp.Domain.Enums;
 using GearUp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -82,6 +83,15 @@ namespace GearUp.Infrastructure.Repositories
                     UpdatedAt = a.UpdatedAt
                 })
                 .ToListAsync();
+        }
+
+        public async Task<bool> HasCompletedAppointmentWithDealerAsync(Guid requesterId, Guid dealerId)
+        {
+            return await _db.Appointments
+                .AsNoTracking()
+                .AnyAsync(a => a.RequesterId == requesterId
+                            && a.AgentId == dealerId
+                            && a.Status == AppointmentStatus.Completed);
         }
     }
 }

@@ -61,7 +61,8 @@ namespace GearUp.Application.Services.Posts
 
             if (alreadyLiked)
             {
-                _likeRepository.RemoveCommentLike(userId, commentId);
+               _likeRepository.RemoveCommentLike(userId, commentId);
+               await _commonRepository.SaveChangesAsync();
                 message = "Comment unliked successfully";
 
                 _logger.LogInformation(
@@ -72,6 +73,7 @@ namespace GearUp.Application.Services.Posts
             {
                 var commentLike = CommentLike.CreateCommentLike(commentId, userId);
                 await _likeRepository.AddCommentLikeAsync(commentLike);
+                await _commonRepository.SaveChangesAsync();
                 message = "Comment liked successfully";
 
                 _logger.LogInformation(
@@ -107,7 +109,7 @@ namespace GearUp.Application.Services.Posts
             }
 
             await _commonRepository.SaveChangesAsync();
-            var likeCount = await _commentRepository.GetCommentLikeCountByIdAysnc(commentId);
+            var likeCount = await _commentRepository.GetCommentLikeCountByIdAsync(commentId);
             await _realTimeNotifier.BroadCastCommentLikes(comment.PostId, commentId, likeCount);
 
             return Result<int>.Success(likeCount, message, 200);

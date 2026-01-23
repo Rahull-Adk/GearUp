@@ -20,7 +20,7 @@ namespace GearUp.Infrastructure.Repositories
         }
 
 
-        public async Task<IEnumerable<CommentDto>> GetTopLevelCommentsByPostIdAsync(Guid postId)
+        public async Task<IEnumerable<CommentDto>> GetTopLevelCommentsByPostIdAsync(Guid postId, Guid userId)
         {
             return await _db.PostComments
                 .Where(pc => (pc.PostId == postId && pc.ParentCommentId == null))
@@ -31,7 +31,9 @@ namespace GearUp.Infrastructure.Repositories
                     PostId = c.PostId,
                     ParentCommentId = c.ParentCommentId,
                     Content = c.Content,
-                    ChildCount = _db.PostComments.Count(pc => pc.ParentCommentId == c.Id),  
+                    LikeCount = _db.CommentLikes.Count(pc => pc.CommentId == c.Id),
+                    IsLikedByCurrentUser = c.Likes.Any(cl => cl.LikedUserId == userId),
+                    ChildCount = _db.PostComments.Count(pc => pc.ParentCommentId == c.Id),
                     CreatedAt = c.CreatedAt,
                     UpdatedAt = c.UpdatedAt,
                     CommentedUserId = c.CommentedUserId,
@@ -41,7 +43,7 @@ namespace GearUp.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<CommentDto>> GetChildCommentsByParentIdAsync(Guid parentCommentId)
+        public async Task<IEnumerable<CommentDto>> GetChildCommentsByParentIdAsync(Guid parentCommentId, Guid userId)
         {
             return await _db.PostComments
                 .Where(pc => pc.ParentCommentId == parentCommentId)
@@ -52,7 +54,9 @@ namespace GearUp.Infrastructure.Repositories
                     PostId = c.PostId,
                     ParentCommentId = c.ParentCommentId,
                     ChildCount = _db.PostComments.Count(pc => pc.ParentCommentId == c.Id),
+                    LikeCount = _db.CommentLikes.Count(pc => pc.CommentId == c.Id),
                     Content = c.Content,
+                    IsLikedByCurrentUser = c.Likes.Any(cl => cl.LikedUserId == userId),
                     CreatedAt = c.CreatedAt,
                     UpdatedAt = c.UpdatedAt,
                     CommentedUserId = c.CommentedUserId,
@@ -62,14 +66,14 @@ namespace GearUp.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-    
+
         public async Task<PostComment?> GetCommentByIdAsync(Guid commentId)
         {
             return await _db.PostComments.Where(c => c.Id == commentId)
           .FirstOrDefaultAsync();
         }
 
-        public async Task<int> GetCommentLikeCountByIdAysnc(Guid commentId)
+        public async Task<int> GetCommentLikeCountByIdAsync(Guid commentId)
         {
             return await _db.CommentLikes.CountAsync(cl => cl.CommentId == commentId);
         }

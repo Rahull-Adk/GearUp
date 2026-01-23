@@ -9,5 +9,6 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<Appointment?> GetByIdAsync(Guid appointmentId);
         Task<List<AppointmentResponseDto>> GetByDealerIdAsync(Guid dealerId);
         Task<List<AppointmentResponseDto>> GetByRequesterIdAsync(Guid requesterId);
+        Task<bool> HasCompletedAppointmentWithDealerAsync(Guid requesterId, Guid dealerId);
     }
 }

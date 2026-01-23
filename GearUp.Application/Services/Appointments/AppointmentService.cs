@@ -81,6 +81,7 @@ namespace GearUp.Application.Services.Appointments
                 dto.Schedule,
                 dto.Location,
                 dto.Notes,
+                status: AppointmentStatus.Pending,
                 dto.CarId
             );
 
@@ -406,6 +407,63 @@ namespace GearUp.Application.Services.Appointments
 
             _logger.LogInformation("Appointment {AppointmentId} cancelled successfully", appointmentId);
             return Result<AppointmentResponseDto>.Success(responseDto, "Appointment cancelled successfully.", 200);
+        }
+
+        public async Task<Result<AppointmentResponseDto>> CompleteAppointmentAsync(Guid appointmentId, Guid dealerId)
+        {
+            _logger.LogInformation("Dealer {DealerId} completing appointment {AppointmentId}", dealerId, appointmentId);
+
+            var appointment = await _appointmentRepository.GetByIdAsync(appointmentId);
+            if (appointment == null)
+            {
+                return Result<AppointmentResponseDto>.Failure("Appointment not found.", 404);
+            }
+
+            if (appointment.AgentId != dealerId)
+            {
+                return Result<AppointmentResponseDto>.Failure("You don't have permission to complete this appointment.", 403);
+            }
+
+            try
+            {
+                appointment.CompleteAppointment();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Result<AppointmentResponseDto>.Failure(ex.Message, 400);
+            }
+
+            var dealer = await _userRepository.GetUserByIdAsync(dealerId);
+            var requester = await _userRepository.GetUserByIdAsync(appointment.RequesterId);
+
+            await _commonRepository.SaveChangesAsync();
+
+            string? carTitle = null;
+            if (appointment.CarId.HasValue)
+            {
+                var car = await _carRepository.GetCarByIdAsync(appointment.CarId.Value);
+                carTitle = car?.Title;
+            }
+
+            var responseDto = new AppointmentResponseDto
+            {
+                Id = appointment.Id,
+                AgentId = appointment.AgentId,
+                AgentName = dealer?.Name ?? "Unknown",
+                RequesterId = appointment.RequesterId,
+                RequesterName = requester?.Name ?? "Unknown",
+                CarId = appointment.CarId,
+                CarTitle = carTitle,
+                Schedule = appointment.Schedule,
+                Location = appointment.Location,
+                Status = appointment.Status,
+                Notes = appointment.Notes,
+                CreatedAt = appointment.CreatedAt,
+                UpdatedAt = appointment.UpdatedAt
+            };
+
+            _logger.LogInformation("Appointment {AppointmentId} completed successfully", appointmentId);
+            return Result<AppointmentResponseDto>.Success(responseDto, "Appointment completed successfully.");
         }
     }
 }
