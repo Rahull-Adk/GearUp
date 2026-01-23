@@ -76,5 +76,14 @@ namespace GearUp.Presentation.Controllers
             var result = await _appointmentService.CancelAppointmentAsync(appointmentId, userId);
             return StatusCode(result.Status, result.ToApiResponse());
         }
+
+        [Authorize(Policy = "DealerOnly")]
+        [HttpPatch("{appointmentId:guid}/complete")]
+        public async Task<IActionResult> CompleteAppointment([FromRoute] Guid appointmentId)
+        {
+            var dealerId = Guid.Parse(User.FindFirst(u => u.Type == "id")!.Value);
+            var result = await _appointmentService.CompleteAppointmentAsync(appointmentId, dealerId);
+            return StatusCode(result.Status, result.ToApiResponse());
+        }
     }
 }

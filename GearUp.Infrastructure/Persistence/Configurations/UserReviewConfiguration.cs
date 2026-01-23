@@ -10,6 +10,41 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         {
             builder.HasKey(ur => ur.Id);
             builder.HasQueryFilter(ur => !ur.Reviewer.IsDeleted && !ur.Reviewee.IsDeleted);
+
+            builder.Property(ur => ur.ReviewText)
+                .IsRequired()
+                .HasMaxLength(1000);
+
+            builder.Property(ur => ur.Rating)
+                .IsRequired();
+
+            builder.Property(ur => ur.CreatedAt)
+                .IsRequired();
+
+            builder.Property(ur => ur.UpdatedAt)
+                .IsRequired();
+
+            builder.HasOne(ur => ur.Reviewer)
+                .WithMany()
+                .HasForeignKey(ur => ur.ReviewerId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+
+            builder.HasOne(ur => ur.Reviewee)
+                .WithMany()
+                .HasForeignKey(ur => ur.RevieweeId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+
+            builder.HasOne(ur => ur.Appointment)
+                .WithMany()
+                .HasForeignKey(ur => ur.AppointmentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+
+            // Ensure one review per appointment
+            builder.HasIndex(ur => ur.AppointmentId)
+                .IsUnique();
         }
     }
 }

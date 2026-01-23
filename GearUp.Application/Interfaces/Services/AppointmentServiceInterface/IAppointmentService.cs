@@ -12,5 +12,6 @@ namespace GearUp.Application.Interfaces.Services.AppointmentServiceInterface
         Task<Result<AppointmentResponseDto>> AcceptAppointmentAsync(Guid appointmentId, Guid dealerId);
         Task<Result<AppointmentResponseDto>> RejectAppointmentAsync(Guid appointmentId, Guid dealerId, string? reason);
         Task<Result<AppointmentResponseDto>> CancelAppointmentAsync(Guid appointmentId, Guid userId);
+        Task<Result<AppointmentResponseDto>> CompleteAppointmentAsync(Guid appointmentId, Guid dealerId);
     }
 }

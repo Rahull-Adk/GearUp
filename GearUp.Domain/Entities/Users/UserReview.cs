@@ -1,4 +1,5 @@
 
+using GearUp.Domain.Entities.Cars;
 
 namespace GearUp.Domain.Entities.Users
 {
@@ -7,10 +8,12 @@ namespace GearUp.Domain.Entities.Users
         public Guid Id { get; private set; }
         public Guid ReviewerId { get; private set; }
         public Guid RevieweeId { get; private set; }
+        public Guid AppointmentId { get; private set; }
         public User? Reviewer { get; private set; }
         public User? Reviewee { get; private set; }
+        public Appointment? Appointment { get; private set; }
         public string ReviewText { get; private set; }
-        public int Rating { get; private set; } 
+        public int Rating { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
         private UserReview()
@@ -19,12 +22,14 @@ namespace GearUp.Domain.Entities.Users
             CreatedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
         }
-        public static UserReview Create(Guid reviewerId, Guid revieweeId, string reviewText, int rating)
+        public static UserReview Create(Guid reviewerId, Guid revieweeId, Guid appointmentId, string reviewText, int rating)
         {
             if (reviewerId == Guid.Empty)
                 throw new ArgumentException("Reviewer ID cannot be empty.", nameof(reviewerId));
             if (revieweeId == Guid.Empty)
                 throw new ArgumentException("Reviewee ID cannot be empty.", nameof(revieweeId));
+            if (appointmentId == Guid.Empty)
+                throw new ArgumentException("Appointment ID cannot be empty.", nameof(appointmentId));
             if (string.IsNullOrWhiteSpace(reviewText))
                 throw new ArgumentException("Review text cannot be null or empty.", nameof(reviewText));
             if (rating < 1 || rating > 5)
@@ -33,6 +38,7 @@ namespace GearUp.Domain.Entities.Users
             {
                 ReviewerId = reviewerId,
                 RevieweeId = revieweeId,
+                AppointmentId = appointmentId,
                 ReviewText = reviewText,
                 Rating = rating
             };
@@ -47,10 +53,6 @@ namespace GearUp.Domain.Entities.Users
             Rating = rating;
             UpdatedAt = DateTime.UtcNow;
         }
-
-
-
-
     }
 
 }
