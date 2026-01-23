@@ -33,6 +33,7 @@ namespace GearUp.Domain.Entities.Cars
             DateTime schedule,
             string location,
             string notes,
+            AppointmentStatus status,
             Guid? carId = null)
         {
             return new Appointment
@@ -43,7 +44,7 @@ namespace GearUp.Domain.Entities.Cars
                 Location = location,
                 Notes = notes,
                 CarId = carId,
-                Status = AppointmentStatus.Pending,
+                Status = status,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };

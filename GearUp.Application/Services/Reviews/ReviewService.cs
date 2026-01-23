@@ -32,46 +32,46 @@ namespace GearUp.Application.Services.Reviews
 
         public async Task<Result<ReviewResponseDto>> CreateReviewAsync(CreateReviewRequestDto dto, Guid reviewerId)
         {
-            _logger.LogInformation("User {ReviewerId} creating review for appointment {AppointmentId}", reviewerId, dto.AppointmentId);
+            _logger.LogInformation("User {ReviewerId} creating review for dealer {DealerId}", reviewerId, dto.DealerId);
 
             if (dto.Rating is < 1 or > 5)
             {
                 return Result<ReviewResponseDto>.Failure("Rating must be between 1 and 5.", 400);
             }
 
-            var appointment = await _appointmentRepository.GetByIdAsync(dto.AppointmentId);
-            if (appointment == null)
+            var dealer = await _userRepository.GetUserByIdAsync(dto.DealerId);
+            if (dealer == null)
             {
-                return Result<ReviewResponseDto>.Failure("Appointment not found.", 404);
+                return Result<ReviewResponseDto>.Failure("Dealer not found.", 404);
             }
 
-            if (appointment.RequesterId != reviewerId)
+            if (dealer.Role != UserRole.Dealer)
             {
-                return Result<ReviewResponseDto>.Failure("You can only review appointments you requested.", 403);
+                return Result<ReviewResponseDto>.Failure("You can only review dealers.", 400);
             }
 
-            if (appointment.Status != AppointmentStatus.Completed)
+            // Check if user has at least one completed appointment with this dealer
+            var hasCompletedAppointment = await _appointmentRepository.HasCompletedAppointmentWithDealerAsync(reviewerId, dto.DealerId);
+            if (!hasCompletedAppointment)
             {
-                return Result<ReviewResponseDto>.Failure("You can only review completed appointments.", 400);
+                return Result<ReviewResponseDto>.Failure("You can only review dealers you have completed an appointment with.", 403);
             }
 
-            if (await _reviewRepository.HasReviewForAppointmentAsync(dto.AppointmentId))
+            // Check if user has already reviewed this dealer
+            if (await _reviewRepository.HasReviewedDealerAsync(reviewerId, dto.DealerId))
             {
-                return Result<ReviewResponseDto>.Failure("You have already reviewed this appointment.", 409);
+                return Result<ReviewResponseDto>.Failure("You have already reviewed this dealer.", 409);
             }
 
             var reviewer = await _userRepository.GetUserByIdAsync(reviewerId);
-            var dealer = await _userRepository.GetUserByIdAsync(appointment.AgentId);
-
-            if (reviewer == null || dealer == null)
+            if (reviewer == null)
             {
                 return Result<ReviewResponseDto>.Failure("User information not found.", 404);
             }
 
             var review = UserReview.Create(
                 reviewerId,
-                appointment.AgentId,
-                dto.AppointmentId,
+                dto.DealerId,
                 dto.ReviewText,
                 dto.Rating
             );
@@ -87,14 +87,13 @@ namespace GearUp.Application.Services.Reviews
                 ReviewerAvatarUrl = reviewer.AvatarUrl,
                 RevieweeId = review.RevieweeId,
                 RevieweeName = dealer.Name,
-                AppointmentId = review.AppointmentId,
                 ReviewText = review.ReviewText,
                 Rating = review.Rating,
                 CreatedAt = review.CreatedAt,
                 UpdatedAt = review.UpdatedAt
             };
 
-            _logger.LogInformation("Review {ReviewId} created successfully for appointment {AppointmentId}", review.Id, dto.AppointmentId);
+            _logger.LogInformation("Review {ReviewId} created successfully for dealer {DealerId}", review.Id, dto.DealerId);
             return Result<ReviewResponseDto>.Success(responseDto, "Review created successfully.", 201);
         }
 
@@ -132,7 +131,6 @@ namespace GearUp.Application.Services.Reviews
                 ReviewerAvatarUrl = reviewer?.AvatarUrl,
                 RevieweeId = review.RevieweeId,
                 RevieweeName = dealer?.Name ?? "Unknown",
-                AppointmentId = review.AppointmentId,
                 ReviewText = review.ReviewText,
                 Rating = review.Rating,
                 CreatedAt = review.CreatedAt,
@@ -184,7 +182,6 @@ namespace GearUp.Application.Services.Reviews
                 ReviewerAvatarUrl = reviewer?.AvatarUrl,
                 RevieweeId = review.RevieweeId,
                 RevieweeName = dealer?.Name ?? "Unknown",
-                AppointmentId = review.AppointmentId,
                 ReviewText = review.ReviewText,
                 Rating = review.Rating,
                 CreatedAt = review.CreatedAt,

@@ -81,6 +81,7 @@ namespace GearUp.Application.Services.Appointments
                 dto.Schedule,
                 dto.Location,
                 dto.Notes,
+                status: AppointmentStatus.Pending,
                 dto.CarId
             );
 

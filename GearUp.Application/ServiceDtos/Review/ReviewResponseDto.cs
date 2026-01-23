@@ -8,9 +8,8 @@ namespace GearUp.Application.ServiceDtos.Review
         public string? ReviewerAvatarUrl { get; set; }
         public Guid RevieweeId { get; set; }
         public string RevieweeName { get; set; } = string.Empty;
-        public Guid AppointmentId { get; set; }
         public string ReviewText { get; set; } = string.Empty;
-        public int Rating { get; set; }
+        public double Rating { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

@@ -7,11 +7,11 @@ namespace GearUp.Application.Interfaces.Repositories
     {
         Task AddAsync(UserReview review);
         Task<UserReview?> GetByIdAsync(Guid reviewId);
-        Task<UserReview?> GetByAppointmentIdAsync(Guid appointmentId);
+        Task<UserReview?> GetByReviewerAndDealerIdAsync(Guid reviewerId, Guid dealerId);
         Task<List<ReviewResponseDto>> GetReviewsByDealerIdAsync(Guid dealerId);
         Task<List<ReviewResponseDto>> GetReviewsByReviewerIdAsync(Guid reviewerId);
         Task<DealerRatingSummaryDto?> GetDealerRatingSummaryAsync(Guid dealerId);
-        Task<bool> HasReviewForAppointmentAsync(Guid appointmentId);
+        Task<bool> HasReviewedDealerAsync(Guid reviewerId, Guid dealerId);
         void Remove(UserReview review);
     }
 }

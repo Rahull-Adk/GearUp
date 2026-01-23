@@ -26,10 +26,10 @@ namespace GearUp.Infrastructure.Repositories
                 .FirstOrDefaultAsync(r => r.Id == reviewId);
         }
 
-        public async Task<UserReview?> GetByAppointmentIdAsync(Guid appointmentId)
+        public async Task<UserReview?> GetByReviewerAndDealerIdAsync(Guid reviewerId, Guid dealerId)
         {
             return await _db.UserReviews
-                .FirstOrDefaultAsync(r => r.AppointmentId == appointmentId);
+                .FirstOrDefaultAsync(r => r.ReviewerId == reviewerId && r.RevieweeId == dealerId);
         }
 
         public async Task<List<ReviewResponseDto>> GetReviewsByDealerIdAsync(Guid dealerId)
@@ -48,7 +48,6 @@ namespace GearUp.Infrastructure.Repositories
                     ReviewerAvatarUrl = r.Reviewer != null ? r.Reviewer.AvatarUrl : null,
                     RevieweeId = r.RevieweeId,
                     RevieweeName = r.Reviewee != null ? r.Reviewee.Name : "Unknown",
-                    AppointmentId = r.AppointmentId,
                     ReviewText = r.ReviewText,
                     Rating = r.Rating,
                     CreatedAt = r.CreatedAt,
@@ -73,7 +72,6 @@ namespace GearUp.Infrastructure.Repositories
                     ReviewerAvatarUrl = r.Reviewer != null ? r.Reviewer.AvatarUrl : null,
                     RevieweeId = r.RevieweeId,
                     RevieweeName = r.Reviewee != null ? r.Reviewee.Name : "Unknown",
-                    AppointmentId = r.AppointmentId,
                     ReviewText = r.ReviewText,
                     Rating = r.Rating,
                     CreatedAt = r.CreatedAt,
@@ -90,7 +88,7 @@ namespace GearUp.Infrastructure.Repositories
                 .Include(r => r.Reviewee)
                 .ToListAsync();
 
-            if (!reviews.Any())
+            if (reviews.Count == 0)
             {
                 return null;
             }
@@ -103,19 +101,19 @@ namespace GearUp.Infrastructure.Repositories
                 DealerName = dealer?.Name ?? "Unknown",
                 AverageRating = Math.Round(reviews.Average(r => r.Rating), 2),
                 TotalReviews = reviews.Count,
-                FiveStarCount = reviews.Count(r => r.Rating == 5),
-                FourStarCount = reviews.Count(r => r.Rating == 4),
-                ThreeStarCount = reviews.Count(r => r.Rating == 3),
-                TwoStarCount = reviews.Count(r => r.Rating == 2),
-                OneStarCount = reviews.Count(r => r.Rating == 1)
+                FiveStarCount = reviews.Count(r => r.Rating >= 4.5),
+                FourStarCount = reviews.Count(r => r.Rating is >= 3.5 and < 4.5),
+                ThreeStarCount = reviews.Count(r => r.Rating is >= 2.5 and < 3.5),
+                TwoStarCount = reviews.Count(r => r.Rating is >= 1.5 and < 2.5),
+                OneStarCount = reviews.Count(r => r.Rating < 1.5)
             };
         }
 
-        public async Task<bool> HasReviewForAppointmentAsync(Guid appointmentId)
+        public async Task<bool> HasReviewedDealerAsync(Guid reviewerId, Guid dealerId)
         {
             return await _db.UserReviews
                 .AsNoTracking()
-                .AnyAsync(r => r.AppointmentId == appointmentId);
+                .AnyAsync(r => r.ReviewerId == reviewerId && r.RevieweeId == dealerId);
         }
 
         public void Remove(UserReview review)

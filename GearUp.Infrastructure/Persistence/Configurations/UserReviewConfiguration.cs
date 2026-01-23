@@ -36,14 +36,8 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Cascade)
                 .IsRequired();
 
-            builder.HasOne(ur => ur.Appointment)
-                .WithMany()
-                .HasForeignKey(ur => ur.AppointmentId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .IsRequired();
-
-            // Ensure one review per appointment
-            builder.HasIndex(ur => ur.AppointmentId)
+            // Ensure one review per dealer per customer
+            builder.HasIndex(ur => new { ur.ReviewerId, ur.RevieweeId })
                 .IsUnique();
         }
     }
