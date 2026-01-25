@@ -11,6 +11,7 @@ using GearUp.Application.Interfaces.Services.AdminServiceInterface;
 using GearUp.Application.Interfaces.Services.AppointmentServiceInterface;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
+using GearUp.Application.Interfaces.Services.MessageServiceInterface;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.Interfaces.Services.ReviewServiceInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
@@ -23,6 +24,7 @@ using GearUp.Application.Services.Admin;
 using GearUp.Application.Services.Appointments;
 using GearUp.Application.Services.Auth;
 using GearUp.Application.Services.Cars;
+using GearUp.Application.Services.Messages;
 using GearUp.Application.Services.Posts;
 using GearUp.Application.Services.Reviews;
 using GearUp.Application.Services.Users;
@@ -114,6 +116,7 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IRealTimeNotifier, SignalRRealTimeNotifier>();
             services.AddScoped<IAppointmentService, AppointmentService>();
             services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<IMessageService, MessageService>();
 
             // Redis Cache Injection
             var redisConnection = config["Redis:ConnectionString"] ?? "localhost:6379";
@@ -151,6 +154,7 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<ITokenRepository, TokenRepository>();
             services.AddScoped<IAppointmentRepository, AppointmentRepository>();
             services.AddScoped<IReviewRepository, ReviewRepository>();
+            services.AddScoped<IMessageRepository, MessageRepository>();
 
             // Validator Injections
             services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestDtoValidator>();

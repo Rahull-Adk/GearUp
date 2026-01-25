@@ -1,8 +1,7 @@
 using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Cars;
-using GearUp.Domain.Entities.Chats;
-using GearUp.Domain.Entities.Posts;
 using GearUp.Domain.Entities.RealTime;
+using GearUp.Domain.Entities.Posts;
 using GearUp.Domain.Entities.Tokens;
 using GearUp.Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;

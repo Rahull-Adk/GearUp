@@ -1,32 +1,38 @@
-﻿
-using GearUp.Domain.Entities.RealTime;
-using GearUp.Domain.Entities.Users;
-
-namespace GearUp.Domain.Entities.Chats
+﻿namespace GearUp.Domain.Entities.RealTime
 {
     public class Conversation
     {
         public Guid Id { get; private set; }
+        public DateTime CreatedAt { get; private set; }
         public Guid? LastMessageId { get; private set; }
-        public Message? LastMessage { get; private set; }
-        public DateTime UpdatedAt { get; private set; }
+        public DateTime? LastMessageAt { get; private set; }
 
-        private readonly List<ConversationParticipant> _participants = new();
-        public IReadOnlyCollection<ConversationParticipant> Participants => _participants.AsReadOnly();
-
-        private readonly List<Message> _messages = new();
-        public IReadOnlyCollection<Message> Messages => _messages.AsReadOnly();
+        public ICollection<Message> Messages { get; private set; } = new List<Message>();
+        public ICollection<ConversationParticipant> Participants { get; private set; } = new List<ConversationParticipant>();
 
         private Conversation() { }
 
-        public static Conversation Create()
+        private Conversation(Guid id)
         {
-            return new Conversation
+            Id = id;
+            CreatedAt = DateTime.UtcNow;
+        }
+
+        public static Conversation Create()
+            => new(Guid.NewGuid());
+
+        public void AddParticipant(Guid userId)
+        {
+            if (Participants.All(p => p.UserId != userId))
             {
-                Id = Guid.NewGuid(),
-                UpdatedAt = DateTime.UtcNow
-            };
+                Participants.Add(ConversationParticipant.Create(Id, userId));
+            }
+        }
+
+        public void TouchLastMessage(Guid messageId, DateTime sentAt)
+        {
+            LastMessageId = messageId;
+            LastMessageAt = sentAt;
         }
     }
-
 }

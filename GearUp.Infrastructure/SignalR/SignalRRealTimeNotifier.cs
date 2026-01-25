@@ -1,5 +1,6 @@
 using GearUp.Application.Interfaces;
 using GearUp.Application.ServiceDtos;
+using GearUp.Application.ServiceDtos.Message;
 using GearUp.Application.ServiceDtos.Post;
 using Microsoft.AspNetCore.SignalR;
 
@@ -36,5 +37,9 @@ namespace GearUp.Infrastructure.SignalR
                 .User(receiverId.ToString())
                 .SendAsync("NotificationCreated", notification);
 
+        public Task SendMessageToUser(Guid receiverId, MessageResponseDto message) =>
+            _notificationHub.Clients
+                .User(receiverId.ToString())
+                .SendAsync("MessageReceived", message);
     }
 }
