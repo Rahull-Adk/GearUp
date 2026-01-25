@@ -8,6 +8,8 @@ export default function App({ initialToken = '' }) {
     const [commentId, setCommentId] = useState('')
     const [messages, setMessages] = useState([])
     const [token, setToken] = useState(initialToken)
+    const [receiverId, setReceiverId] = useState('')
+    const [messageText, setMessageText] = useState('')
     const postConnectionRef = useRef(null)
     const notificationConnectionRef = useRef(null)
 
@@ -137,6 +139,14 @@ export default function App({ initialToken = '' }) {
             pushMessage({type: `🔔 ${typeName}`, text: title, data: payload})
         })
 
+        conn.on('MessageReceived', (payload) => {
+            console.info('MessageReceived payload:', payload)
+            const senderName = payload?.senderName ?? payload?.SenderName ?? 'Someone'
+            const text = payload?.text ?? payload?.Text ?? 'sent you a message'
+            const conversationId = payload?.conversationId ?? payload?.ConversationId
+            pushMessage({type: `💬 Message from ${senderName}`, text: text, data: payload})
+        })
+
         conn.onreconnected(() => {
             console.info('NotificationHub Reconnected')
             setIsNotificationHubConnected(true)
@@ -228,6 +238,58 @@ export default function App({ initialToken = '' }) {
         }
     }
 
+    // Send a message to another user via REST API
+    const sendMessage = async () => {
+        if (!receiverId) return alert('Enter receiver id (dealer or customer guid)')
+        if (!messageText) return alert('Enter a message')
+        if (!token) return alert('JWT token is required to send messages')
+
+        try {
+            const response = await fetch('http://localhost:5255/api/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    receiverId: receiverId,
+                    text: messageText
+                })
+            })
+
+            const data = await response.json()
+
+            if (response.ok) {
+                setMessages(m => [...m, {type: '✅ Message Sent', text: `Sent to ${receiverId}: ${messageText}`, data: data.data}])
+                setMessageText('')
+            } else {
+                setMessages(m => [...m, {type: '❌ Send Failed', text: data.message || 'Failed to send message', data: data}])
+            }
+        } catch (err) {
+            console.error('Failed to send message:', err)
+            alert('Failed to send message: ' + err.message)
+        }
+    }
+
+    // Get conversations
+    const getConversations = async () => {
+        if (!token) return alert('JWT token is required')
+
+        try {
+            const response = await fetch('http://localhost:5255/api/v1/messages/conversations', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+
+            const data = await response.json()
+            setMessages(m => [...m, {type: '📋 Conversations', text: `Found ${data.data?.length || 0} conversations`, data: data.data}])
+        } catch (err) {
+            console.error('Failed to get conversations:', err)
+            alert('Failed to get conversations: ' + err.message)
+        }
+    }
+
     // Local test helpers so you can simulate events. If you provide commentId it will be used.
     const sendLocalTest = (type) => {
         if (type === 'post-like') {
@@ -272,6 +334,32 @@ export default function App({ initialToken = '' }) {
             <div style={{marginTop: 14}}>
                 <strong>PostHub:</strong> {isPostHubConnected ? '✅ Connected' : '❌ Disconnected'}
                 <span style={{marginLeft: 16}}><strong>NotificationHub:</strong> {isNotificationHubConnected ? '✅ Connected' : token ? '❌ Disconnected' : '⚠️ No token (auth required)'}</span>
+            </div>
+
+            <div style={{marginTop: 20, padding: 16, backgroundColor: '#f5f5f5', borderRadius: 8}}>
+                <h3>💬 Messaging (Customer ↔ Dealer)</h3>
+                <div style={{marginBottom: 8}}>
+                    <input
+                        placeholder="receiver id (dealer or customer guid)"
+                        value={receiverId}
+                        onChange={e => setReceiverId(e.target.value)}
+                        style={{width: 400}}
+                    />
+                </div>
+                <div style={{marginBottom: 8}}>
+                    <input
+                        placeholder="message text"
+                        value={messageText}
+                        onChange={e => setMessageText(e.target.value)}
+                        style={{width: 400}}
+                        onKeyPress={e => e.key === 'Enter' && sendMessage()}
+                    />
+                    <button onClick={sendMessage} style={{marginLeft: 8}}>Send Message</button>
+                </div>
+                <button onClick={getConversations}>Get My Conversations</button>
+                <div style={{marginTop: 8, color: '#666', fontSize: 13}}>
+                    Note: Messages can only be sent between customers and dealers. Both users need to be authenticated.
+                </div>
             </div>
 
             <div style={{marginTop: 20}}>
