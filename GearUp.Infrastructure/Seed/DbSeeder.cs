@@ -51,24 +51,13 @@ public class DbSeeder
 
         for (int i = 0; i < toCreate; i++)
         {
-<<<<<<< HEAD
+
             UserRole role = i switch
             {
-                <= 50 => UserRole.Dealer,
-                <= 100 => UserRole.Renter,
+                <= 70 => UserRole.Dealer,
                 _ => UserRole.Customer
             };
-=======
-            UserRole role = UserRole.Default;
-            if (i <= 70)
-            {
-                role = UserRole.Dealer;
-            }
-            else
-            {
-                role = UserRole.Customer;
-            }
->>>>>>> a28a540 (remove(rentals) Remove rentals)
+
 
             var username = faker.Internet.UserName().ToLower();
             var email = $"{username}@example.com";
