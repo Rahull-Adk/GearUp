@@ -22,7 +22,6 @@ namespace GearUp.Infrastructure.Persistence
 
         public DbSet<KycSubmissions> KycSubmissions { get; set; }
         public DbSet<Car> Cars { get; set; }
-        public DbSet<CarRental> CarRentals { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<CarImage> CarImages { get; set; }
         public DbSet<Post> Posts { get; set; }

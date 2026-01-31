@@ -1,6 +1,8 @@
-﻿using GearUp.Application.Interfaces.Services.PostServiceInterface;
+﻿using GearUp.Application.Interfaces.Services.CarServiceInterface;
+using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.ServiceDtos.User;
+using GearUp.Domain.Enums;
 using GearUp.Presentation.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,13 +20,14 @@ namespace GearUp.Presentation.Controllers
         private readonly IGeneralUserService _generalUserService;
         private readonly IProfileUpdateService _profileUpdateService;
         private readonly IPostService _postService;
-        public UserController(IKycService kycService, IGeneralUserService generalUserService, IProfileUpdateService profileUpdateService, IPostService postService)
+        private readonly ICarService _carService;
+        public UserController(IKycService kycService, IGeneralUserService generalUserService, IProfileUpdateService profileUpdateService, IPostService postService, ICarService carService)
         {
             _kycService = kycService;
             _generalUserService = generalUserService;
             _profileUpdateService = profileUpdateService;
             _postService = postService;
-
+            _carService = carService;
         }
         [Authorize]
         [HttpGet("me")]
@@ -59,6 +62,16 @@ namespace GearUp.Presentation.Controllers
             var result = await _generalUserService.GetPostsByDealerId(dealerId, pageNum);
             return StatusCode(result.Status, result);
         }
+
+
+        [Authorize]
+        [HttpGet("{dealerId:guid}/cars")]
+        public async Task<IActionResult> GetMyCars([FromRoute] Guid dealerId, [FromQuery] int pageNum)
+        {
+            var result = await _carService.GetDealerCarsAsync(dealerId, pageNum);
+            return  StatusCode(result.Status, result.ToApiResponse());
+        }
+
 
         [Authorize(Policy = "CustomerOnly")]
         [HttpPost("kyc")]

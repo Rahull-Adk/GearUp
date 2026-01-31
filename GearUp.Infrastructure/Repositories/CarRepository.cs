@@ -47,6 +47,101 @@ namespace GearUp.Infrastructure.Repositories
                     Description = c.Description,
                     Make = c.Make,
                     Model = c.Model,
+                    DealerId = c.DealerId,
+                    Year = c.Year,
+                    Color = c.Color,
+                    Price = c.Price,
+                    VIN = c.VIN,
+                    CarStatus = c.Status,
+                    CarValidationStatus = c.ValidationStatus,
+                    CreatedAt = c.CreatedAt,
+                    CarImages = c.Images.Select(img => new CarImageDto
+                    {
+                        Id = img.Id,
+                        CarId = img.CarId,
+                        Url = img.Url
+                    }).ToList()
+                });
+
+            var totalCars = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCars / 10.0);
+            var cars = await query
+                .Skip((pageNum - 1) * 10)
+                .Take(10)
+                .ToListAsync();
+
+            return new PageResult<CarResponseDto>
+            {
+                TotalCount = totalCars,
+                PageSize = 10,
+                CurrentPage = pageNum,
+                TotalPages = totalPages,
+                Items = cars
+            };
+        }
+
+        public async Task<PageResult<CarResponseDto>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, int pageNum)
+        {
+            var query = _db.Cars
+                .AsNoTracking()
+                .Where(car => car.IsDeleted == false && car.ValidationStatus == status && car.DealerId == dealerId)
+                .Include(c => c.Images)
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new CarResponseDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    Description = c.Description,
+                    Make = c.Make,
+                    Model = c.Model,
+                    DealerId = c.DealerId,
+                    Year = c.Year,
+                    Color = c.Color,
+                    Price = c.Price,
+                    VIN = c.VIN,
+                    CarStatus = c.Status,
+                    CarValidationStatus = c.ValidationStatus,
+                    CreatedAt = c.CreatedAt,
+                    CarImages = c.Images.Select(img => new CarImageDto
+                    {
+                        Id = img.Id,
+                        CarId = img.CarId,
+                        Url = img.Url
+                    }).ToList()
+                });
+
+            var totalCars = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCars / 10.0);
+            var cars = await query
+                .Skip((pageNum - 1) * 10)
+                .Take(10)
+                .ToListAsync();
+
+            return new PageResult<CarResponseDto>
+            {
+                TotalCount = totalCars,
+                PageSize = 10,
+                CurrentPage = pageNum,
+                TotalPages = totalPages,
+                Items = cars
+            };
+        }
+
+        public async Task<PageResult<CarResponseDto>> GetDealerCarsAsync(Guid dealerId, int pageNum)
+        {
+            var query = _db.Cars
+                .AsNoTracking()
+                .Where(car => car.IsDeleted == false && car.ValidationStatus == CarValidationStatus.Approved && car.DealerId == dealerId)
+                .Include(c => c.Images)
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new CarResponseDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    Description = c.Description,
+                    Make = c.Make,
+                    Model = c.Model,
+                    DealerId = c.DealerId,
                     Year = c.Year,
                     Color = c.Color,
                     Price = c.Price,
@@ -132,6 +227,7 @@ namespace GearUp.Infrastructure.Repositories
                     Description = c.Description,
                     Make = c.Make,
                     Model = c.Model,
+                    DealerId = c.DealerId,
                     Year = c.Year,
                     Color = c.Color,
                     Price = c.Price,
@@ -191,6 +287,7 @@ namespace GearUp.Infrastructure.Repositories
                     Model = c.Model,
                     Year = c.Year,
                     Color = c.Color,
+                    DealerId = c.DealerId,
                     Price = c.Price,
                     VIN = c.VIN,
                     CarStatus = c.Status,

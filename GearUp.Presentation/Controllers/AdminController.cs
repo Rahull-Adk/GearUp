@@ -24,7 +24,7 @@ namespace GearUp.Presentation.Controllers
         public async Task<IActionResult> Login([FromBody] AdminLoginRequestDto request)
         {
             var result = await _loginService.LoginAdmin(request);
-            if (!result.IsSuccess || result.Data.AccessToken == null || result.Data.RefreshToken == null)
+            if (!result.IsSuccess)
             {
                 return StatusCode(result.Status, result.ToApiResponse());
             }

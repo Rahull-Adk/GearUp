@@ -41,17 +41,6 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Rentals
-            builder.HasMany(u => u.OwnedRentals)
-                .WithOne(r => r.Tenant)
-                .HasForeignKey(r => r.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.HasMany(u => u.BookedRentals)
-                .WithOne(r => r.Renter)
-                .HasForeignKey(r => r.RenterId)
-                .OnDelete(DeleteBehavior.Cascade);
-
 
             // Submitted KYCs
             builder.HasMany(u => u.KycSubmitted)

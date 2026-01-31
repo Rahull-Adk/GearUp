@@ -20,13 +20,15 @@
 logs/
 LogFiles/
 
+load-tests/**/*.txt
+load-tests/**/*.log
 
 
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
-[Rr]eleases/
+[Rr]eleases
 x64/
 x86/
 bld/
@@ -279,6 +281,6 @@ __pycache__/
 # Cake - Uncomment if you are using it
 # tools/
 
-# End of https://www.toptal.com/developers/gitignore/api/aspnetcore. e n v 
- 
- 
+# End of https://www.toptal.com/developers/gitignore/api/aspnetcore. e n v
+
+/LoadTests/

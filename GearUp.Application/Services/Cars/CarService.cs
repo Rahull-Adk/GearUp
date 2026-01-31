@@ -4,6 +4,7 @@ using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
 using GearUp.Application.ServiceDtos.Car;
 using GearUp.Domain.Entities.Cars;
+using GearUp.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace GearUp.Application.Services.Cars
@@ -53,7 +54,7 @@ namespace GearUp.Application.Services.Cars
 
             var dealerExist = await _userRepository.UserExistAsync(dealerId);
             if (!dealerExist)
-                {
+            {
                 _logger.LogWarning("Car creation failed: Dealer not found for ID: {DealerId}", dealerId);
                 return Result<CarResponseDto>.Failure("Dealer not found.", 404);
             }
@@ -116,7 +117,7 @@ namespace GearUp.Application.Services.Cars
         }
 
         public async Task<Result<CarResponseDto>> GetCarByIdAsync(Guid carId)
-        { 
+        {
             var car = await _carRepository.GetCarByIdAsync(carId);
             if (car == null)
             {
@@ -205,6 +206,35 @@ namespace GearUp.Application.Services.Cars
 
         }
 
+        public async Task<Result<PageResult<CarResponseDto>>> GetDealerCarsAsync(Guid dealerId, int pageNum)
+        {
+            _logger.LogInformation("Getting cars of {DealerId}", dealerId);
+
+            var dealer = await _userRepository.GetUserByIdAsync(dealerId);
+            if (dealer == null)
+            {
+                _logger.LogInformation("Dealer with id {DealerId} does not exist", dealerId);
+                return Result<PageResult<CarResponseDto>>.Failure("Dealer not found", 404);
+            }
+
+            if (dealer.Role != UserRole.Dealer)
+            {
+                return Result<PageResult<CarResponseDto>>.Failure(
+                    "Cars are only available for dealer accounts.",
+                    403
+                );
+            }
+
+            if(pageNum < 1)
+            {
+                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than zero", 400);
+            }
+
+            var cars = await _carRepository.GetDealerCarsAsync(dealerId, pageNum);
+
+            return Result<PageResult<CarResponseDto>>.Success(cars, $"Cars fetched successfully");
+        }
+
         private Result<CarResponseDto> ValidateCarUpdate(Car? existingCar, UpdateCarDto request, Guid dealerId)
         {
             if (existingCar == null)
@@ -223,7 +253,7 @@ namespace GearUp.Application.Services.Cars
             return Result<CarResponseDto>.Success(null!, "Validation passed", 200);
         }
 
-        public async Task<Result<PageResult<CarResponseDto>>> SearchCarsAsync(CarSearchDto searchDto)
+        public async Task<Result<PageResult<CarResponseDto>>> SearchCarsAsync(CarSearchDto? searchDto)
         {
             if (searchDto == null)
             {
@@ -265,6 +295,34 @@ namespace GearUp.Application.Services.Cars
 
             var cars = await _carRepository.SearchCarsAsync(searchDto);
             return Result<PageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
+        }
+
+        public async Task<Result<PageResult<CarResponseDto>>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, int pageNum)
+        {
+            _logger.LogInformation("Getting cars of {DealerId}", dealerId);
+
+            var dealerExists = await _userRepository.GetUserByIdAsync(dealerId);
+            if (dealerExists == null)
+            {
+                _logger.LogInformation("Dealer with id {DealerId} does not exist", dealerId);
+                return Result<PageResult<CarResponseDto>>.Failure("Dealer not found", 404);
+            }
+
+            if (status != CarValidationStatus.Approved && status != CarValidationStatus.Pending &&
+                status != CarValidationStatus.Rejected)
+            {
+                _logger.LogInformation("Invalid car status");
+                return Result<PageResult<CarResponseDto>>.Failure("Invalid car status", 404);
+            }
+            if(pageNum < 1)
+            {
+                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than zero", 400);
+            }
+
+            var cars = await _carRepository.GetMyCarsAsync(dealerId, status, pageNum);
+
+            return Result<PageResult<CarResponseDto>>.Success(cars, $"{status} cars fetched successfully");
+
         }
     }
 }

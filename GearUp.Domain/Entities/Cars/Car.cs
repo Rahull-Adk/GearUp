@@ -22,8 +22,6 @@ namespace GearUp.Domain.Entities.Cars
         public TransmissionType Transmission { get; private set; }
         public CarStatus Status { get; private set; }
         public CarValidationStatus ValidationStatus { get; private set; }
-        public double? RentalPricePerDay { get; private set; }
-        public double? RentalPricePerWeek { get; private set; }
         public string VIN { get; private set; }
         public string LicensePlate { get; private set; }
         public Guid DealerId { get; private set; }

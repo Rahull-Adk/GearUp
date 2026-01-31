@@ -66,6 +66,10 @@ if (app.Environment.IsDevelopment())
     });
 
 }
+else
+{
+    app.UseRateLimiter();
+}
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
@@ -86,7 +90,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 });
 
 app.UseSerilogRequestLogging();
-app.UseRateLimiter();
+
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();

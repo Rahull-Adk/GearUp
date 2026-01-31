@@ -25,8 +25,6 @@ namespace GearUp.Domain.Entities.Users
         public bool IsPendingEmailVerified { get; private set; }
 
         private readonly List<Post> _posts;
-        private readonly List<CarRental> _ownedRentals;
-        private readonly List<CarRental> _bookedRentals;
         private readonly List<Appointment> _receivedAppointments;
         private readonly List<Appointment> _sentAppointments;
         private readonly List<Notification> _notifications;
@@ -38,8 +36,6 @@ namespace GearUp.Domain.Entities.Users
         private readonly List<Notification> _notificationsTriggered;
         public IReadOnlyCollection<ConversationParticipant> ConversationParticipants => _conversationParticipants;
         public IReadOnlyCollection<Post> Posts => _posts;
-        public IReadOnlyCollection<CarRental> OwnedRentals => _ownedRentals;
-        public IReadOnlyCollection<CarRental> BookedRentals => _bookedRentals;
         public IReadOnlyCollection<Appointment> ReceivedAppointments => _receivedAppointments;
         public IReadOnlyCollection<Appointment> SentAppointments => _sentAppointments;
         public IReadOnlyCollection<Notification> Notifications => _notifications;
@@ -57,8 +53,6 @@ namespace GearUp.Domain.Entities.Users
         {
             Id = Guid.NewGuid();
             _posts = [];
-            _bookedRentals = [];
-            _ownedRentals = [];
             _receivedAppointments = [];
             _sentAppointments = [];
             _notifications = [];

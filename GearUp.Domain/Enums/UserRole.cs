@@ -5,8 +5,7 @@
         Default = 0,
         Admin = 1,
         Dealer = 2,
-        Renter = 3,
-        Customer = 4,
+        Customer = 3,
     }
-   
+
 }
