@@ -15,12 +15,14 @@ namespace GearUp.UnitTests.Application.Admin
     {
         private readonly Mock<IAdminRepository> _mockAdminRepository = new();
         private readonly Mock<IUserRepository> _mockUserRepository = new();
+        private readonly Mock<ICarRepository> _mockCarRepository = new();
         private readonly Mock<ILogger<GeneralAdminService>> _mockLogger = new();
         private readonly Mock<IRealTimeNotifier> _mockNotifier = new();
 
         private GeneralAdminService CreateService() => new(
             _mockAdminRepository.Object,
             _mockUserRepository.Object,
+            _mockCarRepository.Object,
             _mockLogger.Object,
             _mockNotifier.Object
         );
