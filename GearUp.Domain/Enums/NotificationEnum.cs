@@ -10,6 +10,7 @@ namespace GearUp.Domain.Enums
         KycInfo = 5,
         AppointmentRequested = 6,
         AppointmentAccepted = 7,
-        AppointmentRejected = 8
+        AppointmentRejected = 8,
+        CarInfo = 9
     }
 }

@@ -153,5 +153,14 @@ namespace GearUp.Domain.Entities.Cars
             DeletedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
         }
+
+        public void UpdateValidationStatus(CarValidationStatus status, string? rejectionReason = null)
+        {
+            if (ValidationStatus != CarValidationStatus.Pending)
+                throw new InvalidOperationException("Car has already been reviewed.");
+
+            ValidationStatus = status;
+            UpdatedAt = DateTime.UtcNow;
+        }
     }
 }

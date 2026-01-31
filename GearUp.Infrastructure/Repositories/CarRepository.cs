@@ -302,5 +302,152 @@ namespace GearUp.Infrastructure.Repositories
                 })
                 .FirstOrDefaultAsync();
         }
+
+        // Admin methods
+        public async Task<PageResult<CarResponseDto>> GetAllCarsForAdminAsync(int pageNum, int pageSize = 10)
+        {
+            var query = _db.Cars
+                .AsNoTracking()
+                .Where(car => !car.IsDeleted)
+                .Include(c => c.Images)
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new CarResponseDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    Description = c.Description,
+                    Make = c.Make,
+                    Model = c.Model,
+                    DealerId = c.DealerId,
+                    Year = c.Year,
+                    Color = c.Color,
+                    Price = c.Price,
+                    VIN = c.VIN,
+                    CarStatus = c.Status,
+                    CarValidationStatus = c.ValidationStatus,
+                    CreatedAt = c.CreatedAt,
+                    CarImages = c.Images.Select(img => new CarImageDto
+                    {
+                        Id = img.Id,
+                        CarId = img.CarId,
+                        Url = img.Url
+                    }).ToList()
+                });
+
+            var totalCars = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalCars / pageSize);
+            var cars = await query
+                .Skip((pageNum - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PageResult<CarResponseDto>
+            {
+                TotalCount = totalCars,
+                PageSize = pageSize,
+                CurrentPage = pageNum,
+                TotalPages = totalPages,
+                Items = cars
+            };
+        }
+
+        public async Task<PageResult<CarResponseDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, int pageNum, int pageSize = 10)
+        {
+            var query = _db.Cars
+                .AsNoTracking()
+                .Where(car => !car.IsDeleted && car.ValidationStatus == status)
+                .Include(c => c.Images)
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new CarResponseDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    Description = c.Description,
+                    Make = c.Make,
+                    Model = c.Model,
+                    DealerId = c.DealerId,
+                    Year = c.Year,
+                    Color = c.Color,
+                    Price = c.Price,
+                    VIN = c.VIN,
+                    CarStatus = c.Status,
+                    CarValidationStatus = c.ValidationStatus,
+                    CreatedAt = c.CreatedAt,
+                    CarImages = c.Images.Select(img => new CarImageDto
+                    {
+                        Id = img.Id,
+                        CarId = img.CarId,
+                        Url = img.Url
+                    }).ToList()
+                });
+
+            var totalCars = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalCars / pageSize);
+            var cars = await query
+                .Skip((pageNum - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PageResult<CarResponseDto>
+            {
+                TotalCount = totalCars,
+                PageSize = pageSize,
+                CurrentPage = pageNum,
+                TotalPages = totalPages,
+                Items = cars
+            };
+        }
+
+        public async Task<PageResult<CarResponseDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, int pageNum, int pageSize = 10)
+        {
+            var query = _db.Cars
+                .AsNoTracking()
+                .Where(car => !car.IsDeleted && car.DealerId == dealerId)
+                .Include(c => c.Images)
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new CarResponseDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    Description = c.Description,
+                    Make = c.Make,
+                    Model = c.Model,
+                    DealerId = c.DealerId,
+                    Year = c.Year,
+                    Color = c.Color,
+                    Price = c.Price,
+                    VIN = c.VIN,
+                    CarStatus = c.Status,
+                    CarValidationStatus = c.ValidationStatus,
+                    CreatedAt = c.CreatedAt,
+                    CarImages = c.Images.Select(img => new CarImageDto
+                    {
+                        Id = img.Id,
+                        CarId = img.CarId,
+                        Url = img.Url
+                    }).ToList()
+                });
+
+            var totalCars = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalCars / pageSize);
+            var cars = await query
+                .Skip((pageNum - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PageResult<CarResponseDto>
+            {
+                TotalCount = totalCars,
+                PageSize = pageSize,
+                CurrentPage = pageNum,
+                TotalPages = totalPages,
+                Items = cars
+            };
+        }
+
+        public async Task SaveChangesAsync()
+        {
+            await _db.SaveChangesAsync();
+        }
     }
 }
