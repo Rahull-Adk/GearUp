@@ -13,6 +13,7 @@ namespace GearUp.Application.ServiceDtos
         public Guid? PostId { get; set; }
         public Guid? CommentId { get; set; }
         public Guid? KycId { get; set; }
+        public Guid? CarId { get; set; }
         public Guid? AppointmentId { get; set; }
         public DateTime SentAt { get; set; }
     }
