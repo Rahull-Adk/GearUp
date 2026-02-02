@@ -1,13 +1,12 @@
 using AutoMapper;
 using FluentValidation;
 using GearUp.Application.Common;
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.ServiceDtos.Post;
 using GearUp.Application.ServiceDtos.Socials;
 using GearUp.Domain.Entities.Posts;
-using GearUp.Domain.Entities.Users;
-using Microsoft.CSharp.RuntimeBinder;
 using Microsoft.Extensions.Logging;
 
 namespace GearUp.Application.Services.Posts
@@ -36,28 +35,42 @@ namespace GearUp.Application.Services.Posts
             _viewRepository = viewRepository;
         }
 
-        public async Task<Result<PageResult<PostResponseDto>>> GetLatestFeedAsync(Guid userId, int pageNum)
+        public async Task<Result<CursorPageResult<PostResponseDto>>> GetLatestFeedAsync(Guid userId, string? cursor)
         {
-            _logger.LogInformation("Fetching page {PageNum} of posts for user: {UserId}", pageNum, userId);
-            var postsPaged = await _postRepository.GetLatestFeedAsync(pageNum, userId);
-            if (postsPaged.TotalCount == 0)
-                return Result<PageResult<PostResponseDto>>.Success(postsPaged, "No post yet.");
+            _logger.LogInformation("Fetching page posts for user: {UserId}", userId);
+            Cursor? c = null;
+            if (!string.IsNullOrEmpty(cursor) && !Cursor.TryDecode(cursor, out c))
+            {
+                _logger.LogInformation("Invalid cursor {Cursor}", cursor);
+
+                return Result<CursorPageResult<PostResponseDto>>.Failure("Invalid cursor format.", 400);
+            }
+
+            var postsPaged = await _postRepository.GetLatestFeedAsync(c, userId);
 
             _logger.LogInformation("Posts fetched successfully from database");
 
-            return Result<PageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
+            return Result<CursorPageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
         }
 
-        public async Task<Result<PageResult<PostResponseDto>>> GetMyPosts(Guid userId, int pageNum)
+        public async Task<Result<CursorPageResult<PostResponseDto?>>> GetMyPosts(Guid userId, string? cursorString)
         {
-            _logger.LogInformation("Fetching page {PageNum} of posts for user: {UserId}", pageNum, userId);
-            var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(userId, pageNum);
-            if (postsPaged.TotalCount == 0)
-                return Result<PageResult<PostResponseDto>>.Success(postsPaged, "No post yet.");
+            _logger.LogInformation("Fetching posts for user: {UserId}", userId);
+
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
+            {
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<PostResponseDto?>>.Failure("Invalid cursor", 400);
+                }
+            }
+
+            var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(cursor, userId);
 
             _logger.LogInformation("Posts fetched successfully from database");
 
-            return Result<PageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
+            return Result<CursorPageResult<PostResponseDto?>>.Success(postsPaged, "Post fetched successfully.");
         }
 
 
@@ -130,16 +143,25 @@ namespace GearUp.Application.Services.Posts
             return Result<PostResponseDto>.Success(null!, "Post created successfully", 201);
         }
 
-        public async Task<Result<PageResult<UserEngagementDto>>> GetPostLikersAsync(Guid postId, int pageNum)
+        public async Task<Result<CursorPageResult<UserEngagementDto>>> GetPostLikersAsync(Guid postId, string? cursorString)
         {
             _logger.LogInformation("Getting all users liked for Post with Id: {PostId}", postId);
             var postEntity = await _postRepository.GetPostEntityByIdAsync(postId);
             if (postEntity == null)
-                return Result<PageResult<UserEngagementDto>>.Failure("Post not found", 404);
+                return Result<CursorPageResult<UserEngagementDto>>.Failure("Post not found", 404);
 
-            var likedUsers = await _postRepository.GetPostLikersAsync(postId, pageNum);
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
+            {
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<UserEngagementDto>>.Failure("Invalid cursor", 400);
+                }
+            }
 
-            return Result<PageResult<UserEngagementDto>>.Success(likedUsers);
+            var likedUsers = await _postRepository.GetPostLikersAsync(postId, cursor);
+
+            return Result<CursorPageResult<UserEngagementDto>>.Success(likedUsers);
         }
 
         public async Task<Result<bool>> DeletePostAsync(Guid id, Guid userId)

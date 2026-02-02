@@ -1,4 +1,5 @@
 using GearUp.Application.Common;
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AppointmentServiceInterface;
@@ -178,16 +179,34 @@ namespace GearUp.Application.Services.Appointments
             return Result<AppointmentResponseDto>.Success(responseDto, "Appointment retrieved successfully.", 200);
         }
 
-        public async Task<Result<List<AppointmentResponseDto>>> GetDealerAppointmentsAsync(Guid dealerId)
+        public async Task<Result<CursorPageResult<AppointmentResponseDto>>> GetDealerAppointmentsAsync(Guid dealerId, string? cursorString)
         {
-            var appointments = await _appointmentRepository.GetByDealerIdAsync(dealerId);
-            return Result<List<AppointmentResponseDto>>.Success(appointments, "Appointments retrieved successfully.", 200);
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
+            {
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<AppointmentResponseDto>>.Failure("Invalid cursor", 400);
+                }
+            }
+
+            var appointments = await _appointmentRepository.GetByDealerIdAsync(dealerId, cursor);
+            return Result<CursorPageResult<AppointmentResponseDto>>.Success(appointments, "Appointments retrieved successfully.", 200);
         }
 
-        public async Task<Result<List<AppointmentResponseDto>>> GetCustomerAppointmentsAsync(Guid customerId)
+        public async Task<Result<CursorPageResult<AppointmentResponseDto>>> GetCustomerAppointmentsAsync(Guid customerId, string? cursorString)
         {
-            var appointments = await _appointmentRepository.GetByRequesterIdAsync(customerId);
-            return Result<List<AppointmentResponseDto>>.Success(appointments, "Appointments retrieved successfully.", 200);
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
+            {
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<AppointmentResponseDto>>.Failure("Invalid cursor", 400);
+                }
+            }
+
+            var appointments = await _appointmentRepository.GetByRequesterIdAsync(customerId, cursor);
+            return Result<CursorPageResult<AppointmentResponseDto>>.Success(appointments, "Appointments retrieved successfully.", 200);
         }
 
         public async Task<Result<AppointmentResponseDto>> AcceptAppointmentAsync(Guid appointmentId, Guid dealerId)

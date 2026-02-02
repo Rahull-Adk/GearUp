@@ -1,3 +1,4 @@
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Message;
 using GearUp.Domain.Entities.RealTime;
@@ -9,6 +10,7 @@ namespace GearUp.Infrastructure.Repositories
     public class MessageRepository : IMessageRepository
     {
         private readonly GearUpDbContext _db;
+        private const int PageSize = 20;
 
         public MessageRepository(GearUpDbContext db)
         {
@@ -33,20 +35,29 @@ namespace GearUp.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<List<ConversationResponseDto>> GetUserConversationsAsync(Guid userId)
+        public async Task<CursorPageResult<ConversationResponseDto>> GetUserConversationsAsync(Guid userId, Cursor? cursor)
         {
-            var conversations = await _db.Conversations
+            IQueryable<Conversation> query = _db.Conversations
                 .AsNoTracking()
                 .Include(c => c.Participants)
                     .ThenInclude(p => p.User)
                 .Include(c => c.Messages.OrderByDescending(m => m.SentAt).Take(1))
-                .Where(c => c.Participants.Any(p => p.UserId == userId))
-                .OrderByDescending(c => c.LastMessageAt ?? c.CreatedAt)
-                .ToListAsync();
+                .Where(c => c.Participants.Any(p => p.UserId == userId));
+
+            if (cursor is not null)
+            {
+                query = query.Where(c => (c.LastMessageAt ?? c.CreatedAt) < cursor.CreatedAt ||
+                    ((c.LastMessageAt ?? c.CreatedAt) == cursor.CreatedAt && c.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            query = query.OrderByDescending(c => c.LastMessageAt ?? c.CreatedAt)
+                .ThenByDescending(c => c.Id);
+
+            var conversations = await query.Take(PageSize + 1).ToListAsync();
 
             var result = new List<ConversationResponseDto>();
 
-            foreach (var conv in conversations)
+            foreach (var conv in conversations.Take(PageSize))
             {
                 var otherParticipant = conv.Participants.FirstOrDefault(p => p.UserId != userId);
                 if (otherParticipant?.User == null) continue;
@@ -54,7 +65,6 @@ namespace GearUp.Infrastructure.Repositories
                 var myParticipant = conv.Participants.First(p => p.UserId == userId);
                 var lastMessage = conv.Messages.FirstOrDefault();
 
-                // Count unread messages (messages sent after my last read time)
                 var unreadCount = await _db.Messages
                     .CountAsync(m => m.ConversationId == conv.Id &&
                                      m.SenderId != userId &&
@@ -73,19 +83,63 @@ namespace GearUp.Infrastructure.Repositories
                 });
             }
 
-            return result;
+            bool hasMore = conversations.Count > PageSize;
+            string? nextCursor = null;
+
+            if (hasMore && result.Count > 0)
+            {
+                var lastItem = result.Last();
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.LastMessageAt ?? lastItem.CreatedAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<ConversationResponseDto>
+            {
+                Items = result,
+                NextCursor = nextCursor,
+                HasMore = hasMore
+            };
         }
 
-        public async Task<List<Message>> GetConversationMessagesAsync(Guid conversationId, int page = 1, int pageSize = 50)
+        public async Task<CursorPageResult<Message>> GetConversationMessagesAsync(Guid conversationId, Cursor? cursor)
         {
-            return await _db.Messages
+            IQueryable<Message> query = _db.Messages
                 .AsNoTracking()
                 .Include(m => m.Sender)
                 .Where(m => m.ConversationId == conversationId)
                 .OrderByDescending(m => m.SentAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+                .ThenByDescending(m => m.Id);
+
+            if (cursor is not null)
+            {
+                query = query.Where(m => m.SentAt < cursor.CreatedAt ||
+                    (m.SentAt == cursor.CreatedAt && m.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            var messages = await query.Take(PageSize + 1).ToListAsync();
+
+            bool hasMore = messages.Count > PageSize;
+            string? nextCursor = null;
+
+            if (hasMore)
+            {
+                var lastItem = messages[PageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.SentAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<Message>
+            {
+                Items = messages.Take(PageSize).ToList(),
+                NextCursor = nextCursor,
+                HasMore = hasMore
+            };
         }
 
         public async Task<bool> IsParticipantInConversationAsync(Guid conversationId, Guid userId)

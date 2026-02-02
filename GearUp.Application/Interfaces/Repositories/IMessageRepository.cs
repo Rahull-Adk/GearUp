@@ -1,3 +1,4 @@
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.ServiceDtos.Message;
 using GearUp.Domain.Entities.RealTime;
 
@@ -7,8 +8,8 @@ namespace GearUp.Application.Interfaces.Repositories
     {
         Task<Conversation?> GetConversationByIdAsync(Guid conversationId);
         Task<Conversation?> GetConversationByParticipantsAsync(Guid userId1, Guid userId2);
-        Task<List<ConversationResponseDto>> GetUserConversationsAsync(Guid userId);
-        Task<List<Message>> GetConversationMessagesAsync(Guid conversationId, int page = 1, int pageSize = 50);
+        Task<CursorPageResult<ConversationResponseDto>> GetUserConversationsAsync(Guid userId, Cursor? cursor);
+        Task<CursorPageResult<Message>> GetConversationMessagesAsync(Guid conversationId, Cursor? cursor);
         Task<bool> IsParticipantInConversationAsync(Guid conversationId, Guid userId);
         Task AddConversationAsync(Conversation conversation);
         Task AddMessageAsync(Message message);

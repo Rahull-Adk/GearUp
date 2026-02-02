@@ -1,4 +1,5 @@
 using GearUp.Application.Common;
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.MessageServiceInterface;
@@ -121,16 +122,25 @@ namespace GearUp.Application.Services.Messages
             return Result<MessageResponseDto>.Success(responseDto, "Message sent successfully.", 201);
         }
 
-        public async Task<Result<List<ConversationResponseDto>>> GetConversationsAsync(Guid userId)
+        public async Task<Result<CursorPageResult<ConversationResponseDto>>> GetConversationsAsync(Guid userId, string? cursorString)
         {
             _logger.LogInformation("Getting conversations for user {UserId}", userId);
 
-            var conversations = await _messageRepository.GetUserConversationsAsync(userId);
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
+            {
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<ConversationResponseDto>>.Failure("Invalid cursor", 400);
+                }
+            }
 
-            return Result<List<ConversationResponseDto>>.Success(conversations, "Conversations retrieved successfully.");
+            var conversations = await _messageRepository.GetUserConversationsAsync(userId, cursor);
+
+            return Result<CursorPageResult<ConversationResponseDto>>.Success(conversations, "Conversations retrieved successfully.");
         }
 
-        public async Task<Result<ConversationDetailResponseDto>> GetConversationAsync(Guid conversationId, Guid userId, int page = 1, int pageSize = 50)
+        public async Task<Result<ConversationDetailResponseDto>> GetConversationAsync(Guid conversationId, Guid userId, string? cursorString)
         {
             _logger.LogInformation("Getting conversation {ConversationId} for user {UserId}", conversationId, userId);
 
@@ -151,13 +161,22 @@ namespace GearUp.Application.Services.Messages
                 return Result<ConversationDetailResponseDto>.Failure("Other participant not found.", 404);
             }
 
-            var messages = await _messageRepository.GetConversationMessagesAsync(conversationId, page, pageSize);
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
+            {
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<ConversationDetailResponseDto>.Failure("Invalid cursor", 400);
+                }
+            }
+
+            var messagesResult = await _messageRepository.GetConversationMessagesAsync(conversationId, cursor);
 
             // Mark messages as read
             await _messageRepository.MarkMessagesAsReadAsync(conversationId, userId);
             await _commonRepository.SaveChangesAsync();
 
-            var messageResponses = messages.Select(m => new MessageResponseDto
+            var messageResponses = messagesResult.Items.Select(m => new MessageResponseDto
             {
                 Id = m.Id,
                 ConversationId = m.ConversationId,
@@ -177,7 +196,9 @@ namespace GearUp.Application.Services.Messages
                 OtherUserId = otherParticipant.UserId,
                 OtherUserName = otherParticipant.User.Name,
                 OtherUserAvatarUrl = otherParticipant.User.AvatarUrl,
-                Messages = messageResponses
+                Messages = messageResponses,
+                NextCursor = messagesResult.NextCursor,
+                HasMore = messagesResult.HasMore
             };
 
             return Result<ConversationDetailResponseDto>.Success(response, "Conversation retrieved successfully.");

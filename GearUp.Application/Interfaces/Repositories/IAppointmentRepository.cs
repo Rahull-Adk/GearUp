@@ -1,3 +1,4 @@
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.ServiceDtos.Appointment;
 using GearUp.Domain.Entities.Cars;
 
@@ -7,8 +8,8 @@ namespace GearUp.Application.Interfaces.Repositories
     {
         Task AddAsync(Appointment appointment);
         Task<Appointment?> GetByIdAsync(Guid appointmentId);
-        Task<List<AppointmentResponseDto>> GetByDealerIdAsync(Guid dealerId);
-        Task<List<AppointmentResponseDto>> GetByRequesterIdAsync(Guid requesterId);
+        Task<CursorPageResult<AppointmentResponseDto>> GetByDealerIdAsync(Guid dealerId, Cursor? cursor);
+        Task<CursorPageResult<AppointmentResponseDto>> GetByRequesterIdAsync(Guid requesterId, Cursor? cursor);
         Task<bool> HasCompletedAppointmentWithDealerAsync(Guid requesterId, Guid dealerId);
     }
 }

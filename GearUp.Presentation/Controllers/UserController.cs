@@ -1,4 +1,4 @@
-﻿using GearUp.Application.Interfaces.Services.CarServiceInterface;
+﻿﻿using GearUp.Application.Interfaces.Services.CarServiceInterface;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.ServiceDtos.User;
@@ -57,18 +57,18 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize]
         [HttpGet("{dealerId:guid}/posts")]
-        public async  Task<IActionResult> GetDealerPosts([FromRoute] Guid dealerId,[FromQuery] int pageNum = 1)
+        public async  Task<IActionResult> GetDealerPosts([FromRoute] Guid dealerId,[FromQuery] string? cursor)
         {
-            var result = await _generalUserService.GetPostsByDealerId(dealerId, pageNum);
+            var result = await _generalUserService.GetPostsByDealerId(dealerId, cursor);
             return StatusCode(result.Status, result);
         }
 
 
         [Authorize]
         [HttpGet("{dealerId:guid}/cars")]
-        public async Task<IActionResult> GetMyCars([FromRoute] Guid dealerId, [FromQuery] int pageNum)
+        public async Task<IActionResult> GetMyCars([FromRoute] Guid dealerId, [FromQuery] string? cursor)
         {
-            var result = await _carService.GetDealerCarsAsync(dealerId, pageNum);
+            var result = await _carService.GetDealerCarsAsync(dealerId, cursor);
             return  StatusCode(result.Status, result.ToApiResponse());
         }
 

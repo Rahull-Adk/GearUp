@@ -27,10 +27,14 @@ namespace GearUp.Application.Mappings
                 .ForMember(dest => dest.TransmissionType, opt => opt.MapFrom(src => src.Transmission))
                 .ForMember(dest => dest.CarStatus, opt => opt.MapFrom(src => src.Status))
                 .ForMember(dest => dest.CarValidationStatus, opt => opt.MapFrom(src => src.ValidationStatus))
-                .ForMember(dest => dest.LicensePlate, opt => opt.MapFrom(src => src.LicensePlate));
+                .ForMember(dest => dest.LicensePlate, opt => opt.MapFrom(src => src.LicensePlate))
+                .ForMember(dest => dest.DealerId, opt => opt.MapFrom(src => src.DealerId))
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt));
 
             CreateMap<CarImage, CarImageDto>()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.CarId, opt => opt.MapFrom(src => src.CarId))
                 .ForMember(dest => dest.Url, opt => opt.MapFrom(src => src.Url));
         }
     }

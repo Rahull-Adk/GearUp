@@ -1,3 +1,4 @@
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Admin;
@@ -30,8 +31,9 @@ namespace GearUp.UnitTests.Application.Admin
         public async Task GetAllKyc_ShouldReturnResult_WhenCacheIsNull()
         {
             // Arrange
-            var input = new ToAdminKycListResponseDto(
-                new List<ToAdminKycResponseDto>
+            var input = new CursorPageResult<ToAdminKycResponseDto>
+            {
+                Items = new List<ToAdminKycResponseDto>
                 {
                     new ToAdminKycResponseDto
                     {
@@ -48,38 +50,44 @@ namespace GearUp.UnitTests.Application.Admin
                         SubmittedAt = DateTime.UtcNow.AddDays(-5)
                     }
                 },
-                2
-            );
+                HasMore = false,
+                NextCursor = null
+            };
 
-            _mockAdminRepository.Setup(a => a.GetAllKycSubmissionsAsync()).ReturnsAsync(input);
+            _mockAdminRepository.Setup(a => a.GetAllKycSubmissionsAsync(null)).ReturnsAsync(input);
 
             //Act
             var svc = CreateService();
-            var result = await svc.GetAllKycs();
+            var result = await svc.GetAllKycs(null);
 
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
             Assert.True(result.IsSuccess);
-            Assert.Equal(2, result.Data.TotalCount);
+            Assert.Equal(2, result.Data.Items.Count());
             Assert.Equal("KYC submissions retrieved successfully", result.SuccessMessage);
         }
 
         [Fact]
-        public async Task GetAllKyc_ShouldReturnNoKycResult_WhenNoKycSubmissionsExist()
+        public async Task GetAllKyc_ShouldReturnEmptyResult_WhenNoKycSubmissionsExist()
         {
             // Arrange
-            var empty = new ToAdminKycListResponseDto(new List<ToAdminKycResponseDto>(), 0);
-            _mockAdminRepository.Setup(a => a.GetAllKycSubmissionsAsync()).ReturnsAsync(empty);
+            var empty = new CursorPageResult<ToAdminKycResponseDto>
+            {
+                Items = new List<ToAdminKycResponseDto>(),
+                HasMore = false,
+                NextCursor = null
+            };
+            _mockAdminRepository.Setup(a => a.GetAllKycSubmissionsAsync(null)).ReturnsAsync(empty);
 
             // Act
             var svc = CreateService();
-            var result = await svc.GetAllKycs();
+            var result = await svc.GetAllKycs(null);
             // Assert
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
             Assert.True(result.IsSuccess);
-            Assert.Null(result.Data);
-            Assert.Equal("No KYC submissions yet", result.SuccessMessage);
+            Assert.Empty(result.Data.Items);
+            Assert.Equal("KYC submissions retrieved successfully", result.SuccessMessage);
         }
 
         [Fact]
@@ -138,17 +146,22 @@ namespace GearUp.UnitTests.Application.Admin
                 new ToAdminKycResponseDto { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), Status = status, SubmittedAt = DateTime.UtcNow },
                 new ToAdminKycResponseDto { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), Status = status, SubmittedAt = DateTime.UtcNow }
             };
-            var response = new ToAdminKycListResponseDto(list, list.Count);
-            _mockAdminRepository.Setup(a => a.GetKycSubmissionsByStatusAsync(status)).ReturnsAsync(response);
+            var response = new CursorPageResult<ToAdminKycResponseDto>
+            {
+                Items = list,
+                HasMore = false,
+                NextCursor = null
+            };
+            _mockAdminRepository.Setup(a => a.GetKycSubmissionsByStatusAsync(status, null)).ReturnsAsync(response);
 
             //Act
             var svc = CreateService();
-            var result = await svc.GetKycsByStatus(status);
+            var result = await svc.GetKycsByStatus(status, null);
             // Assert
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
             Assert.True(result.IsSuccess);
-            Assert.Equal(list.Count, result.Data.TotalCount);
+            Assert.Equal(list.Count, result.Data.Items.Count());
             Assert.Equal("KYC submissions retrieved successfully", result.SuccessMessage);
 
         }
@@ -157,20 +170,25 @@ namespace GearUp.UnitTests.Application.Admin
         [InlineData(KycStatus.Pending)]
         [InlineData(KycStatus.Approved)]
         [InlineData(KycStatus.Rejected)]
-        public async Task GetKycByStatus_ShouldReturnMessage_WhenKycIsNotPresent(KycStatus status)
+        public async Task GetKycByStatus_ShouldReturnEmptyResult_WhenKycIsNotPresent(KycStatus status)
         {
             // Arrange
-            var empty = new ToAdminKycListResponseDto(new List<ToAdminKycResponseDto>(), 0);
-            _mockAdminRepository.Setup(a => a.GetKycSubmissionsByStatusAsync(status)).ReturnsAsync(empty);
+            var empty = new CursorPageResult<ToAdminKycResponseDto>
+            {
+                Items = new List<ToAdminKycResponseDto>(),
+                HasMore = false,
+                NextCursor = null
+            };
+            _mockAdminRepository.Setup(a => a.GetKycSubmissionsByStatusAsync(status, null)).ReturnsAsync(empty);
             //Act
             var svc = CreateService();
-            var result = await svc.GetKycsByStatus(status);
+            var result = await svc.GetKycsByStatus(status, null);
             // Assert
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
             Assert.True(result.IsSuccess);
-            Assert.Null(result.Data);
-            Assert.Equal("No KYC submissions found with the specified status", result.SuccessMessage);
+            Assert.Empty(result.Data.Items);
+            Assert.Equal("KYC submissions retrieved successfully", result.SuccessMessage);
 
         }
 
@@ -181,7 +199,7 @@ namespace GearUp.UnitTests.Application.Admin
             var invalidStatus = (KycStatus)999; // Invalid enum value
             // Act
             var svc = CreateService();
-            var result = await svc.GetKycsByStatus(invalidStatus);
+            var result = await svc.GetKycsByStatus(invalidStatus, null);
             // Assert
             Assert.NotNull(result);
             Assert.Equal(400, result.Status);

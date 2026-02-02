@@ -52,9 +52,9 @@ namespace GearUp.Presentation.Controllers
 
         [HttpGet("dealer/{dealerId:guid}")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetDealerReviews([FromRoute] Guid dealerId)
+        public async Task<IActionResult> GetDealerReviews([FromRoute] Guid dealerId, [FromQuery] string? cursor)
         {
-            var result = await _reviewService.GetDealerReviewsAsync(dealerId);
+            var result = await _reviewService.GetDealerReviewsAsync(dealerId, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -67,10 +67,10 @@ namespace GearUp.Presentation.Controllers
         }
 
         [HttpGet("my")]
-        public async Task<IActionResult> GetMyReviews()
+        public async Task<IActionResult> GetMyReviews([FromQuery] string? cursor)
         {
             var userId = Guid.Parse(User.FindFirst(u => u.Type == "id")!.Value);
-            var result = await _reviewService.GetMyReviewsAsync(userId);
+            var result = await _reviewService.GetMyReviewsAsync(userId, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
     }

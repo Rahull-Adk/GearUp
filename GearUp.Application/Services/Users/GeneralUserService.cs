@@ -1,5 +1,6 @@
 using AutoMapper;
 using GearUp.Application.Common;
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.ServiceDtos.Auth;
@@ -39,16 +40,24 @@ namespace GearUp.Application.Services.Users
             _logger.LogInformation("User profile fetched successfully for user ID: {UserId}", userId);
             return Result<RegisterResponseDto>.Success(user, "User fetched Successfully", 200);
         }
-        public async Task<Result<PageResult<PostResponseDto>>> GetPostsByDealerId(Guid dealerId, int pageNum)
+        public async Task<Result<CursorPageResult<PostResponseDto?>>> GetPostsByDealerId(Guid dealerId, string? cursorString)
         {
-            _logger.LogInformation("Fetching page {PageNum} of posts for user: {UserId}", pageNum, dealerId);
-            var postsPaged = await _postRepo.GetAllUserPostByUserIdAsync(dealerId, pageNum);
-            if (postsPaged.TotalCount == 0)
-                return Result<PageResult<PostResponseDto>>.Success(postsPaged, "No post yet.");
+            _logger.LogInformation("Fetching posts for user: {UserId}", dealerId);
+
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
+            {
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<PostResponseDto?>>.Failure("Invalid cursor", 400);
+                }
+            }
+
+            var postsPaged = await _postRepo.GetAllUserPostByUserIdAsync(cursor, dealerId);
 
             _logger.LogInformation("Posts fetched successfully from database");
 
-            return Result<PageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
+            return Result<CursorPageResult<PostResponseDto?>>.Success(postsPaged, "Post fetched successfully.");
         }
         public async Task<Result<RegisterResponseDto>> GetUserProfile(string username)
         {

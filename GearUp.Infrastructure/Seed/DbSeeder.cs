@@ -175,7 +175,7 @@ public class DbSeeder
     private async Task SeedFakePostsAsync(int targetCount)
     {
         int existing = await _context.Posts
-            .CountAsync(p => p.Content.EndsWith("@example.com"));
+            .CountAsync();
 
         if (existing >= targetCount)
             return;

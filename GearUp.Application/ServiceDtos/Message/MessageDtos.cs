@@ -40,5 +40,7 @@ namespace GearUp.Application.ServiceDtos.Message
         public string OtherUserName { get; set; } = string.Empty;
         public string? OtherUserAvatarUrl { get; set; }
         public List<MessageResponseDto> Messages { get; set; } = new();
+        public string? NextCursor { get; set; }
+        public bool HasMore { get; set; }
     }
 }
