@@ -2,6 +2,7 @@ using AutoMapper;
 using FluentValidation;
 using FluentValidation.Results;
 using GearUp.Application.Common;
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
@@ -83,10 +84,15 @@ namespace GearUp.UnitTests.Application.Cars
         public async Task GetAllCars_NoCars_ReturnsEmptyItems()
         {
             var service = CreateService();
-            var pageResult = new PageResult<CarResponseDto> { Items = new List<CarResponseDto>(), TotalCount =0, CurrentPage =1, PageSize =10, TotalPages =0 };
-            _carRepo.Setup(r => r.GetAllCarsAsync(1)).ReturnsAsync(pageResult);
+            var pageResult = new CursorPageResult<CarResponseDto>
+            {
+                Items = new List<CarResponseDto>(),
+                HasMore = false,
+                NextCursor = null
+            };
+            _carRepo.Setup(r => r.GetAllCarsAsync(null)).ReturnsAsync(pageResult);
             // mapper mapping not used in service (repository returns DTOs), keep for compatibility
-            var result = await service.GetAllCarsAsync(1);
+            var result = await service.GetAllCarsAsync(null);
             Assert.True(result.IsSuccess);
             Assert.Equal(200, result.Status);
             Assert.NotNull(result.Data);

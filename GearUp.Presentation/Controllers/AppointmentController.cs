@@ -36,18 +36,18 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize(Policy = "DealerOnly")]
         [HttpGet("dealer")]
-        public async Task<IActionResult> GetDealerAppointments()
+        public async Task<IActionResult> GetDealerAppointments([FromQuery] string? cursor)
         {
             var dealerId = Guid.Parse(User.FindFirst(u => u.Type == "id")!.Value);
-            var result = await _appointmentService.GetDealerAppointmentsAsync(dealerId);
+            var result = await _appointmentService.GetDealerAppointmentsAsync(dealerId, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
         [HttpGet("my")]
-        public async Task<IActionResult> GetCustomerAppointments()
+        public async Task<IActionResult> GetCustomerAppointments([FromQuery] string? cursor)
         {
             var customerId = Guid.Parse(User.FindFirst(u => u.Type == "id")!.Value);
-            var result = await _appointmentService.GetCustomerAppointmentsAsync(customerId);
+            var result = await _appointmentService.GetCustomerAppointmentsAsync(customerId, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 

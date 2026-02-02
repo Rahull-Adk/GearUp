@@ -1,3 +1,4 @@
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Admin;
 using GearUp.Domain.Entities;
@@ -9,14 +10,28 @@ namespace GearUp.Infrastructure.Repositories
     public class AdminRepository : IAdminRepository
     {
         private readonly GearUpDbContext _db;
+        private const int PageSize = 10;
+
         public AdminRepository(GearUpDbContext db)
         {
             _db = db;
         }
-        public async Task<ToAdminKycListResponseDto> GetAllKycSubmissionsAsync()
+
+        public async Task<CursorPageResult<ToAdminKycResponseDto>> GetAllKycSubmissionsAsync(Cursor? cursor)
         {
-            var kycList = await _db.KycSubmissions
+            IQueryable<KycSubmissions> query = _db.KycSubmissions
+                .AsNoTracking()
                 .OrderByDescending(ks => ks.SubmittedAt)
+                .ThenByDescending(ks => ks.Id);
+
+            if (cursor is not null)
+            {
+                query = query.Where(ks => ks.SubmittedAt < cursor.CreatedAt ||
+                    (ks.SubmittedAt == cursor.CreatedAt && ks.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            var kycList = await query
+                .Take(PageSize + 1)
                 .Select(ks => new ToAdminKycResponseDto
                 {
                     Id = ks.Id,
@@ -33,9 +48,25 @@ namespace GearUp.Infrastructure.Repositories
                     RejectionReason = ks.RejectionReason
                 }).ToListAsync();
 
-            var totalCount = await _db.KycSubmissions.CountAsync();
+            bool hasMore = kycList.Count > PageSize;
+            string? nextCursor = null;
 
-            return new ToAdminKycListResponseDto(kycList, totalCount);
+            if (hasMore)
+            {
+                var lastItem = kycList[PageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.SubmittedAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<ToAdminKycResponseDto>
+            {
+                Items = kycList.Take(PageSize).ToList(),
+                NextCursor = nextCursor,
+                HasMore = hasMore
+            };
         }
 
         public async Task<KycSubmissions?> GetKycEntityByIdAsync(Guid kycId)
@@ -63,11 +94,22 @@ namespace GearUp.Infrastructure.Repositories
                 }).FirstOrDefaultAsync();
         }
 
-        public async Task<ToAdminKycListResponseDto> GetKycSubmissionsByStatusAsync(KycStatus status)
+        public async Task<CursorPageResult<ToAdminKycResponseDto>> GetKycSubmissionsByStatusAsync(KycStatus status, Cursor? cursor)
         {
-            return await _db.KycSubmissions
+            IQueryable<KycSubmissions> query = _db.KycSubmissions
+                .AsNoTracking()
                 .Where(ks => ks.Status == status)
                 .OrderByDescending(ks => ks.SubmittedAt)
+                .ThenByDescending(ks => ks.Id);
+
+            if (cursor is not null)
+            {
+                query = query.Where(ks => ks.SubmittedAt < cursor.CreatedAt ||
+                    (ks.SubmittedAt == cursor.CreatedAt && ks.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            var kycList = await query
+                .Take(PageSize + 1)
                 .Select(ks => new ToAdminKycResponseDto
                 {
                     Id = ks.Id,
@@ -83,9 +125,27 @@ namespace GearUp.Infrastructure.Repositories
                     SubmittedAt = ks.SubmittedAt,
                     RejectionReason = ks.RejectionReason
                 })
-                .ToListAsync()
-                .ContinueWith(t => new ToAdminKycListResponseDto(t.Result, t.Result.Count));
-        }
+                .ToListAsync();
 
+            bool hasMore = kycList.Count > PageSize;
+            string? nextCursor = null;
+
+            if (hasMore)
+            {
+                var lastItem = kycList[PageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.SubmittedAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<ToAdminKycResponseDto>
+            {
+                Items = kycList.Take(PageSize).ToList(),
+                NextCursor = nextCursor,
+                HasMore = hasMore
+            };
+        }
     }
 }

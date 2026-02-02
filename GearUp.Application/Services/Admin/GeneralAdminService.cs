@@ -1,4 +1,5 @@
 using GearUp.Application.Common;
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AdminServiceInterface;
@@ -33,20 +34,23 @@ namespace GearUp.Application.Services.Admin
             _realTimeNotifier = realTimeNotifier;
         }
 
-        public async Task<Result<ToAdminKycListResponseDto>> GetAllKycs()
+        public async Task<Result<CursorPageResult<ToAdminKycResponseDto>>> GetAllKycs(string? cursorString)
         {
             _logger.LogInformation("Fetching all KYC submissions");
 
-            var kycs = await _adminRepository.GetAllKycSubmissionsAsync();
-
-            if (kycs.TotalCount == 0)
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
             {
-                _logger.LogInformation("No KYC submissions found");
-                return Result<ToAdminKycListResponseDto>.Success(null!, "No KYC submissions yet", 200);
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<ToAdminKycResponseDto>>.Failure("Invalid cursor", 400);
+                }
             }
 
+            var kycs = await _adminRepository.GetAllKycSubmissionsAsync(cursor);
+
             _logger.LogInformation("KYC submissions retrieved successfully");
-            return Result<ToAdminKycListResponseDto>.Success(kycs, "KYC submissions retrieved successfully", 200);
+            return Result<CursorPageResult<ToAdminKycResponseDto>>.Success(kycs, "KYC submissions retrieved successfully", 200);
         }
 
         public async Task<Result<ToAdminKycResponseDto>> GetKycById(Guid kycId)
@@ -62,22 +66,27 @@ namespace GearUp.Application.Services.Admin
             return Result<ToAdminKycResponseDto>.Success(kyc, "KYC submission retrieved successfully", 200);
         }
 
-        public async Task<Result<ToAdminKycListResponseDto>> GetKycsByStatus(KycStatus status)
+        public async Task<Result<CursorPageResult<ToAdminKycResponseDto>>> GetKycsByStatus(KycStatus status, string? cursorString)
         {
             _logger.LogInformation("Fetching KYC submissions with status: {Status}", status);
 
             if (status != KycStatus.Approved && status != KycStatus.Pending && status != KycStatus.Rejected)
             {
-                return Result<ToAdminKycListResponseDto>.Failure("Invalid KYC status", 400);
+                return Result<CursorPageResult<ToAdminKycResponseDto>>.Failure("Invalid KYC status", 400);
             }
 
-            var kycs = await _adminRepository.GetKycSubmissionsByStatusAsync(status);
-            if (kycs == null || kycs.TotalCount == 0)
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
             {
-                return Result<ToAdminKycListResponseDto>.Success(null!, "No KYC submissions found with the specified status", 200);
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<ToAdminKycResponseDto>>.Failure("Invalid cursor", 400);
+                }
             }
+
+            var kycs = await _adminRepository.GetKycSubmissionsByStatusAsync(status, cursor);
             _logger.LogInformation("KYC submissions retrieved successfully");
-            return Result<ToAdminKycListResponseDto>.Success(kycs, "KYC submissions retrieved successfully", 200);
+            return Result<CursorPageResult<ToAdminKycResponseDto>>.Success(kycs, "KYC submissions retrieved successfully", 200);
         }
 
         public async Task<Result<string>> UpdateKycStatus(Guid kycId, KycStatus status, Guid reviewerId, string? rejectionReason = null)

@@ -1,5 +1,6 @@
 using FluentValidation;
 using GearUp.Application.Common;
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
 using GearUp.Application.ServiceDtos.Car;
@@ -105,15 +106,20 @@ namespace GearUp.Application.Services.Cars
             return Result<CarResponseDto>.Success(null!, "Car added successfully.", 201);
         }
 
-        public async Task<Result<PageResult<CarResponseDto>>> GetAllCarsAsync(int pageNum)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetAllCarsAsync(string? cursorString)
         {
-            if(pageNum < 1)
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
             {
-                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than zero", 400);
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                }
             }
-            var cars = await _carRepository.GetAllCarsAsync(pageNum);
 
-            return Result<PageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
+            var cars = await _carRepository.GetAllCarsAsync(cursor);
+
+            return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
         }
 
         public async Task<Result<CarResponseDto>> GetCarByIdAsync(Guid carId)
@@ -206,7 +212,7 @@ namespace GearUp.Application.Services.Cars
 
         }
 
-        public async Task<Result<PageResult<CarResponseDto>>> GetDealerCarsAsync(Guid dealerId, int pageNum)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetDealerCarsAsync(Guid dealerId, string? cursorString)
         {
             _logger.LogInformation("Getting cars of {DealerId}", dealerId);
 
@@ -214,25 +220,29 @@ namespace GearUp.Application.Services.Cars
             if (dealer == null)
             {
                 _logger.LogInformation("Dealer with id {DealerId} does not exist", dealerId);
-                return Result<PageResult<CarResponseDto>>.Failure("Dealer not found", 404);
+                return Result<CursorPageResult<CarResponseDto>>.Failure("Dealer not found", 404);
             }
 
             if (dealer.Role != UserRole.Dealer)
             {
-                return Result<PageResult<CarResponseDto>>.Failure(
+                return Result<CursorPageResult<CarResponseDto>>.Failure(
                     "Cars are only available for dealer accounts.",
                     403
                 );
             }
 
-            if(pageNum < 1)
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
             {
-                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than zero", 400);
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                }
             }
 
-            var cars = await _carRepository.GetDealerCarsAsync(dealerId, pageNum);
+            var cars = await _carRepository.GetDealerCarsAsync(dealerId, cursor);
 
-            return Result<PageResult<CarResponseDto>>.Success(cars, $"Cars fetched successfully");
+            return Result<CursorPageResult<CarResponseDto>>.Success(cars, $"Cars fetched successfully");
         }
 
         private Result<CarResponseDto> ValidateCarUpdate(Car? existingCar, UpdateCarDto request, Guid dealerId)
@@ -253,51 +263,37 @@ namespace GearUp.Application.Services.Cars
             return Result<CarResponseDto>.Success(null!, "Validation passed", 200);
         }
 
-        public async Task<Result<PageResult<CarResponseDto>>> SearchCarsAsync(CarSearchDto? searchDto)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> SearchCarsAsync(CarSearchDto? searchDto, string? cursorString)
         {
             if (searchDto == null)
             {
-                return Result<PageResult<CarResponseDto>>.Failure("Search criteria cannot be null", 400);
+                return Result<CursorPageResult<CarResponseDto>>.Failure("Search criteria cannot be null", 400);
             }
 
             if(searchDto.Query == null && searchDto.Color == null && searchDto.MinPrice == null && searchDto.MaxPrice == null)
             {
-                return Result<PageResult<CarResponseDto>>.Failure("At least one search criteria must be provided", 400);
-            }
-
-            if(searchDto.Page < 1)
-            {
-                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than zero", 400);
+                return Result<CursorPageResult<CarResponseDto>>.Failure("At least one search criteria must be provided", 400);
             }
 
             if(searchDto.MinPrice != null && searchDto.MaxPrice != null && searchDto.MinPrice > searchDto.MaxPrice)
             {
-                return Result<PageResult<CarResponseDto>>.Failure("MinPrice cannot be greater than MaxPrice", 400);
+                return Result<CursorPageResult<CarResponseDto>>.Failure("MinPrice cannot be greater than MaxPrice", 400);
             }
 
-            if(searchDto.SortBy != null)
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
             {
-                var validSortBy = new List<string> { "price", "year", "make", "model" };
-                if(!validSortBy.Contains(searchDto.SortBy.ToLower()))
+                if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<PageResult<CarResponseDto>>.Failure($"Invalid SortBy value. Valid values are: {string.Join(", ", validSortBy)}", 400);
+                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
                 }
             }
 
-            if(searchDto.SortOrder != null)
-            {
-                var validSortOrder = new List<string> { "asc", "desc" };
-                if(!validSortOrder.Contains(searchDto.SortOrder.ToLower()))
-                {
-                    return Result<PageResult<CarResponseDto>>.Failure($"Invalid SortOrder value. Valid values are: {string.Join(", ", validSortOrder)}", 400);
-                }
-            }
-
-            var cars = await _carRepository.SearchCarsAsync(searchDto);
-            return Result<PageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
+            var cars = await _carRepository.SearchCarsAsync(searchDto, cursor);
+            return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
         }
 
-        public async Task<Result<PageResult<CarResponseDto>>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, int pageNum)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, string? cursorString)
         {
             _logger.LogInformation("Getting cars of {DealerId}", dealerId);
 
@@ -305,23 +301,28 @@ namespace GearUp.Application.Services.Cars
             if (dealerExists == null)
             {
                 _logger.LogInformation("Dealer with id {DealerId} does not exist", dealerId);
-                return Result<PageResult<CarResponseDto>>.Failure("Dealer not found", 404);
+                return Result<CursorPageResult<CarResponseDto>>.Failure("Dealer not found", 404);
             }
 
             if (status != CarValidationStatus.Approved && status != CarValidationStatus.Pending &&
                 status != CarValidationStatus.Rejected)
             {
                 _logger.LogInformation("Invalid car status");
-                return Result<PageResult<CarResponseDto>>.Failure("Invalid car status", 404);
+                return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid car status", 404);
             }
-            if(pageNum < 1)
+
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
             {
-                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than zero", 400);
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                }
             }
 
-            var cars = await _carRepository.GetMyCarsAsync(dealerId, status, pageNum);
+            var cars = await _carRepository.GetMyCarsAsync(dealerId, status, cursor);
 
-            return Result<PageResult<CarResponseDto>>.Success(cars, $"{status} cars fetched successfully");
+            return Result<CursorPageResult<CarResponseDto>>.Success(cars, $"{status} cars fetched successfully");
 
         }
     }

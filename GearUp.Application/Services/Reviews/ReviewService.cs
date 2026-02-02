@@ -1,4 +1,5 @@
 using GearUp.Application.Common;
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.ReviewServiceInterface;
 using GearUp.Application.ServiceDtos.Review;
@@ -191,16 +192,34 @@ namespace GearUp.Application.Services.Reviews
             return Result<ReviewResponseDto>.Success(responseDto, "Review retrieved successfully.");
         }
 
-        public async Task<Result<List<ReviewResponseDto>>> GetDealerReviewsAsync(Guid dealerId)
+        public async Task<Result<CursorPageResult<ReviewResponseDto>>> GetDealerReviewsAsync(Guid dealerId, string? cursorString)
         {
-            var reviews = await _reviewRepository.GetReviewsByDealerIdAsync(dealerId);
-            return Result<List<ReviewResponseDto>>.Success(reviews, "Reviews retrieved successfully.");
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
+            {
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<ReviewResponseDto>>.Failure("Invalid cursor", 400);
+                }
+            }
+
+            var reviews = await _reviewRepository.GetReviewsByDealerIdAsync(dealerId, cursor);
+            return Result<CursorPageResult<ReviewResponseDto>>.Success(reviews, "Reviews retrieved successfully.");
         }
 
-        public async Task<Result<List<ReviewResponseDto>>> GetMyReviewsAsync(Guid reviewerId)
+        public async Task<Result<CursorPageResult<ReviewResponseDto>>> GetMyReviewsAsync(Guid reviewerId, string? cursorString)
         {
-            var reviews = await _reviewRepository.GetReviewsByReviewerIdAsync(reviewerId);
-            return Result<List<ReviewResponseDto>>.Success(reviews, "Reviews retrieved successfully.");
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
+            {
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<ReviewResponseDto>>.Failure("Invalid cursor", 400);
+                }
+            }
+
+            var reviews = await _reviewRepository.GetReviewsByReviewerIdAsync(reviewerId, cursor);
+            return Result<CursorPageResult<ReviewResponseDto>>.Success(reviews, "Reviews retrieved successfully.");
         }
 
         public async Task<Result<DealerRatingSummaryDto>> GetDealerRatingSummaryAsync(Guid dealerId)

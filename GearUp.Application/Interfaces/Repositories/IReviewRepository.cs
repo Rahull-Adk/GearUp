@@ -1,3 +1,4 @@
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.ServiceDtos.Review;
 using GearUp.Domain.Entities.Users;
 
@@ -8,8 +9,8 @@ namespace GearUp.Application.Interfaces.Repositories
         Task AddAsync(UserReview review);
         Task<UserReview?> GetByIdAsync(Guid reviewId);
         Task<UserReview?> GetByReviewerAndDealerIdAsync(Guid reviewerId, Guid dealerId);
-        Task<List<ReviewResponseDto>> GetReviewsByDealerIdAsync(Guid dealerId);
-        Task<List<ReviewResponseDto>> GetReviewsByReviewerIdAsync(Guid reviewerId);
+        Task<CursorPageResult<ReviewResponseDto>> GetReviewsByDealerIdAsync(Guid dealerId, Cursor? cursor);
+        Task<CursorPageResult<ReviewResponseDto>> GetReviewsByReviewerIdAsync(Guid reviewerId, Cursor? cursor);
         Task<DealerRatingSummaryDto?> GetDealerRatingSummaryAsync(Guid dealerId);
         Task<bool> HasReviewedDealerAsync(Guid reviewerId, Guid dealerId);
         void Remove(UserReview review);

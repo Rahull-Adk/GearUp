@@ -1,3 +1,4 @@
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Appointment;
 using GearUp.Domain.Entities.Cars;
@@ -10,6 +11,7 @@ namespace GearUp.Infrastructure.Repositories
     public class AppointmentRepository : IAppointmentRepository
     {
         private readonly GearUpDbContext _db;
+        private const int PageSize = 10;
 
         public AppointmentRepository(GearUpDbContext db)
         {
@@ -27,15 +29,25 @@ namespace GearUp.Infrastructure.Repositories
                 .FirstOrDefaultAsync(a => a.Id == appointmentId);
         }
 
-        public async Task<List<AppointmentResponseDto>> GetByDealerIdAsync(Guid dealerId)
+        public async Task<CursorPageResult<AppointmentResponseDto>> GetByDealerIdAsync(Guid dealerId, Cursor? cursor)
         {
-            return await _db.Appointments
+            IQueryable<Appointment> query = _db.Appointments
                 .AsNoTracking()
                 .Where(a => a.AgentId == dealerId)
                 .Include(a => a.Agent)
                 .Include(a => a.Requester)
                 .Include(a => a.Car)
                 .OrderByDescending(a => a.CreatedAt)
+                .ThenByDescending(a => a.Id);
+
+            if (cursor is not null)
+            {
+                query = query.Where(a => a.CreatedAt < cursor.CreatedAt ||
+                    (a.CreatedAt == cursor.CreatedAt && a.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            var appointments = await query
+                .Take(PageSize + 1)
                 .Select(a => new AppointmentResponseDto
                 {
                     Id = a.Id,
@@ -54,17 +66,47 @@ namespace GearUp.Infrastructure.Repositories
                     UpdatedAt = a.UpdatedAt
                 })
                 .ToListAsync();
+
+            bool hasMore = appointments.Count > PageSize;
+            string? nextCursor = null;
+
+            if (hasMore)
+            {
+                var lastItem = appointments[PageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.CreatedAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<AppointmentResponseDto>
+            {
+                Items = appointments.Take(PageSize).ToList(),
+                NextCursor = nextCursor,
+                HasMore = hasMore
+            };
         }
 
-        public async Task<List<AppointmentResponseDto>> GetByRequesterIdAsync(Guid requesterId)
+        public async Task<CursorPageResult<AppointmentResponseDto>> GetByRequesterIdAsync(Guid requesterId, Cursor? cursor)
         {
-            return await _db.Appointments
+            IQueryable<Appointment> query = _db.Appointments
                 .AsNoTracking()
                 .Where(a => a.RequesterId == requesterId)
                 .Include(a => a.Agent)
                 .Include(a => a.Requester)
                 .Include(a => a.Car)
                 .OrderByDescending(a => a.CreatedAt)
+                .ThenByDescending(a => a.Id);
+
+            if (cursor is not null)
+            {
+                query = query.Where(a => a.CreatedAt < cursor.CreatedAt ||
+                    (a.CreatedAt == cursor.CreatedAt && a.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            var appointments = await query
+                .Take(PageSize + 1)
                 .Select(a => new AppointmentResponseDto
                 {
                     Id = a.Id,
@@ -83,6 +125,26 @@ namespace GearUp.Infrastructure.Repositories
                     UpdatedAt = a.UpdatedAt
                 })
                 .ToListAsync();
+
+            bool hasMore = appointments.Count > PageSize;
+            string? nextCursor = null;
+
+            if (hasMore)
+            {
+                var lastItem = appointments[PageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.CreatedAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<AppointmentResponseDto>
+            {
+                Items = appointments.Take(PageSize).ToList(),
+                NextCursor = nextCursor,
+                HasMore = hasMore
+            };
         }
 
         public async Task<bool> HasCompletedAppointmentWithDealerAsync(Guid requesterId, Guid dealerId)

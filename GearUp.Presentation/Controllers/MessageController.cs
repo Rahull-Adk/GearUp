@@ -33,10 +33,10 @@ namespace GearUp.Presentation.Controllers
         /// Get all conversations for the current user
         /// </summary>
         [HttpGet("conversations")]
-        public async Task<IActionResult> GetConversations()
+        public async Task<IActionResult> GetConversations([FromQuery] string? cursor)
         {
             var userId = Guid.Parse(User.FindFirst(u => u.Type == "id")!.Value);
-            var result = await _messageService.GetConversationsAsync(userId);
+            var result = await _messageService.GetConversationsAsync(userId, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -46,11 +46,10 @@ namespace GearUp.Presentation.Controllers
         [HttpGet("conversations/{conversationId:guid}")]
         public async Task<IActionResult> GetConversation(
             [FromRoute] Guid conversationId,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 50)
+            [FromQuery] string? cursor)
         {
             var userId = Guid.Parse(User.FindFirst(u => u.Type == "id")!.Value);
-            var result = await _messageService.GetConversationAsync(conversationId, userId, page, pageSize);
+            var result = await _messageService.GetConversationAsync(conversationId, userId, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 

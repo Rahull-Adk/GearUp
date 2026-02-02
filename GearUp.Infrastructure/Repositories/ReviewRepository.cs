@@ -1,3 +1,4 @@
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Review;
 using GearUp.Domain.Entities.Users;
@@ -9,6 +10,7 @@ namespace GearUp.Infrastructure.Repositories
     public class ReviewRepository : IReviewRepository
     {
         private readonly GearUpDbContext _db;
+        private const int PageSize = 10;
 
         public ReviewRepository(GearUpDbContext db)
         {
@@ -32,14 +34,24 @@ namespace GearUp.Infrastructure.Repositories
                 .FirstOrDefaultAsync(r => r.ReviewerId == reviewerId && r.RevieweeId == dealerId);
         }
 
-        public async Task<List<ReviewResponseDto>> GetReviewsByDealerIdAsync(Guid dealerId)
+        public async Task<CursorPageResult<ReviewResponseDto>> GetReviewsByDealerIdAsync(Guid dealerId, Cursor? cursor)
         {
-            return await _db.UserReviews
+            IQueryable<UserReview> query = _db.UserReviews
                 .AsNoTracking()
                 .Where(r => r.RevieweeId == dealerId)
                 .Include(r => r.Reviewer)
                 .Include(r => r.Reviewee)
                 .OrderByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.Id);
+
+            if (cursor is not null)
+            {
+                query = query.Where(r => r.CreatedAt < cursor.CreatedAt ||
+                    (r.CreatedAt == cursor.CreatedAt && r.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            var reviews = await query
+                .Take(PageSize + 1)
                 .Select(r => new ReviewResponseDto
                 {
                     Id = r.Id,
@@ -54,16 +66,46 @@ namespace GearUp.Infrastructure.Repositories
                     UpdatedAt = r.UpdatedAt
                 })
                 .ToListAsync();
+
+            bool hasMore = reviews.Count > PageSize;
+            string? nextCursor = null;
+
+            if (hasMore)
+            {
+                var lastItem = reviews[PageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.CreatedAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<ReviewResponseDto>
+            {
+                Items = reviews.Take(PageSize).ToList(),
+                NextCursor = nextCursor,
+                HasMore = hasMore
+            };
         }
 
-        public async Task<List<ReviewResponseDto>> GetReviewsByReviewerIdAsync(Guid reviewerId)
+        public async Task<CursorPageResult<ReviewResponseDto>> GetReviewsByReviewerIdAsync(Guid reviewerId, Cursor? cursor)
         {
-            return await _db.UserReviews
+            IQueryable<UserReview> query = _db.UserReviews
                 .AsNoTracking()
                 .Where(r => r.ReviewerId == reviewerId)
                 .Include(r => r.Reviewer)
                 .Include(r => r.Reviewee)
                 .OrderByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.Id);
+
+            if (cursor is not null)
+            {
+                query = query.Where(r => r.CreatedAt < cursor.CreatedAt ||
+                    (r.CreatedAt == cursor.CreatedAt && r.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            var reviews = await query
+                .Take(PageSize + 1)
                 .Select(r => new ReviewResponseDto
                 {
                     Id = r.Id,
@@ -78,6 +120,26 @@ namespace GearUp.Infrastructure.Repositories
                     UpdatedAt = r.UpdatedAt
                 })
                 .ToListAsync();
+
+            bool hasMore = reviews.Count > PageSize;
+            string? nextCursor = null;
+
+            if (hasMore)
+            {
+                var lastItem = reviews[PageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.CreatedAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<ReviewResponseDto>
+            {
+                Items = reviews.Take(PageSize).ToList(),
+                NextCursor = nextCursor,
+                HasMore = hasMore
+            };
         }
 
         public async Task<DealerRatingSummaryDto?> GetDealerRatingSummaryAsync(Guid dealerId)

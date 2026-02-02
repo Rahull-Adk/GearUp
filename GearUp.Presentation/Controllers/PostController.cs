@@ -30,20 +30,20 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize]
         [HttpGet("")]
-        public async Task<IActionResult> GetFeed([FromQuery] string mode, [FromQuery] int pageNumber = 1)
+        public async Task<IActionResult> GetFeed([FromQuery] string? cursor)
         {
             var currUserId = User.FindFirst(u => u.Type == "id")?.Value ?? Guid.Empty.ToString();
-            var pageResult = await _postService.GetLatestFeedAsync(Guid.Parse(currUserId), pageNumber);
+            var pageResult = await _postService.GetLatestFeedAsync(Guid.Parse(currUserId), cursor!);
             return Ok(pageResult);
         }
 
         [Authorize(Policy = "DealerOnly")]
         [HttpGet("me")]
 
-        public async Task<IActionResult> GetMyPosts([FromQuery] int pageNum = 1)
+        public async Task<IActionResult> GetMyPosts([FromQuery] string? cursor)
         {
             var currUserId = User.FindFirst(u => u.Type == "id")?.Value ?? Guid.Empty.ToString();
-            var result = await _postService.GetMyPosts(Guid.Parse(currUserId), pageNum);
+            var result = await _postService.GetMyPosts(Guid.Parse(currUserId), cursor);
             return StatusCode(result.Status, result);
         }
 
@@ -67,9 +67,9 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize]
         [HttpGet("{postId:guid}/like")]
-        public async Task<IActionResult> GetLikedUsers([FromRoute] Guid postId, [FromQuery] int pageNum)
+        public async Task<IActionResult> GetLikedUsers([FromRoute] Guid postId, [FromQuery] string? cursor)
         {
-            var likedUsers = await _postService.GetPostLikersAsync(postId, pageNum);
+            var likedUsers = await _postService.GetPostLikersAsync(postId, cursor);
             return StatusCode(likedUsers.Status, likedUsers);
         }
 
