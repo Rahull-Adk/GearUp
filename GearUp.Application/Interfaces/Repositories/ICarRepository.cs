@@ -19,5 +19,11 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId);
         Task<CursorPageResult<CarResponseDto>> GetDealerCarsAsync(Guid dealerId, Cursor? cursor);
         void RemoveCarImageByCarId(Car car);
+
+        // Admin methods
+        Task<PageResult<CarResponseDto>> GetAllCarsForAdminAsync(int pageNum, int pageSize = 10);
+        Task<PageResult<CarResponseDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, int pageNum, int pageSize = 10);
+        Task<PageResult<CarResponseDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, int pageNum, int pageSize = 10);
+        Task SaveChangesAsync();
     }
 }
