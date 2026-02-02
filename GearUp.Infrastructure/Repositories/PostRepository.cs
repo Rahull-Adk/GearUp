@@ -1,4 +1,3 @@
-using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Car;
@@ -85,9 +84,6 @@ namespace GearUp.Infrastructure.Repositories
                 .OrderByDescending(p => p.CreatedAt)
                 .ThenByDescending(p => p.Id);
 
-
-            var totalCount = await query.CountAsync();
-
             if (c is not null)
             {
                 query = query.Where(p => p.CreatedAt < c.CreatedAt || (p.CreatedAt == c.CreatedAt && p.Id.CompareTo(c.Id) < 0));
@@ -142,15 +138,23 @@ namespace GearUp.Infrastructure.Repositories
                 })
                 .ToListAsync();
             bool hasMore = rows.Count > pageSize;
+            string? nextCursor = null;
+
+            if (hasMore)
+            {
+                var lastItem = rows[pageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.CreatedAt,
+                    Id = lastItem.Id
+                });
+            }
+
             return new CursorPageResult<PostResponseDto?>
             {
                 HasMore = hasMore,
                 Items = rows.Take(pageSize),
-                NextCursor = Cursor.Encode(new Cursor
-                {
-                    CreatedAt = rows[^1].CreatedAt,
-                    Id = rows[^1].Id
-                })
+                NextCursor = nextCursor
             };
         }
 
@@ -236,7 +240,7 @@ namespace GearUp.Infrastructure.Repositories
             bool hasMore = rows.Count > pageSize;
             if (hasMore)
             {
-                var lastItem = rows[^1];
+                var lastItem = rows[pageSize - 1];
                 nextCursor = Cursor.Encode(new Cursor
                 {
                     CreatedAt = lastItem.CreatedAt,
