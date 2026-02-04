@@ -202,7 +202,7 @@ namespace GearUp.Infrastructure.Repositories
                     AuthorAvatarUrl = p.User.AvatarUrl,
                     IsLikedByCurrentUser =
                         p.Likes.Any(l => l.LikedUserId == currUserId),
-                    LikeCount = p.Likes.Count,
+                    LikeCount = p.LikeCount,
                     CommentCount = p.Comments.Count,
                     ViewCount = p.Views.Count,
                     CarDto = p.CarId == null

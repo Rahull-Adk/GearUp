@@ -89,9 +89,9 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize(Policy = "AdminOnly")]
         [HttpGet("cars")]
-        public async Task<IActionResult> GetAllCars([FromQuery] int pageNum = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAllCars([FromQuery] string? cursor)
         {
-            var result = await _generalAdminService.GetAllCars(pageNum, pageSize);
+            var result = await _generalAdminService.GetAllCars(cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -105,17 +105,17 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize(Policy = "AdminOnly")]
         [HttpGet("cars/dealer/{dealerId:guid}")]
-        public async Task<IActionResult> GetCarsByDealerId([FromRoute] Guid dealerId, [FromQuery] int pageNum = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetCarsByDealerId([FromRoute] Guid dealerId, [FromQuery] string? cursor)
         {
-            var result = await _generalAdminService.GetCarsByDealerId(dealerId, pageNum, pageSize);
+            var result = await _generalAdminService.GetCarsByDealerId(dealerId, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
         [Authorize(Policy = "AdminOnly")]
         [HttpGet("cars/status/{status}")]
-        public async Task<IActionResult> GetCarsByValidationStatus([FromRoute] CarValidationStatus status, [FromQuery] int pageNum = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetCarsByValidationStatus([FromRoute] CarValidationStatus status, [FromQuery] string? cursor)
         {
-            var result = await _generalAdminService.GetCarsByValidationStatus(status, pageNum, pageSize);
+            var result = await _generalAdminService.GetCarsByValidationStatus(status, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 

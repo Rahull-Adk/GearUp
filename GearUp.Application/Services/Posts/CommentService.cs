@@ -78,6 +78,13 @@ namespace GearUp.Application.Services.Posts
             var postComment = PostComment.CreateComment(comment.PostId, userId, comment.Text, comment.ParentCommentId);
             await _commentRepository.AddCommentAsync(postComment);
 
+            // Increment counts transactionally
+            post.IncrementCommentCount();
+            if (parentComment != null)
+            {
+                parentComment.IncrementReplyCount();
+            }
+
             var receiverUserId = parentComment?.CommentedUserId ?? post.UserId;
 
             Notification? notification = null;
@@ -163,6 +170,22 @@ namespace GearUp.Application.Services.Posts
                 _logger.LogWarning("User with Id: {UserId} is not authorized to delete comment with Id: {CommentId}",
                     userId, commentId);
                 return Result<bool>.Failure("You are not authorized to delete this comment", 403);
+            }
+
+            // Get parent comment and post to decrement counts
+            var post = await _postRepository.GetPostEntityByIdAsync(commentEntity.PostId);
+            if (post != null)
+            {
+                post.DecrementCommentCount();
+            }
+
+            if (commentEntity.ParentCommentId.HasValue)
+            {
+                var parentComment = await _commentRepository.GetCommentByIdAsync(commentEntity.ParentCommentId.Value);
+                if (parentComment != null)
+                {
+                    parentComment.DecrementReplyCount();
+                }
             }
 
             commentEntity.DeleteComment();

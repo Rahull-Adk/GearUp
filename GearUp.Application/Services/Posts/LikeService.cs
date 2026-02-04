@@ -62,6 +62,7 @@ namespace GearUp.Application.Services.Posts
             if (alreadyLiked)
             {
                _likeRepository.RemoveCommentLike(userId, commentId);
+               comment.DecrementLikeCount();
                await _commonRepository.SaveChangesAsync();
                 message = "Comment unliked successfully";
 
@@ -73,6 +74,7 @@ namespace GearUp.Application.Services.Posts
             {
                 var commentLike = CommentLike.CreateCommentLike(commentId, userId);
                 await _likeRepository.AddCommentLikeAsync(commentLike);
+                comment.IncrementLikeCount();
                 await _commonRepository.SaveChangesAsync();
                 message = "Comment liked successfully";
 
@@ -109,7 +111,7 @@ namespace GearUp.Application.Services.Posts
             }
 
             await _commonRepository.SaveChangesAsync();
-            var likeCount = await _commentRepository.GetCommentLikeCountByIdAsync(commentId);
+            var likeCount = comment.LikeCount;
             await _realTimeNotifier.BroadCastCommentLikes(comment.PostId, commentId, likeCount);
 
             return Result<int>.Success(likeCount, message, 200);
@@ -143,6 +145,7 @@ namespace GearUp.Application.Services.Posts
             if (counts.IsLikedByCurrentUser)
             {
                 _likeRepository.RemovePostLike(userId, postId);
+                post.DecrementLikeCount();
                 message = "Post unliked successfully";
 
                 _logger.LogInformation(
@@ -153,6 +156,7 @@ namespace GearUp.Application.Services.Posts
             {
                 var postLike = PostLike.CreateLike(postId, userId);
                 await _likeRepository.AddPostLikeAsync(postLike);
+                post.IncrementLikeCount();
                 message = "Post liked successfully";
 
                 _logger.LogInformation(
@@ -190,7 +194,7 @@ namespace GearUp.Application.Services.Posts
 
             await _commonRepository.SaveChangesAsync();
 
-            var likeCount = await _likeRepository.GetPostLikeCountAsync(postId);
+            var likeCount = post.LikeCount;
             await _realTimeNotifier.BroadCastPostLikes(postId, likeCount);
 
             return Result<int>.Success(likeCount, message, 200);

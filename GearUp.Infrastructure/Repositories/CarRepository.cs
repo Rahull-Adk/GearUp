@@ -394,13 +394,23 @@ namespace GearUp.Infrastructure.Repositories
         }
 
         // Admin methods
-        public async Task<PageResult<CarResponseDto>> GetAllCarsForAdminAsync(int pageNum, int pageSize = 10)
+        public async Task<CursorPageResult<CarResponseDto>> GetAllCarsForAdminAsync(Cursor? cursor)
         {
-            var query = _db.Cars
+            IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
                 .Where(car => !car.IsDeleted)
                 .Include(c => c.Images)
                 .OrderByDescending(c => c.CreatedAt)
+                .ThenByDescending(c => c.Id);
+
+            if (cursor is not null)
+            {
+                query = query.Where(c => c.CreatedAt < cursor.CreatedAt ||
+                    (c.CreatedAt == cursor.CreatedAt && c.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            var cars = await query
+                .Take(PageSize + 1)
                 .Select(c => new CarResponseDto
                 {
                     Id = c.Id,
@@ -422,32 +432,47 @@ namespace GearUp.Infrastructure.Repositories
                         CarId = img.CarId,
                         Url = img.Url
                     }).ToList()
-                });
-
-            var totalCars = await query.CountAsync();
-            var totalPages = (int)Math.Ceiling((double)totalCars / pageSize);
-            var cars = await query
-                .Skip((pageNum - 1) * pageSize)
-                .Take(pageSize)
+                })
                 .ToListAsync();
 
-            return new PageResult<CarResponseDto>
+            bool hasMore = cars.Count > PageSize;
+            string? nextCursor = null;
+
+            if (hasMore)
             {
-                TotalCount = totalCars,
-                PageSize = pageSize,
-                CurrentPage = pageNum,
-                TotalPages = totalPages,
-                Items = cars
+                var lastItem = cars[PageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.CreatedAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<CarResponseDto>
+            {
+                Items = cars.Take(PageSize).ToList(),
+                NextCursor = nextCursor,
+                HasMore = hasMore
             };
         }
 
-        public async Task<PageResult<CarResponseDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, int pageNum, int pageSize = 10)
+        public async Task<CursorPageResult<CarResponseDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, Cursor? cursor)
         {
-            var query = _db.Cars
+            IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
                 .Where(car => !car.IsDeleted && car.ValidationStatus == status)
                 .Include(c => c.Images)
                 .OrderByDescending(c => c.CreatedAt)
+                .ThenByDescending(c => c.Id);
+
+            if (cursor is not null)
+            {
+                query = query.Where(c => c.CreatedAt < cursor.CreatedAt ||
+                    (c.CreatedAt == cursor.CreatedAt && c.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            var cars = await query
+                .Take(PageSize + 1)
                 .Select(c => new CarResponseDto
                 {
                     Id = c.Id,
@@ -469,32 +494,47 @@ namespace GearUp.Infrastructure.Repositories
                         CarId = img.CarId,
                         Url = img.Url
                     }).ToList()
-                });
-
-            var totalCars = await query.CountAsync();
-            var totalPages = (int)Math.Ceiling((double)totalCars / pageSize);
-            var cars = await query
-                .Skip((pageNum - 1) * pageSize)
-                .Take(pageSize)
+                })
                 .ToListAsync();
 
-            return new PageResult<CarResponseDto>
+            bool hasMore = cars.Count > PageSize;
+            string? nextCursor = null;
+
+            if (hasMore)
             {
-                TotalCount = totalCars,
-                PageSize = pageSize,
-                CurrentPage = pageNum,
-                TotalPages = totalPages,
-                Items = cars
+                var lastItem = cars[PageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.CreatedAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<CarResponseDto>
+            {
+                Items = cars.Take(PageSize).ToList(),
+                NextCursor = nextCursor,
+                HasMore = hasMore
             };
         }
 
-        public async Task<PageResult<CarResponseDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, int pageNum, int pageSize = 10)
+        public async Task<CursorPageResult<CarResponseDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, Cursor? cursor)
         {
-            var query = _db.Cars
+            IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
                 .Where(car => !car.IsDeleted && car.DealerId == dealerId)
                 .Include(c => c.Images)
                 .OrderByDescending(c => c.CreatedAt)
+                .ThenByDescending(c => c.Id);
+
+            if (cursor is not null)
+            {
+                query = query.Where(c => c.CreatedAt < cursor.CreatedAt ||
+                    (c.CreatedAt == cursor.CreatedAt && c.Id.CompareTo(cursor.Id) < 0));
+            }
+
+            var cars = await query
+                .Take(PageSize + 1)
                 .Select(c => new CarResponseDto
                 {
                     Id = c.Id,
@@ -516,22 +556,27 @@ namespace GearUp.Infrastructure.Repositories
                         CarId = img.CarId,
                         Url = img.Url
                     }).ToList()
-                });
-
-            var totalCars = await query.CountAsync();
-            var totalPages = (int)Math.Ceiling((double)totalCars / pageSize);
-            var cars = await query
-                .Skip((pageNum - 1) * pageSize)
-                .Take(pageSize)
+                })
                 .ToListAsync();
 
-            return new PageResult<CarResponseDto>
+            bool hasMore = cars.Count > PageSize;
+            string? nextCursor = null;
+
+            if (hasMore)
             {
-                TotalCount = totalCars,
-                PageSize = pageSize,
-                CurrentPage = pageNum,
-                TotalPages = totalPages,
-                Items = cars
+                var lastItem = cars[PageSize - 1];
+                nextCursor = Cursor.Encode(new Cursor
+                {
+                    CreatedAt = lastItem.CreatedAt,
+                    Id = lastItem.Id
+                });
+            }
+
+            return new CursorPageResult<CarResponseDto>
+            {
+                Items = cars.Take(PageSize).ToList(),
+                NextCursor = nextCursor,
+                HasMore = hasMore
             };
         }
 

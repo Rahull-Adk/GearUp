@@ -17,6 +17,11 @@ namespace GearUp.Domain.Entities.Posts
         [JsonIgnore]
         public PostComment ParentComment { get; private set; }
         public bool IsDeleted { get; private set; }
+
+        // Denormalized counts for performance
+        public int LikeCount { get; private set; }
+        public int ReplyCount { get; private set; }
+
         private readonly List<PostComment> _replies = new List<PostComment>();
         private readonly List<CommentLike> _likes = new List<CommentLike>();
         public IReadOnlyCollection<PostComment> Replies => _replies.AsReadOnly();
@@ -34,6 +39,8 @@ namespace GearUp.Domain.Entities.Posts
             Content = content;
             ParentCommentId = parentCommentId;
             IsDeleted = false;
+            LikeCount = 0;
+            ReplyCount = 0;
             _replies = [];
             _likes = [];
             CreatedAt = DateTime.UtcNow;
@@ -60,7 +67,30 @@ namespace GearUp.Domain.Entities.Posts
                 throw new ArgumentException("Content cannot be null or empty.", nameof(content));
             Content = content;
             UpdatedAt = DateTime.UtcNow;
+        }
 
+        public void IncrementLikeCount()
+        {
+            LikeCount++;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void DecrementLikeCount()
+        {
+            if (LikeCount > 0) LikeCount--;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void IncrementReplyCount()
+        {
+            ReplyCount++;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void DecrementReplyCount()
+        {
+            if (ReplyCount > 0) ReplyCount--;
+            UpdatedAt = DateTime.UtcNow;
         }
     }
 }

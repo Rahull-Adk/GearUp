@@ -98,10 +98,16 @@ namespace GearUp.Application.Services.Posts
             {
                 var view = PostView.CreatePostView(post.Id, currUserId);
                 await _viewRepository.CreatePostViewAsync(view);
+
+                // Get post entity and increment view count
+                var postEntity = await _postRepository.GetPostEntityByIdAsync(id);
+                if (postEntity != null)
+                {
+                    postEntity.IncrementViewCount();
+                }
             }
 
             await _commonRepository.SaveChangesAsync();
-            post.ViewCount = await _postRepository.GetPostViewCountAsync(post.Id);
             _logger.LogInformation("Post with Id: {PostId} fetched successfully", id);
             return Result<PostResponseDto>.Success(post, "Post fetched successfully", 200);
         }
@@ -113,7 +119,7 @@ namespace GearUp.Application.Services.Posts
 
             _logger.LogInformation("Creating a new post for dealer with Id: {DealerId}", dealerId);
 
-            var validator = _createPostValidator.Validate(req);
+            var validator = await _createPostValidator.ValidateAsync(req);
 
             if (!validator.IsValid)
             {

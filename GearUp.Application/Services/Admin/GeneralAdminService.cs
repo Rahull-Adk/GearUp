@@ -157,25 +157,23 @@ namespace GearUp.Application.Services.Admin
         }
 
         // Car methods
-        public async Task<Result<PageResult<CarResponseDto>>> GetAllCars(int pageNum, int pageSize = 10)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetAllCars(string? cursorString)
         {
             _logger.LogInformation("Fetching all cars for admin review");
 
-            if (pageNum < 1)
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
             {
-                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than 0", 400);
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                }
             }
 
-            var cars = await _carRepository.GetAllCarsForAdminAsync(pageNum, pageSize);
-
-            if (cars.TotalCount == 0)
-            {
-                _logger.LogInformation("No cars found");
-                return Result<PageResult<CarResponseDto>>.Success(cars, "No cars found", 200);
-            }
+            var cars = await _carRepository.GetAllCarsForAdminAsync(cursor);
 
             _logger.LogInformation("Cars retrieved successfully");
-            return Result<PageResult<CarResponseDto>>.Success(cars, "Cars retrieved successfully", 200);
+            return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars retrieved successfully", 200);
         }
 
         public async Task<Result<CarResponseDto>> GetCarById(Guid carId)
@@ -192,57 +190,53 @@ namespace GearUp.Application.Services.Admin
             return Result<CarResponseDto>.Success(car, "Car retrieved successfully", 200);
         }
 
-        public async Task<Result<PageResult<CarResponseDto>>> GetCarsByDealerId(Guid dealerId, int pageNum, int pageSize = 10)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetCarsByDealerId(Guid dealerId, string? cursorString)
         {
             _logger.LogInformation("Fetching cars for dealer with ID: {DealerId}", dealerId);
 
-            if (pageNum < 1)
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
             {
-                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than 0", 400);
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                }
             }
 
             var dealer = await _userRepository.GetUserEntityByIdAsync(dealerId);
             if (dealer == null)
             {
-                return Result<PageResult<CarResponseDto>>.Failure("Dealer not found", 404);
+                return Result<CursorPageResult<CarResponseDto>>.Failure("Dealer not found", 404);
             }
 
-            var cars = await _carRepository.GetCarsByDealerIdForAdminAsync(dealerId, pageNum, pageSize);
-
-            if (cars.TotalCount == 0)
-            {
-                _logger.LogInformation("No cars found for dealer");
-                return Result<PageResult<CarResponseDto>>.Success(cars, "No cars found for this dealer", 200);
-            }
+            var cars = await _carRepository.GetCarsByDealerIdForAdminAsync(dealerId, cursor);
 
             _logger.LogInformation("Cars retrieved successfully for dealer");
-            return Result<PageResult<CarResponseDto>>.Success(cars, "Cars retrieved successfully", 200);
+            return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars retrieved successfully", 200);
         }
 
-        public async Task<Result<PageResult<CarResponseDto>>> GetCarsByValidationStatus(CarValidationStatus status, int pageNum, int pageSize = 10)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetCarsByValidationStatus(CarValidationStatus status, string? cursorString)
         {
             _logger.LogInformation("Fetching cars with validation status: {Status}", status);
 
-            if (pageNum < 1)
-            {
-                return Result<PageResult<CarResponseDto>>.Failure("Page number must be greater than 0", 400);
-            }
-
             if (status != CarValidationStatus.Approved && status != CarValidationStatus.Pending && status != CarValidationStatus.Rejected)
             {
-                return Result<PageResult<CarResponseDto>>.Failure("Invalid car validation status", 400);
+                return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid car validation status", 400);
             }
 
-            var cars = await _carRepository.GetCarsByValidationStatusAsync(status, pageNum, pageSize);
-
-            if (cars.TotalCount == 0)
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
             {
-                _logger.LogInformation("No cars found with the specified status");
-                return Result<PageResult<CarResponseDto>>.Success(cars, "No cars found with the specified status", 200);
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                }
             }
+
+            var cars = await _carRepository.GetCarsByValidationStatusAsync(status, cursor);
 
             _logger.LogInformation("Cars retrieved successfully");
-            return Result<PageResult<CarResponseDto>>.Success(cars, "Cars retrieved successfully", 200);
+            return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars retrieved successfully", 200);
         }
 
         public async Task<Result<string>> UpdateCarValidationStatus(Guid carId, CarValidationStatus status, Guid reviewerId, string? rejectionReason = null)

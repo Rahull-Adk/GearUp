@@ -21,9 +21,9 @@ namespace GearUp.Application.Interfaces.Repositories
         void RemoveCarImageByCarId(Car car);
 
         // Admin methods
-        Task<PageResult<CarResponseDto>> GetAllCarsForAdminAsync(int pageNum, int pageSize = 10);
-        Task<PageResult<CarResponseDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, int pageNum, int pageSize = 10);
-        Task<PageResult<CarResponseDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, int pageNum, int pageSize = 10);
+        Task<CursorPageResult<CarResponseDto>> GetAllCarsForAdminAsync(Cursor? cursor);
+        Task<CursorPageResult<CarResponseDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, Cursor? cursor);
+        Task<CursorPageResult<CarResponseDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, Cursor? cursor);
         Task SaveChangesAsync();
     }
 }
