@@ -99,6 +99,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<PostHub>("/hubs/post");
 app.MapHub<NotificationHub>("/hubs/notification");
+app.MapHub<ChatHub>("/hubs/chat");
 
 try
 {

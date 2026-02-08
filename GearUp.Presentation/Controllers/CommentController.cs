@@ -28,6 +28,15 @@ namespace GearUp.Presentation.Controllers
         }
 
         [Authorize]
+        [HttpDelete("{commentId:guid}/like")]
+        public async Task<IActionResult> UnlikeComment([FromRoute] Guid commentId)
+        {
+            var currentUser = User.FindFirst(u => u.Type == "id")?.Value;
+            var result = await _likeService.UnlikeCommentAsync(commentId, Guid.Parse(currentUser!));
+            return StatusCode(result.Status, result);
+        }
+
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CommentOnPost([FromBody] CreateCommentDto comment)
         {
@@ -72,5 +81,12 @@ namespace GearUp.Presentation.Controllers
             return StatusCode(result.Status, result);
         }
 
+        [Authorize]
+        [HttpGet("{commentId:guid}/likers")]
+        public async Task<IActionResult> GetCommentLikers([FromRoute] Guid commentId, [FromQuery] string? cursor)
+        {
+            var result = await _commentService.GetCommentLikersAsync(commentId, cursor);
+            return StatusCode(result.Status, result);
+        }
     }
 }

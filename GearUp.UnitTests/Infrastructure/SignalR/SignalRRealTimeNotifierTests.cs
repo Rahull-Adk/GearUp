@@ -10,6 +10,7 @@ namespace GearUp.UnitTests.Infrastructure.SignalR
     {
         private readonly Mock<IHubContext<PostHub>> _postHubMock;
         private readonly Mock<IHubContext<NotificationHub>> _notificationHubMock;
+        private readonly Mock<IHubContext<ChatHub>> _chatHubMock;
         private readonly Mock<IHubClients> _clientsMock;
         private readonly Mock<IClientProxy> _clientProxyMock;
         private readonly SignalRRealTimeNotifier _notifier;
@@ -18,13 +19,14 @@ namespace GearUp.UnitTests.Infrastructure.SignalR
         {
             _postHubMock = new Mock<IHubContext<PostHub>>();
             _notificationHubMock = new Mock<IHubContext<NotificationHub>>();
+            _chatHubMock = new Mock<IHubContext<ChatHub>>();
             _clientsMock = new Mock<IHubClients>();
             _clientProxyMock = new Mock<IClientProxy>();
 
             _postHubMock.Setup(h => h.Clients).Returns(_clientsMock.Object);
             _clientsMock.Setup(c => c.Group(It.IsAny<string>())).Returns(_clientProxyMock.Object);
 
-            _notifier = new SignalRRealTimeNotifier(_postHubMock.Object, _notificationHubMock.Object);
+            _notifier = new SignalRRealTimeNotifier(_postHubMock.Object, _notificationHubMock.Object, _chatHubMock.Object);
         }
 
         [Fact]

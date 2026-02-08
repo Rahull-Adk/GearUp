@@ -12,7 +12,6 @@ namespace GearUp.Application.Mappings
         {
             CreateMap<User, RegisterResponseDto>();
             CreateMap<User, UpdateUserResponseDto>();
-
         }
     }
 }

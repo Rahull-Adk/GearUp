@@ -18,7 +18,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
             builder.Property(p => p.CreatedAt).IsRequired();
             builder.Property(p => p.UpdatedAt).IsRequired();
 
-         
+
             builder.HasOne(p => p.User)
                 .WithMany(u => u.Posts)
                 .HasForeignKey(p => p.UserId)
@@ -43,6 +43,12 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .WithOne(v => v.Post)
                 .HasForeignKey(v => v.PostId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Existing index for public feed queries (filter by visibility, order by CreatedAt, Id)
+            builder.HasIndex(p => new {p.Visibility, p.CreatedAt, p.Id}).IsUnique();
+
+            // Index for user's posts queries (GetAllUserPostByUserIdAsync)
+            builder.HasIndex(p => new { p.UserId, p.CreatedAt, p.Id });
         }
     }
 }

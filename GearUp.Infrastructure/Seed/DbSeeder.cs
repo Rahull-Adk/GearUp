@@ -280,32 +280,63 @@ public class DbSeeder
 
     private async Task SeedFakePostLikeAsync(int targetCount)
     {
-        int existing = await _context.PostLikes
-            .CountAsync();
-        if (existing >= targetCount)
-            return;
+        int existing = await _context.PostLikes.CountAsync();
+        if (existing >= targetCount) return;
+
         int toCreate = targetCount - existing;
         var faker = new Faker("en");
+
         var userIds = await _context.Users
             .Where(u => u.Email.EndsWith("@example.com"))
             .Select(u => u.Id)
             .ToListAsync();
+
         var postIds = await _context.Posts
             .Select(p => p.Id)
             .ToListAsync();
+
+        if (userIds.Count == 0 || postIds.Count == 0) return;
+
+        // Load existing pairs from DB
+        var existingPairs = await _context.PostLikes
+            .Select(pl => new { pl.PostId, pl.LikedUserId })
+            .ToListAsync();
+
+        var used = new HashSet<(Guid PostId, Guid UserId)>(
+            existingPairs.Select(x => (x.PostId, x.LikedUserId))
+        );
+
         var newLikes = new List<PostLike>(toCreate);
-        for (int i = 0; i < toCreate; i++)
+
+        // Safety: you cannot create more unique pairs than posts * users
+        int maxPossible = postIds.Count * userIds.Count;
+        int remainingPossible = maxPossible - used.Count;
+        if (remainingPossible <= 0) return;
+
+        toCreate = Math.Min(toCreate, remainingPossible);
+
+        int attempts = 0;
+        int maxAttempts = toCreate * 20; // avoid infinite loops when space is tight
+
+        while (newLikes.Count < toCreate && attempts < maxAttempts)
         {
-            var like = PostLike.CreateLike(
-                postId: faker.PickRandom(postIds),
-                likedUserId: faker.PickRandom(userIds)
-            );
-            newLikes.Add(like);
+            attempts++;
+
+            var postId = faker.PickRandom(postIds);
+            var userId = faker.PickRandom(userIds);
+
+            if (!used.Add((postId, userId)))
+                continue;
+
+            newLikes.Add(PostLike.CreateLike(postId, userId));
         }
+
+        if (newLikes.Count == 0) return;
 
         await _context.PostLikes.AddRangeAsync(newLikes);
         await _context.SaveChangesAsync();
     }
+
 
     private async Task SeedFakeKycAsync(int targetCount)
     {

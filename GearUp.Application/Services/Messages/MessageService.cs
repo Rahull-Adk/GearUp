@@ -114,7 +114,11 @@ namespace GearUp.Application.Services.Messages
                 EditedAt = message.EditedAt,
                 IsMine = false
             };
+
+
             await _realTimeNotifier.SendMessageToUser(dto.ReceiverId, receiverDto);
+
+            await _realTimeNotifier.SendMessageToConversation(conversation.Id, senderId, receiverDto);
 
             _logger.LogInformation("Message {MessageId} sent successfully from {SenderId} to {ReceiverId}",
                 message.Id, senderId, dto.ReceiverId);

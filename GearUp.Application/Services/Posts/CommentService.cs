@@ -1,11 +1,12 @@
 using GearUp.Application.Common;
+using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
-using GearUp.Application.ServiceDtos;
 using GearUp.Application.ServiceDtos.Post;
+using GearUp.Application.ServiceDtos.Socials;
 using GearUp.Domain.Entities.Posts;
-using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -19,11 +20,16 @@ namespace GearUp.Application.Services.Posts
         private readonly IPostRepository _postRepository;
         private readonly ICommentRepository _commentRepository;
         private readonly IRealTimeNotifier _realTimeNotifier;
+        private readonly INotificationService _notificationService;
 
-        public CommentService(ILogger<ICommentService> logger, ICommonRepository commonRepository,
-            IPostRepository postRepository, IUserRepository userRepository, ICommentRepository commentRepository,
-            IRealTimeNotifier realTimeNotifier
-        )
+        public CommentService(
+            ILogger<ICommentService> logger,
+            ICommonRepository commonRepository,
+            IPostRepository postRepository,
+            IUserRepository userRepository,
+            ICommentRepository commentRepository,
+            IRealTimeNotifier realTimeNotifier,
+            INotificationService notificationService)
         {
             _logger = logger;
             _commonRepository = commonRepository;
@@ -31,6 +37,7 @@ namespace GearUp.Application.Services.Posts
             _userRepository = userRepository;
             _commentRepository = commentRepository;
             _realTimeNotifier = realTimeNotifier;
+            _notificationService = notificationService;
         }
 
         public async Task<Result<CommentDto>> PostCommentAsync(CreateCommentDto comment, Guid userId)
@@ -87,29 +94,6 @@ namespace GearUp.Application.Services.Posts
 
             var receiverUserId = parentComment?.CommentedUserId ?? post.UserId;
 
-            Notification? notification = null;
-
-            if (receiverUserId != userId)
-            {
-                var notificationType = parentComment is not null
-                    ? NotificationEnum.CommentReplied
-                    : NotificationEnum.PostCommented;
-
-                var title = parentComment is not null
-                    ? $"{user.Name} replied to your comment."
-                    : $"{user.Name} commented on your post.";
-
-                notification = Notification.CreateNotification(
-                    title,
-                    notificationType,
-                    actorUserId: userId,
-                    receiverUserId: receiverUserId,
-                    postId: post.Id,
-                    commentId: postComment.Id
-                );
-
-            }
-
             await _commonRepository.SaveChangesAsync();
 
             var commentDto = new CommentDto
@@ -127,22 +111,25 @@ namespace GearUp.Application.Services.Posts
 
             await _realTimeNotifier.BroadCastComments(comment.PostId, commentDto);
 
-
-            if (notification is not null)
+            // Send notification (persisted + real-time)
+            if (receiverUserId != userId)
             {
-                var notificationDto = new NotificationDto
-                {
-                    Title = notification.Title,
-                    ActorUserId = notification.ActorUserId,
-                    ReceiverUserId = notification.ReceiverUserId,
-                    PostId = notification.PostId,
-                    CommentId = notification.CommentId,
-                    IsRead = false,
-                    NotificationType = notification.NotificationType,
-                    SentAt = notification.CreatedAt
-                };
+                var notificationType = parentComment is not null
+                    ? NotificationEnum.CommentReplied
+                    : NotificationEnum.PostCommented;
 
-                await _realTimeNotifier.PushNotification(receiverUserId, notificationDto);
+                var title = parentComment is not null
+                    ? $"{user.Name} replied to your comment."
+                    : $"{user.Name} commented on your post.";
+
+                await _notificationService.CreateAndPushNotificationAsync(
+                    title,
+                    notificationType,
+                    actorUserId: userId,
+                    receiverUserId: receiverUserId,
+                    postId: post.Id,
+                    commentId: postComment.Id
+                );
             }
 
             _logger.LogInformation(
@@ -262,6 +249,34 @@ namespace GearUp.Application.Services.Posts
                 "Fetched {CommentCount} child comments for parent comment with Id: {ParentCommentId}", comments.Count(),
                 parentCommentId);
             return Result<IEnumerable<CommentDto>>.Success(comments, "Child comments fetched successfully", 200);
+        }
+
+        public async Task<Result<CursorPageResult<UserEngagementDto>>> GetCommentLikersAsync(Guid commentId, string? cursorString)
+        {
+            _logger.LogInformation("Fetching likers for comment with Id: {CommentId}", commentId);
+
+            var commentExist = await _commentRepository.CommentExistAsync(commentId);
+            if (!commentExist)
+            {
+                _logger.LogWarning("Comment with Id: {CommentId} not found", commentId);
+                return Result<CursorPageResult<UserEngagementDto>>.Failure("Comment not found", 404);
+            }
+
+            Cursor? cursor = null;
+            if (!string.IsNullOrEmpty(cursorString))
+            {
+                if (!Cursor.TryDecode(cursorString, out cursor))
+                {
+                    return Result<CursorPageResult<UserEngagementDto>>.Failure("Invalid cursor", 400);
+                }
+            }
+
+            var likers = await _commentRepository.GetCommentLikersAsync(commentId, cursor);
+
+            _logger.LogInformation("Fetched {LikerCount} likers for comment with Id: {CommentId}",
+                likers.Items.Count(), commentId);
+
+            return Result<CursorPageResult<UserEngagementDto>>.Success(likers, "Comment likers fetched successfully");
         }
     }
 }

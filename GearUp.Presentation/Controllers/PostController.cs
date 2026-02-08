@@ -66,6 +66,15 @@ namespace GearUp.Presentation.Controllers
         }
 
         [Authorize]
+        [HttpDelete("{postId:guid}/like")]
+        public async Task<IActionResult> UnLikePost([FromRoute] Guid postId)
+        {
+            var currentUserId = User.FindFirst(u => u.Type == "id")?.Value;
+            var result = await _likeService.UnlikePostAsync(postId, Guid.Parse(currentUserId!));
+            return StatusCode(result.Status, result);
+        }
+
+        [Authorize]
         [HttpGet("{postId:guid}/like")]
         public async Task<IActionResult> GetLikedUsers([FromRoute] Guid postId, [FromQuery] string? cursor)
         {

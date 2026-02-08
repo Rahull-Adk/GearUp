@@ -1,10 +1,9 @@
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
-using GearUp.Application.ServiceDtos;
 using GearUp.Domain.Entities.Posts;
-using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -16,29 +15,121 @@ namespace GearUp.Application.Services.Posts
         private readonly IUserRepository _userRepository;
         private readonly ILikeRepository _likeRepository;
         private readonly ICommentRepository _commentRepository;
-        private readonly ICommonRepository _commonRepository;
         private readonly IPostRepository _postRepository;
         private readonly IRealTimeNotifier _realTimeNotifier;
+        private readonly INotificationService _notificationService;
 
-
-        public LikeService(ILogger<IPostService> logger, ICommonRepository commonRepository,
-            IPostRepository postRepository, IUserRepository userRepository, ILikeRepository likeRepository,
-            ICommentRepository commentRepository, IRealTimeNotifier realTimeNotifier)
+        public LikeService(
+            ILogger<IPostService> logger,
+            IPostRepository postRepository,
+            IUserRepository userRepository,
+            ILikeRepository likeRepository,
+            ICommentRepository commentRepository,
+            IRealTimeNotifier realTimeNotifier,
+            INotificationService notificationService)
         {
             _logger = logger;
-            _commonRepository = commonRepository;
             _realTimeNotifier = realTimeNotifier;
             _postRepository = postRepository;
             _userRepository = userRepository;
             _likeRepository = likeRepository;
             _commentRepository = commentRepository;
+            _notificationService = notificationService;
         }
+
+        #region Post Likes
+
+        public async Task<Result<int>> LikePostAsync(Guid postId, Guid userId)
+        {
+            _logger.LogInformation("User {UserId} is liking post {PostId}", userId, postId);
+
+            var userExist = await _userRepository.UserExistAsync(userId);
+            if (!userExist)
+            {
+                _logger.LogWarning("User with Id {UserId} not found", userId);
+                return Result<int>.Failure("User not found", 404);
+            }
+
+            var post = await _postRepository.GetPostEntityByIdAsync(postId);
+            if (post is null || (post.Visibility != PostVisibility.Public && post.UserId != userId))
+            {
+                _logger.LogWarning("Post with Id {PostId} not found", postId);
+                return Result<int>.Failure("Post not found", 404);
+            }
+
+            var postLike = PostLike.CreateLike(postId, userId);
+            var success = await _likeRepository.AddPostLikeAsync(postLike);
+
+            if (!success)
+            {
+                _logger.LogInformation("Post {PostId} already liked by user {UserId}", postId, userId);
+                return Result<int>.Failure("Post already liked", 400);
+            }
+
+            _logger.LogInformation("Post {PostId} liked successfully by user {UserId}", postId, userId);
+
+            // Send notification to post owner (persisted + real-time)
+            if (post.UserId != userId)
+            {
+                var actor = await _userRepository.GetUserByIdAsync(userId);
+                var actorName = actor?.Name ?? "Someone";
+
+                await _notificationService.CreateAndPushNotificationAsync(
+                    $"{actorName} liked your post",
+                    NotificationEnum.PostLiked,
+                    actorUserId: userId,
+                    receiverUserId: post.UserId,
+                    postId: postId
+                );
+            }
+
+            var counts = await _postRepository.GetCountsForPostById(postId, userId);
+            await _realTimeNotifier.BroadCastPostLikes(postId, counts.LikeCount);
+
+            return Result<int>.Success(counts.LikeCount, "Post liked successfully", 200);
+        }
+
+        public async Task<Result<int>> UnlikePostAsync(Guid postId, Guid userId)
+        {
+            _logger.LogInformation("User {UserId} is unliking post {PostId}", userId, postId);
+
+            var userExist = await _userRepository.UserExistAsync(userId);
+            if (!userExist)
+            {
+                _logger.LogWarning("User with Id {UserId} not found", userId);
+                return Result<int>.Failure("User not found", 404);
+            }
+
+            var post = await _postRepository.GetPostEntityByIdAsync(postId);
+            if (post is null || (post.Visibility != PostVisibility.Public && post.UserId != userId))
+            {
+                _logger.LogWarning("Post with Id {PostId} not found", postId);
+                return Result<int>.Failure("Post not found", 404);
+            }
+
+            var success = await _likeRepository.RemovePostLikeAsync(userId, postId);
+
+            if (!success)
+            {
+                _logger.LogInformation("Post {PostId} was not liked by user {UserId}", postId, userId);
+                return Result<int>.Failure("Post was not liked", 400);
+            }
+
+            _logger.LogInformation("Post {PostId} unliked successfully by user {UserId}", postId, userId);
+
+            var counts = await _postRepository.GetCountsForPostById(postId, userId);
+            await _realTimeNotifier.BroadCastPostLikes(postId, counts.LikeCount);
+
+            return Result<int>.Success(counts.LikeCount, "Post unliked successfully", 200);
+        }
+
+        #endregion
+
+        #region Comment Likes
 
         public async Task<Result<int>> LikeCommentAsync(Guid commentId, Guid userId)
         {
-            _logger.LogInformation(
-                "User {UserId} is liking/unliking Comment {CommentId}",
-                userId, commentId);
+            _logger.LogInformation("User {UserId} is liking comment {CommentId}", userId, commentId);
 
             var userExist = await _userRepository.UserExistAsync(userId);
             if (!userExist)
@@ -54,150 +145,79 @@ namespace GearUp.Application.Services.Posts
                 return Result<int>.Failure("Comment not found", 404);
             }
 
-            var alreadyLiked = await _commentRepository
-                .IsCommentAlreadyLikedByUserAsync(commentId, userId);
+            var commentLike = CommentLike.CreateCommentLike(commentId, userId);
+            var success = await _likeRepository.AddCommentLikeAsync(commentLike);
 
-            string message;
-
-            if (alreadyLiked)
+            if (!success)
             {
-               _likeRepository.RemoveCommentLike(userId, commentId);
-               comment.DecrementLikeCount();
-               await _commonRepository.SaveChangesAsync();
-                message = "Comment unliked successfully";
-
-                _logger.LogInformation(
-                    "User {UserId} unliked Comment {CommentId}",
-                    userId, commentId);
-            }
-            else
-            {
-                var commentLike = CommentLike.CreateCommentLike(commentId, userId);
-                await _likeRepository.AddCommentLikeAsync(commentLike);
-                comment.IncrementLikeCount();
-                await _commonRepository.SaveChangesAsync();
-                message = "Comment liked successfully";
-
-                _logger.LogInformation(
-                    "User {UserId} liked Comment {CommentId}",
-                    userId, commentId);
-
-                if (comment.CommentedUserId != userId)
-                {
-                    var actor = await _userRepository.GetUserByIdAsync(userId);
-                    var actorName = actor?.Name ?? "Someone";
-
-                    var notification = Notification.CreateNotification(
-                        $"{actorName} liked your comment",
-                        NotificationEnum.CommentLiked,
-                        actorUserId: userId,
-                        receiverUserId: comment.CommentedUserId,
-                        commentId: commentId,
-                        postId: comment.PostId
-                    );
-
-                    var notificationDto = new NotificationDto
-                    {
-                        Title = notification.Title,
-                        ActorUserId = notification.ActorUserId,
-                        ReceiverUserId = notification.ReceiverUserId,
-                        CommentId = notification.CommentId,
-                        IsRead = false,
-                        NotificationType = notification.NotificationType,
-                        SentAt = notification.CreatedAt
-                    };
-                    await _realTimeNotifier.PushNotification(comment.CommentedUserId, notificationDto);
-                }
+                _logger.LogInformation("Comment {CommentId} already liked by user {UserId}", commentId, userId);
+                return Result<int>.Failure("Comment already liked", 400);
             }
 
-            await _commonRepository.SaveChangesAsync();
-            var likeCount = comment.LikeCount;
+            _logger.LogInformation("Comment {CommentId} liked successfully by user {UserId}", commentId, userId);
+
+            // Send notification to comment owner (persisted + real-time)
+            if (comment.CommentedUserId != userId)
+            {
+                var actor = await _userRepository.GetUserByIdAsync(userId);
+                var actorName = actor?.Name ?? "Someone";
+
+                await _notificationService.CreateAndPushNotificationAsync(
+                    $"{actorName} liked your comment",
+                    NotificationEnum.CommentLiked,
+                    actorUserId: userId,
+                    receiverUserId: comment.CommentedUserId,
+                    commentId: commentId,
+                    postId: comment.PostId
+                );
+            }
+
+            // Get updated count from database
+            var updatedComment = await _commentRepository.GetCommentByIdAsync(commentId);
+            var likeCount = updatedComment?.LikeCount ?? 0;
+
             await _realTimeNotifier.BroadCastCommentLikes(comment.PostId, commentId, likeCount);
 
-            return Result<int>.Success(likeCount, message, 200);
+            return Result<int>.Success(likeCount, "Comment liked successfully", 200);
         }
 
-        public async Task<Result<int>> LikePostAsync(Guid postId, Guid userId)
+        public async Task<Result<int>> UnlikeCommentAsync(Guid commentId, Guid userId)
         {
-            _logger.LogInformation(
-                "User with Id: {UserId} is liking/unliking post with Id: {PostId}",
-                userId, postId);
-
-            string message;
+            _logger.LogInformation("User {UserId} is unliking comment {CommentId}", userId, commentId);
 
             var userExist = await _userRepository.UserExistAsync(userId);
             if (!userExist)
             {
-                _logger.LogWarning("User with Id: {UserId} not found", userId);
+                _logger.LogWarning("User with Id {UserId} not found", userId);
                 return Result<int>.Failure("User not found", 404);
             }
 
-
-            var post = await _postRepository.GetPostEntityByIdAsync(postId);
-            if (post is null || (post.Visibility != PostVisibility.Public && post.UserId != userId))
+            var comment = await _commentRepository.GetCommentByIdAsync(commentId);
+            if (comment is null)
             {
-                _logger.LogWarning("Post with Id: {PostId} not found when fetching", postId);
-                return Result<int>.Failure("Post not found", 404);
+                _logger.LogWarning("Comment with Id {CommentId} not found", commentId);
+                return Result<int>.Failure("Comment not found", 404);
             }
 
-            var counts = await _postRepository.GetCountsForPostById(postId, userId);
+            var success = await _likeRepository.RemoveCommentLikeAsync(userId, commentId);
 
-            if (counts.IsLikedByCurrentUser)
+            if (!success)
             {
-                _likeRepository.RemovePostLike(userId, postId);
-                post.DecrementLikeCount();
-                message = "Post unliked successfully";
-
-                _logger.LogInformation(
-                    "Post with Id: {PostId} unliked successfully by user with Id: {UserId}",
-                    postId, userId);
-            }
-            else
-            {
-                var postLike = PostLike.CreateLike(postId, userId);
-                await _likeRepository.AddPostLikeAsync(postLike);
-                post.IncrementLikeCount();
-                message = "Post liked successfully";
-
-                _logger.LogInformation(
-                    "Post with Id: {PostId} liked successfully by user with Id: {UserId}",
-                    postId, userId);
-
-                if (post.UserId != userId)
-                {
-                    var actor = await _userRepository.GetUserByIdAsync(userId);
-                    var actorName = actor?.Name ?? "Someone";
-
-                    var notification = Notification.CreateNotification(
-                        $"{actorName} liked your post",
-                        NotificationEnum.PostLiked,
-                        actorUserId: userId,
-                        receiverUserId: post.UserId,
-                        postId: postId
-                    );
-
-
-                    var notificationDto = new NotificationDto
-                    {
-                        Title = notification.Title,
-                        ActorUserId = notification.ActorUserId,
-                        ReceiverUserId = notification.ReceiverUserId,
-                        PostId = notification.PostId,
-                        IsRead = false,
-                        NotificationType = notification.NotificationType,
-                        SentAt = notification.CreatedAt
-                    };
-
-                    await _realTimeNotifier.PushNotification(post.UserId, notificationDto);
-                }
+                _logger.LogInformation("Comment {CommentId} was not liked by user {UserId}", commentId, userId);
+                return Result<int>.Failure("Comment was not liked", 400);
             }
 
-            await _commonRepository.SaveChangesAsync();
+            _logger.LogInformation("Comment {CommentId} unliked successfully by user {UserId}", commentId, userId);
 
-            var likeCount = post.LikeCount;
-            await _realTimeNotifier.BroadCastPostLikes(postId, likeCount);
+            // Get updated count from database
+            var updatedComment = await _commentRepository.GetCommentByIdAsync(commentId);
+            var likeCount = updatedComment?.LikeCount ?? 0;
 
-            return Result<int>.Success(likeCount, message, 200);
+            await _realTimeNotifier.BroadCastCommentLikes(comment.PostId, commentId, likeCount);
+
+            return Result<int>.Success(likeCount, "Comment unliked successfully", 200);
         }
+
+        #endregion
     }
 }

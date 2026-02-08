@@ -2,11 +2,10 @@ using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.AppointmentServiceInterface;
-using GearUp.Application.ServiceDtos;
 using GearUp.Application.ServiceDtos.Appointment;
 using GearUp.Domain.Entities.Cars;
-using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +17,7 @@ namespace GearUp.Application.Services.Appointments
         private readonly IUserRepository _userRepository;
         private readonly ICarRepository _carRepository;
         private readonly ICommonRepository _commonRepository;
-        private readonly IRealTimeNotifier _realTimeNotifier;
+        private readonly INotificationService _notificationService;
         private readonly ILogger<AppointmentService> _logger;
 
         public AppointmentService(
@@ -26,14 +25,14 @@ namespace GearUp.Application.Services.Appointments
             IUserRepository userRepository,
             ICarRepository carRepository,
             ICommonRepository commonRepository,
-            IRealTimeNotifier realTimeNotifier,
+            INotificationService notificationService,
             ILogger<AppointmentService> logger)
         {
             _appointmentRepository = appointmentRepository;
             _userRepository = userRepository;
             _carRepository = carRepository;
             _commonRepository = commonRepository;
-            _realTimeNotifier = realTimeNotifier;
+            _notificationService = notificationService;
             _logger = logger;
         }
 
@@ -87,9 +86,10 @@ namespace GearUp.Application.Services.Appointments
             );
 
             await _appointmentRepository.AddAsync(appointment);
+            await _commonRepository.SaveChangesAsync();
 
-            // Create notification for dealer
-            var notification = Notification.CreateNotification(
+            // Create and push notification to dealer
+            await _notificationService.CreateAndPushNotificationAsync(
                 $"{requester.Name} requested an appointment with you.",
                 NotificationEnum.AppointmentRequested,
                 actorUserId: requesterId,
@@ -97,21 +97,6 @@ namespace GearUp.Application.Services.Appointments
                 appointmentId: appointment.Id
             );
 
-            await _commonRepository.SaveChangesAsync();
-
-            // Push real-time notification
-            var notificationDto = new NotificationDto
-            {
-                Title = notification.Title,
-                ActorUserId = notification.ActorUserId,
-                ReceiverUserId = notification.ReceiverUserId,
-                AppointmentId = notification.AppointmentId,
-                IsRead = false,
-                NotificationType = notification.NotificationType,
-                SentAt = notification.CreatedAt
-            };
-
-            await _realTimeNotifier.PushNotification(dto.AgentId, notificationDto);
 
             var responseDto = new AppointmentResponseDto
             {
@@ -236,8 +221,10 @@ namespace GearUp.Application.Services.Appointments
             var dealer = await _userRepository.GetUserByIdAsync(dealerId);
             var requester = await _userRepository.GetUserByIdAsync(appointment.RequesterId);
 
-            // Create notification for requester
-            var notification = Notification.CreateNotification(
+            await _commonRepository.SaveChangesAsync();
+
+            // Create and push notification to requester
+            await _notificationService.CreateAndPushNotificationAsync(
                 $"{dealer?.Name ?? "Dealer"} accepted your appointment request.",
                 NotificationEnum.AppointmentAccepted,
                 actorUserId: dealerId,
@@ -245,21 +232,6 @@ namespace GearUp.Application.Services.Appointments
                 appointmentId: appointmentId
             );
 
-            await _commonRepository.SaveChangesAsync();
-
-            // Push real-time notification
-            var notificationDto = new NotificationDto
-            {
-                Title = notification.Title,
-                ActorUserId = notification.ActorUserId,
-                ReceiverUserId = notification.ReceiverUserId,
-                AppointmentId = notification.AppointmentId,
-                IsRead = false,
-                NotificationType = notification.NotificationType,
-                SentAt = notification.CreatedAt
-            };
-
-            await _realTimeNotifier.PushNotification(appointment.RequesterId, notificationDto);
 
             string? carTitle = null;
             if (appointment.CarId.HasValue)
@@ -316,8 +288,10 @@ namespace GearUp.Application.Services.Appointments
             var dealer = await _userRepository.GetUserByIdAsync(dealerId);
             var requester = await _userRepository.GetUserByIdAsync(appointment.RequesterId);
 
-            // Create notification for requester
-            var notification = Notification.CreateNotification(
+            await _commonRepository.SaveChangesAsync();
+
+            // Create and push notification to requester
+            await _notificationService.CreateAndPushNotificationAsync(
                 $"{dealer?.Name ?? "Dealer"} rejected your appointment request.",
                 NotificationEnum.AppointmentRejected,
                 actorUserId: dealerId,
@@ -325,21 +299,6 @@ namespace GearUp.Application.Services.Appointments
                 appointmentId: appointmentId
             );
 
-            await _commonRepository.SaveChangesAsync();
-
-            // Push real-time notification
-            var notificationDto = new NotificationDto
-            {
-                Title = notification.Title,
-                ActorUserId = notification.ActorUserId,
-                ReceiverUserId = notification.ReceiverUserId,
-                AppointmentId = notification.AppointmentId,
-                IsRead = false,
-                NotificationType = notification.NotificationType,
-                SentAt = notification.CreatedAt
-            };
-
-            await _realTimeNotifier.PushNotification(appointment.RequesterId, notificationDto);
 
             string? carTitle = null;
             if (appointment.CarId.HasValue)

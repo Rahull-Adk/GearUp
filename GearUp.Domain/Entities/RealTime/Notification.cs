@@ -44,6 +44,7 @@ namespace GearUp.Domain.Entities.RealTime
         {
             return new Notification
             {
+                Id = Guid.NewGuid(),
                 Title = title,
                 NotificationType = notificationType,
                 ActorUserId = actorUserId,
@@ -51,6 +52,7 @@ namespace GearUp.Domain.Entities.RealTime
                 PostId = postId,
                 CommentId = commentId,
                 AppointmentId = appointmentId,
+                IsRead = false,
                 CreatedAt = DateTime.UtcNow
             };
         }
