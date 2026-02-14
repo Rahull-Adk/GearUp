@@ -90,6 +90,7 @@ namespace GearUp.Application.Services.Appointments
 
             // Create and push notification to dealer
             await _notificationService.CreateAndPushNotificationAsync(
+                "New appointment request",
                 $"{requester.Name} requested an appointment with you.",
                 NotificationEnum.AppointmentRequested,
                 actorUserId: requesterId,
@@ -225,6 +226,7 @@ namespace GearUp.Application.Services.Appointments
 
             // Create and push notification to requester
             await _notificationService.CreateAndPushNotificationAsync(
+                "Appointment update",
                 $"{dealer?.Name ?? "Dealer"} accepted your appointment request.",
                 NotificationEnum.AppointmentAccepted,
                 actorUserId: dealerId,
@@ -292,6 +294,7 @@ namespace GearUp.Application.Services.Appointments
 
             // Create and push notification to requester
             await _notificationService.CreateAndPushNotificationAsync(
+                "Appointment update",
                 $"{dealer?.Name ?? "Dealer"} rejected your appointment request.",
                 NotificationEnum.AppointmentRejected,
                 actorUserId: dealerId,

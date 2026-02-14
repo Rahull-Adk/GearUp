@@ -37,7 +37,7 @@ namespace GearUp.Application.Services.Posts
             _notificationService = notificationService;
         }
 
-        #region Post Likes
+
 
         public async Task<Result<int>> LikePostAsync(Guid postId, Guid userId)
         {
@@ -75,7 +75,8 @@ namespace GearUp.Application.Services.Posts
                 var actorName = actor?.Name ?? "Someone";
 
                 await _notificationService.CreateAndPushNotificationAsync(
-                    $"{actorName} liked your post",
+                    "Someone liked your post",
+                    $"{actorName} liked your post.",
                     NotificationEnum.PostLiked,
                     actorUserId: userId,
                     receiverUserId: post.UserId,
@@ -123,9 +124,7 @@ namespace GearUp.Application.Services.Posts
             return Result<int>.Success(counts.LikeCount, "Post unliked successfully", 200);
         }
 
-        #endregion
 
-        #region Comment Likes
 
         public async Task<Result<int>> LikeCommentAsync(Guid commentId, Guid userId)
         {
@@ -163,7 +162,8 @@ namespace GearUp.Application.Services.Posts
                 var actorName = actor?.Name ?? "Someone";
 
                 await _notificationService.CreateAndPushNotificationAsync(
-                    $"{actorName} liked your comment",
+                    "Someone liked your comment",
+                    $"{actorName} liked your comment.",
                     NotificationEnum.CommentLiked,
                     actorUserId: userId,
                     receiverUserId: comment.CommentedUserId,
@@ -218,6 +218,6 @@ namespace GearUp.Application.Services.Posts
             return Result<int>.Success(likeCount, "Comment unliked successfully", 200);
         }
 
-        #endregion
+
     }
 }

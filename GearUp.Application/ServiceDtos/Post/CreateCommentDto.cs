@@ -9,7 +9,7 @@ namespace GearUp.Application.ServiceDtos.Post
     public class CreateCommentDto
     {
         public Guid PostId { get; set; }
-        public string Text { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
         public Guid? ParentCommentId { get; set; }
 }
 }

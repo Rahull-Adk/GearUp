@@ -31,6 +31,7 @@ namespace GearUp.Application.Services.Notifications
 
         public async Task<NotificationDto> CreateAndPushNotificationAsync(
             string title,
+            string content,
             NotificationEnum notificationType,
             Guid actorUserId,
             Guid receiverUserId,
@@ -45,6 +46,7 @@ namespace GearUp.Application.Services.Notifications
             // Create the notification entity
             var notification = Notification.CreateNotification(
                 title,
+                content,
                 notificationType,
                 actorUserId,
                 receiverUserId,
@@ -62,6 +64,7 @@ namespace GearUp.Application.Services.Notifications
             {
                 Id = notification.Id,
                 Title = notification.Title,
+                Content = notification.Content,
                 NotificationType = notification.NotificationType,
                 ActorUserId = notification.ActorUserId,
                 ReceiverUserId = notification.ReceiverUserId,

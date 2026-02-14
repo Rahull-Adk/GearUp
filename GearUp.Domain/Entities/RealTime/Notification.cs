@@ -34,6 +34,7 @@ namespace GearUp.Domain.Entities.RealTime
 
         public static Notification CreateNotification(
             string title,
+            string content,
             NotificationEnum notificationType,
             Guid actorUserId,
             Guid receiverUserId,
@@ -46,6 +47,7 @@ namespace GearUp.Domain.Entities.RealTime
             {
                 Id = Guid.NewGuid(),
                 Title = title,
+                Content = content,
                 NotificationType = notificationType,
                 ActorUserId = actorUserId,
                 ReceiverUserId = receiverUserId,

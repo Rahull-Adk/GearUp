@@ -60,7 +60,7 @@ namespace GearUp.Application.Services.Posts
                 return Result<CommentDto>.Failure("Post not found", 404);
             }
 
-            if (string.IsNullOrWhiteSpace(comment.Text))
+            if (string.IsNullOrWhiteSpace(comment.Content))
             {
                 _logger.LogWarning(
                     "Comment length is invalid. UserId: {UserId}, PostId: {PostId}",
@@ -82,7 +82,7 @@ namespace GearUp.Application.Services.Posts
                 }
             }
 
-            var postComment = PostComment.CreateComment(comment.PostId, userId, comment.Text, comment.ParentCommentId);
+            var postComment = PostComment.CreateComment(comment.PostId, userId, comment.Content, comment.ParentCommentId);
             await _commentRepository.AddCommentAsync(postComment);
 
             // Increment counts transactionally
@@ -101,7 +101,7 @@ namespace GearUp.Application.Services.Posts
                 ParentCommentId = comment.ParentCommentId,
                 PostId = comment.PostId,
                 CommentedUserId = userId,
-                Content = comment.Text,
+                Content = comment.Content,
                 CreatedAt = postComment.CreatedAt,
                 Id = postComment.Id,
                 CommentedUserName = user.Username,
@@ -119,11 +119,16 @@ namespace GearUp.Application.Services.Posts
                     : NotificationEnum.PostCommented;
 
                 var title = parentComment is not null
-                    ? $"{user.Name} replied to your comment."
-                    : $"{user.Name} commented on your post.";
+                    ? "New reply on your comment"
+                    : "New comment on your post";
+
+                var content = parentComment is not null
+                    ? $"{user.Name} replied to your comment: \"{comment.Content}\""
+                    : $"{user.Name} commented on your post: \"{comment.Content}\"";
 
                 await _notificationService.CreateAndPushNotificationAsync(
                     title,
+                    content,
                     notificationType,
                     actorUserId: userId,
                     receiverUserId: receiverUserId,

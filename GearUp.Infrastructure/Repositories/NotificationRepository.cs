@@ -46,6 +46,7 @@ namespace GearUp.Infrastructure.Repositories
                 {
                     Id = n.Id,
                     Title = n.Title,
+                    Content = n.Content,
                     NotificationType = n.NotificationType,
                     ReceiverUserId = n.ReceiverUserId,
                     ActorUserId = n.ActorUserId,
