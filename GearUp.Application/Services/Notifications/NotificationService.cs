@@ -37,7 +37,9 @@ namespace GearUp.Application.Services.Notifications
             Guid receiverUserId,
             Guid? postId = null,
             Guid? commentId = null,
-            Guid? appointmentId = null)
+            Guid? appointmentId = null,
+            Guid? kycId = null,
+            Guid? carId = null)
         {
             _logger.LogInformation(
                 "Creating notification for user {ReceiverId} from {ActorId}, type: {Type}",
@@ -52,7 +54,9 @@ namespace GearUp.Application.Services.Notifications
                 receiverUserId,
                 postId,
                 commentId,
-                appointmentId
+                appointmentId,
+                kycId,
+                carId
             );
 
             // Persist to database
@@ -71,6 +75,8 @@ namespace GearUp.Application.Services.Notifications
                 PostId = notification.PostId,
                 CommentId = notification.CommentId,
                 AppointmentId = notification.AppointmentId,
+                KycId = notification.KycId,
+                CarId = notification.CarId,
                 IsRead = false,
                 SentAt = notification.CreatedAt
             };

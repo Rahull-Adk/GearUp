@@ -15,7 +15,9 @@ namespace GearUp.Application.Interfaces.Services
             Guid receiverUserId,
             Guid? postId = null,
             Guid? commentId = null,
-            Guid? appointmentId = null);
+            Guid? appointmentId = null,
+            Guid? kycId = null,
+            Guid? carId = null);
 
 
         Task<Result<CursorPageResult<NotificationDto>>> GetNotificationsAsync(Guid userId, string? cursor, int pageSize = 20);

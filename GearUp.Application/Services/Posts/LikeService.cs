@@ -123,9 +123,6 @@ namespace GearUp.Application.Services.Posts
 
             return Result<int>.Success(counts.LikeCount, "Post unliked successfully", 200);
         }
-
-
-
         public async Task<Result<int>> LikeCommentAsync(Guid commentId, Guid userId)
         {
             _logger.LogInformation("User {UserId} is liking comment {CommentId}", userId, commentId);

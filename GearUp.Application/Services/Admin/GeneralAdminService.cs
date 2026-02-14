@@ -1,9 +1,8 @@
 using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;
-using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.AdminServiceInterface;
-using GearUp.Application.ServiceDtos;
 using GearUp.Application.ServiceDtos.Admin;
 using GearUp.Application.ServiceDtos.Car;
 using GearUp.Domain.Entities;
@@ -18,20 +17,20 @@ namespace GearUp.Application.Services.Admin
         private readonly IUserRepository _userRepository;
         private readonly ICarRepository _carRepository;
         private readonly ILogger<GeneralAdminService> _logger;
-        private readonly IRealTimeNotifier _realTimeNotifier;
+        private readonly INotificationService _notificationService;
 
         public GeneralAdminService(
             IAdminRepository adminRepository,
             IUserRepository userRepository,
             ICarRepository carRepository,
             ILogger<GeneralAdminService> logger,
-            IRealTimeNotifier realTimeNotifier)
+            INotificationService notificationService)
         {
             _adminRepository = adminRepository;
             _userRepository = userRepository;
             _carRepository = carRepository;
             _logger = logger;
-            _realTimeNotifier = realTimeNotifier;
+            _notificationService = notificationService;
         }
 
         public async Task<Result<CursorPageResult<ToAdminKycResponseDto>>> GetAllKycs(string? cursorString)
@@ -131,26 +130,23 @@ namespace GearUp.Application.Services.Admin
 
             await _userRepository.SaveChangesAsync();
 
-            // Send real-time notification to the dealer about their KYC status
-            var statusMessage = status switch
+            // Send notification to the dealer about their KYC status
+            var title = "KYC Status Update";
+            var content = status switch
             {
                 KycStatus.Approved => "Your KYC has been approved! You are now a dealer.",
                 KycStatus.Rejected => $"Your KYC has been rejected. Reason: {rejectionReason ?? "No reason provided"}",
                 _ => "Your KYC status has been updated."
             };
 
-            var notification = new NotificationDto
-            {
-                Id = Guid.NewGuid(),
-                Title = statusMessage,
-                NotificationType = NotificationEnum.KycInfo,
-                ReceiverUserId = userId,
-                ActorUserId = reviewerId,
-                KycId = kycId,
-                SentAt = DateTime.UtcNow
-            };
-
-            await _realTimeNotifier.PushNotification(userId, notification);
+            await _notificationService.CreateAndPushNotificationAsync(
+                title,
+                content,
+                NotificationEnum.KycInfo,
+                reviewerId,
+                userId,
+                kycId: kycId
+            );
 
             _logger.LogInformation("KYC submission status updated successfully");
             return Result<string>.Success(null!, "KYC status updated successfully", 200);
@@ -272,26 +268,23 @@ namespace GearUp.Application.Services.Admin
             car.UpdateValidationStatus(status, rejectionReason);
             await _carRepository.SaveChangesAsync();
 
-            // Send real-time notification to the dealer about their car validation status
-            var statusMessage = status switch
+            // Send notification to the dealer about their car validation status
+            var title = "Car Listing Update";
+            var content = status switch
             {
                 CarValidationStatus.Approved => $"Your car listing '{car.Title}' has been approved!",
                 CarValidationStatus.Rejected => $"Your car listing '{car.Title}' has been rejected. Reason: {rejectionReason ?? "No reason provided"}",
                 _ => $"Your car listing '{car.Title}' status has been updated."
             };
 
-            var notification = new NotificationDto
-            {
-                Id = Guid.NewGuid(),
-                Title = statusMessage,
-                NotificationType = NotificationEnum.CarInfo,
-                ReceiverUserId = car.DealerId,
-                ActorUserId = reviewerId,
-                CarId = carId,
-                SentAt = DateTime.UtcNow
-            };
-
-            await _realTimeNotifier.PushNotification(car.DealerId, notification);
+            await _notificationService.CreateAndPushNotificationAsync(
+                title,
+                content,
+                NotificationEnum.CarInfo,
+                reviewerId,
+                car.DealerId,
+                carId: carId
+            );
 
             _logger.LogInformation("Car validation status updated successfully");
             return Result<string>.Success(null!, "Car validation status updated successfully", 200);
