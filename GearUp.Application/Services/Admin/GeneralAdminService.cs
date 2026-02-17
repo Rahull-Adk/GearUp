@@ -102,6 +102,11 @@ namespace GearUp.Application.Services.Admin
                 return Result<string>.Failure("No rejection reasons allowed!");
             }
 
+            if (status == KycStatus.Rejected && string.IsNullOrWhiteSpace(rejectionReason))
+            {
+                return Result<string>.Failure("Rejection reason is required when rejecting a KYC submission", 400);
+            }
+
             var kyc = await _adminRepository.GetKycEntityByIdAsync(kycId);
             if (kyc == null)
             {
