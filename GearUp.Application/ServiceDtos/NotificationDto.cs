@@ -6,6 +6,7 @@ namespace GearUp.Application.ServiceDtos
     {
         public Guid Id { get; set; }
         public string Title { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
         public NotificationEnum NotificationType { get; set; } = NotificationEnum.Default;
         public Guid ReceiverUserId { get; set; }
         public Guid ActorUserId { get; set; }

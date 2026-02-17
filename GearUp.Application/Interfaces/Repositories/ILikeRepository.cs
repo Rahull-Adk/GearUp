@@ -5,10 +5,13 @@ namespace GearUp.Application.Interfaces.Repositories
 {
     public interface ILikeRepository
     {
-        Task AddPostLikeAsync(PostLike pl);
-        void RemovePostLike(Guid userId, Guid postId);
+        // Post likes
+        Task<bool> AddPostLikeAsync(PostLike pl);
+        Task<bool> RemovePostLikeAsync(Guid userId, Guid postId);
         Task<int> GetPostLikeCountAsync(Guid postId);
-        Task AddCommentLikeAsync(CommentLike cl);
-        void RemoveCommentLike(Guid userId, Guid commentId);
+
+        // Comment likes
+        Task<bool> AddCommentLikeAsync(CommentLike cl);
+        Task<bool> RemoveCommentLikeAsync(Guid userId, Guid commentId);
     }
 }

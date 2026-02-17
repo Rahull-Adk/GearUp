@@ -36,7 +36,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Cascade)
                 .IsRequired();
 
-            // Ensure one review per dealer per customer
+
             builder.HasIndex(ur => new { ur.ReviewerId, ur.RevieweeId })
                 .IsUnique();
         }

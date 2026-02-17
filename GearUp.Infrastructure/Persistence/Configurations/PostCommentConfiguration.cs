@@ -17,7 +17,10 @@ namespace GearUp.Infrastructure.Persistence.Configurations
 
             builder.Property(pc => pc.Content)
                 .IsRequired();
-    
+
+            // Composite index for top-level comments (PostId, ParentCommentId = null, CreatedAt)
+            // and child comments (ParentCommentId, CreatedAt)
+            builder.HasIndex(pc => new { pc.PostId, pc.ParentCommentId, pc.CreatedAt });
         }
     }
 }

@@ -10,7 +10,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
 {
     public class CommentLikeConfiguration : IEntityTypeConfiguration<CommentLike>
     {
-        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<CommentLike> builder)       
+        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<CommentLike> builder)
         {
 
 
@@ -38,8 +38,10 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                    .HasForeignKey(cl => cl.CommentId)
                    .OnDelete(DeleteBehavior.Cascade);
 
+            // Unique constraint to prevent duplicate likes + efficient lookup
+            builder.HasIndex(cl => new { cl.CommentId, cl.LikedUserId }).IsUnique();
 
         }
-    
+
     }
 }
