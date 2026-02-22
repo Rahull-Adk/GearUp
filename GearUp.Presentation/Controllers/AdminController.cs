@@ -71,7 +71,7 @@ namespace GearUp.Presentation.Controllers
         public async Task<IActionResult> ReviewKyc([FromRoute] Guid kycId, [FromBody] kycRequestDto req)
         {
             var reviewerId = User.FindFirst(c => c.Type == "id")?.Value;
-            var result = await _generalAdminService.UpdateKycStatus(kycId, req.Status, Guid.Parse(reviewerId!), req.RejectionReason!);
+            var result = await _generalAdminService.UpdateKycStatus(kycId, req.Status, Guid.Parse(reviewerId!), req.RejectionReason);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 

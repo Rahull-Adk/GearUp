@@ -136,12 +136,12 @@ namespace GearUp.Application.Services.Admin
             await _userRepository.SaveChangesAsync();
 
             // Send notification to the dealer about their KYC status
-            var title = "KYC Status Update";
+            var title = "Account Update";
             var content = status switch
             {
-                KycStatus.Approved => "Your KYC has been approved! You are now a dealer.",
-                KycStatus.Rejected => $"Your KYC has been rejected. Reason: {rejectionReason ?? "No reason provided"}",
-                _ => "Your KYC status has been updated."
+                KycStatus.Approved => "Your KYC verification has been approved. You are now a verified dealer on GearUp.",
+                KycStatus.Rejected => $"Your KYC verification has been rejected. Reason: {rejectionReason ?? "No reason provided"}. You may resubmit with corrected documents.",
+                _ => "Your KYC verification status has been updated. Please check your account for details."
             };
 
             await _notificationService.CreateAndPushNotificationAsync(
@@ -274,12 +274,12 @@ namespace GearUp.Application.Services.Admin
             await _carRepository.SaveChangesAsync();
 
             // Send notification to the dealer about their car validation status
-            var title = "Car Listing Update";
+            var title = "Listing Update";
             var content = status switch
             {
-                CarValidationStatus.Approved => $"Your car listing '{car.Title}' has been approved!",
-                CarValidationStatus.Rejected => $"Your car listing '{car.Title}' has been rejected. Reason: {rejectionReason ?? "No reason provided"}",
-                _ => $"Your car listing '{car.Title}' status has been updated."
+                CarValidationStatus.Approved => $"Your car listing '{car.Title}' has been approved and is now live on GearUp.",
+                CarValidationStatus.Rejected => $"Your car listing '{car.Title}' has been rejected. Reason: {rejectionReason ?? "No reason provided"}. Please review and resubmit.",
+                _ => $"Your car listing '{car.Title}' status has been updated. Check your listings for details."
             };
 
             await _notificationService.CreateAndPushNotificationAsync(

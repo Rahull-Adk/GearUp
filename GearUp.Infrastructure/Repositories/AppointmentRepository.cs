@@ -34,9 +34,6 @@ namespace GearUp.Infrastructure.Repositories
             IQueryable<Appointment> query = _db.Appointments
                 .AsNoTracking()
                 .Where(a => a.AgentId == dealerId)
-                .Include(a => a.Agent)
-                .Include(a => a.Requester)
-                .Include(a => a.Car)
                 .OrderByDescending(a => a.CreatedAt)
                 .ThenByDescending(a => a.Id);
 
@@ -93,9 +90,6 @@ namespace GearUp.Infrastructure.Repositories
             IQueryable<Appointment> query = _db.Appointments
                 .AsNoTracking()
                 .Where(a => a.RequesterId == requesterId)
-                .Include(a => a.Agent)
-                .Include(a => a.Requester)
-                .Include(a => a.Car)
                 .OrderByDescending(a => a.CreatedAt)
                 .ThenByDescending(a => a.Id);
 

@@ -4,14 +4,17 @@ import * as signalR from '@microsoft/signalr'
 export default function App({ initialToken = '' }) {
     const [isPostHubConnected, setIsPostHubConnected] = useState(false)
     const [isNotificationHubConnected, setIsNotificationHubConnected] = useState(false)
+    const [isChatHubConnected, setIsChatHubConnected] = useState(false)
     const [postId, setPostId] = useState('')
     const [commentId, setCommentId] = useState('')
     const [messages, setMessages] = useState([])
     const [token, setToken] = useState(initialToken)
     const [receiverId, setReceiverId] = useState('')
     const [messageText, setMessageText] = useState('')
+    const [conversationId, setConversationId] = useState('')
     const postConnectionRef = useRef(null)
     const notificationConnectionRef = useRef(null)
+    const chatConnectionRef = useRef(null)
 
     useEffect(() => {
         // Ask for browser notification permission once
@@ -133,17 +136,18 @@ export default function App({ initialToken = '' }) {
                 5: 'KycInfo',
                 6: 'AppointmentRequested',
                 7: 'AppointmentAccepted',
-                8: 'AppointmentRejected'
+                8: 'AppointmentRejected',
+                9: 'CarInfo'
             }
             const typeName = notificationTypes[typeNum] || `Unknown(${typeNum})`
-            pushMessage({type: `🔔 ${typeName}`, text: title, data: payload})
+            const content = payload?.content ?? payload?.Content ?? ''
+            pushMessage({type: `🔔 ${typeName}`, text: `${title}${content ? ' — ' + content : ''}`, data: payload})
         })
 
         conn.on('MessageReceived', (payload) => {
-            console.info('MessageReceived payload:', payload)
+             console.info('NotificationHub MessageReceived payload:', payload)
             const senderName = payload?.senderName ?? payload?.SenderName ?? 'Someone'
             const text = payload?.text ?? payload?.Text ?? 'sent you a message'
-            const conversationId = payload?.conversationId ?? payload?.ConversationId
             pushMessage({type: `💬 Message from ${senderName}`, text: text, data: payload})
         })
 
@@ -179,6 +183,141 @@ export default function App({ initialToken = '' }) {
             }
         }
     }, [token])
+
+    // ChatHub connection (requires auth)
+    useEffect(() => {
+        if (!token) {
+            console.info('No token provided, ChatHub not connected (requires auth)')
+            setIsChatHubConnected(false)
+            return
+        }
+
+        const conn = new signalR.HubConnectionBuilder()
+            .withUrl('http://localhost:5255/hubs/chat', { accessTokenFactory: () => token })
+            .withAutomaticReconnect()
+            .configureLogging(signalR.LogLevel.Information)
+            .build()
+
+        const pushMessage = (msg) => {
+            setMessages(m => [...m, msg])
+            try {
+                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                    new Notification(msg.type, { body: msg.text })
+                }
+            } catch (e) {
+                console.warn('Notification failed', e)
+            }
+        }
+
+        conn.on('MessageReceived', (payload) => {
+            console.info('ChatHub MessageReceived payload:', payload)
+            const senderName = payload?.senderName ?? payload?.SenderName ?? 'Someone'
+            const text = payload?.text ?? payload?.Text ?? 'sent a message'
+            const convId = payload?.conversationId ?? payload?.ConversationId ?? 'unknown'
+            pushMessage({type: `💬 Chat: ${senderName}`, text: `${text} (conv: ${convId})`, data: payload})
+        })
+
+        conn.on('MessagesRead', (payload) => {
+            console.info('ChatHub MessagesRead payload:', payload)
+            pushMessage({type: '👁️ Messages Read', text: `User ${payload?.userId} read messages up to ${payload?.lastReadMessageId} in conversation ${payload?.conversationId}`, data: payload})
+        })
+
+        conn.on('MessageEdited', (payload) => {
+            console.info('ChatHub MessageEdited payload:', payload)
+            const newText = payload?.newText ?? payload?.NewText ?? ''
+            pushMessage({type: '✏️ Message Edited', text: `Message ${payload?.messageId} edited: "${newText}"`, data: payload})
+        })
+
+        conn.on('MessageDeleted', (payload) => {
+            console.info('ChatHub MessageDeleted payload:', payload)
+            pushMessage({type: '🗑️ Message Deleted', text: `Message ${payload?.messageId} was deleted`, data: payload})
+        })
+
+        conn.onreconnected(() => {
+            console.info('ChatHub Reconnected')
+            setIsChatHubConnected(true)
+        })
+
+        conn.onreconnecting(() => {
+            console.warn('ChatHub Reconnecting...')
+            setIsChatHubConnected(false)
+        })
+
+        conn.onclose(() => {
+            console.warn('ChatHub Connection closed')
+            setIsChatHubConnected(false)
+        })
+
+        conn.start().then(() => {
+            console.info('Connected to ChatHub')
+            setIsChatHubConnected(true)
+            pushMessage({type: 'info', text: 'Connected to ChatHub (authenticated)'})
+        }).catch(err => {
+            console.error('ChatHub SignalR start failed', err)
+            pushMessage({type: 'error', text: 'Failed to connect to ChatHub - check your JWT token'})
+        })
+
+        chatConnectionRef.current = conn
+
+        return () => {
+            if (chatConnectionRef.current) {
+                chatConnectionRef.current.stop().catch(() => {})
+            }
+        }
+    }, [token])
+
+    // Join a conversation group on ChatHub
+    const joinConversation = async () => {
+        if (!conversationId) return alert('Enter conversation id (guid)')
+        if (!chatConnectionRef.current || !isChatHubConnected) {
+            alert('ChatHub not connected yet')
+            return
+        }
+
+        try {
+            await chatConnectionRef.current.invoke('JoinConversation', conversationId)
+            setMessages(m => [...m, {type: 'info', text: `Joined conversation group: conversation-${conversationId}`}])
+        } catch (err) {
+            console.error(err)
+            alert('Failed to join conversation group')
+        }
+    }
+
+    // Leave a conversation group on ChatHub
+    const leaveConversation = async () => {
+        if (!conversationId) return alert('Enter conversation id (guid)')
+        if (!chatConnectionRef.current || !isChatHubConnected) {
+            alert('ChatHub not connected yet')
+            return
+        }
+
+        try {
+            await chatConnectionRef.current.invoke('LeaveConversation', conversationId)
+            setMessages(m => [...m, {type: 'info', text: `Left conversation group: conversation-${conversationId}`}])
+        } catch (err) {
+            console.error(err)
+            alert('Failed to leave conversation group')
+        }
+    }
+
+    // Mark messages as read via ChatHub
+    const markMessagesAsRead = async () => {
+        if (!conversationId) return alert('Enter conversation id')
+        if (!chatConnectionRef.current || !isChatHubConnected) {
+            alert('ChatHub not connected yet')
+            return
+        }
+
+        try {
+            // Use a placeholder messageId — in real usage this would be the last message ID
+            const lastMsgId = '00000000-0000-0000-0000-000000000000'
+            await chatConnectionRef.current.invoke('MarkMessagesAsRead', conversationId, lastMsgId)
+            setMessages(m => [...m, {type: 'info', text: `Marked messages as read in conversation ${conversationId}`}])
+        } catch (err) {
+            console.error(err)
+            alert('Failed to mark messages as read')
+        }
+    }
 
     // Join only the post group
     const joinPostGroup = async () => {
@@ -334,6 +473,26 @@ export default function App({ initialToken = '' }) {
             <div style={{marginTop: 14}}>
                 <strong>PostHub:</strong> {isPostHubConnected ? '✅ Connected' : '❌ Disconnected'}
                 <span style={{marginLeft: 16}}><strong>NotificationHub:</strong> {isNotificationHubConnected ? '✅ Connected' : token ? '❌ Disconnected' : '⚠️ No token (auth required)'}</span>
+                <span style={{marginLeft: 16}}><strong>ChatHub:</strong> {isChatHubConnected ? '✅ Connected' : token ? '❌ Disconnected' : '⚠️ No token (auth required)'}</span>
+            </div>
+
+            <div style={{marginTop: 20, padding: 16, backgroundColor: '#e8f5e9', borderRadius: 8}}>
+                <h3>🔌 ChatHub — Real-Time Conversations</h3>
+                <div style={{marginBottom: 8}}>
+                    <input
+                        placeholder="conversation id (guid)"
+                        value={conversationId}
+                        onChange={e => setConversationId(e.target.value)}
+                        style={{width: 400}}
+                    />
+                    <button onClick={joinConversation} style={{marginLeft: 8}}>Join Conversation</button>
+                    <button onClick={leaveConversation} style={{marginLeft: 8}}>Leave Conversation</button>
+                    <button onClick={markMessagesAsRead} style={{marginLeft: 8}}>Mark Read</button>
+                </div>
+                <div style={{marginTop: 8, color: '#666', fontSize: 13}}>
+                    Join a conversation group to receive real-time messages via ChatHub (MessageReceived, MessageEdited, MessageDeleted events).
+                    Use "Get My Conversations" below to find conversation IDs.
+                </div>
             </div>
 
             <div style={{marginTop: 20, padding: 16, backgroundColor: '#f5f5f5', borderRadius: 8}}>
@@ -352,11 +511,29 @@ export default function App({ initialToken = '' }) {
                         value={messageText}
                         onChange={e => setMessageText(e.target.value)}
                         style={{width: 400}}
-                        onKeyPress={e => e.key === 'Enter' && sendMessage()}
+                        onKeyDown={e => e.key === 'Enter' && sendMessage()}
                     />
                     <button onClick={sendMessage} style={{marginLeft: 8}}>Send Message</button>
                 </div>
                 <button onClick={getConversations}>Get My Conversations</button>
+                <button onClick={async () => {
+                    if (!conversationId) return alert('Enter a conversation ID in the ChatHub section above first')
+                    if (!token) return alert('JWT token is required')
+                    try {
+                        const response = await fetch(`http://localhost:5255/api/v1/messages/conversations/${conversationId}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        })
+                        const data = await response.json()
+                        if (response.ok) {
+                            const msgCount = data.data?.messages?.length || 0
+                            setMessages(m => [...m, {type: '📜 Conversation Messages', text: `Loaded ${msgCount} messages from conversation ${conversationId}`, data: data.data}])
+                        } else {
+                            setMessages(m => [...m, {type: '❌ Error', text: data.message || 'Failed to load conversation', data}])
+                        }
+                    } catch (err) {
+                        alert('Failed: ' + err.message)
+                    }
+                }} style={{marginLeft: 8}}>Get Conversation Messages</button>
                 <div style={{marginTop: 8, color: '#666', fontSize: 13}}>
                     Note: Messages can only be sent between customers and dealers. Both users need to be authenticated.
                 </div>
