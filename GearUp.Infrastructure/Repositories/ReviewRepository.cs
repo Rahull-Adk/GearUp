@@ -39,8 +39,6 @@ namespace GearUp.Infrastructure.Repositories
             IQueryable<UserReview> query = _db.UserReviews
                 .AsNoTracking()
                 .Where(r => r.RevieweeId == dealerId)
-                .Include(r => r.Reviewer)
-                .Include(r => r.Reviewee)
                 .OrderByDescending(r => r.CreatedAt)
                 .ThenByDescending(r => r.Id);
 
@@ -93,8 +91,6 @@ namespace GearUp.Infrastructure.Repositories
             IQueryable<UserReview> query = _db.UserReviews
                 .AsNoTracking()
                 .Where(r => r.ReviewerId == reviewerId)
-                .Include(r => r.Reviewer)
-                .Include(r => r.Reviewee)
                 .OrderByDescending(r => r.CreatedAt)
                 .ThenByDescending(r => r.Id);
 

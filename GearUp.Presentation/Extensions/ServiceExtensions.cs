@@ -43,6 +43,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace GearUp.Presentation.Extensions
 {
@@ -200,6 +202,19 @@ namespace GearUp.Presentation.Extensions
                 .AddPolicy("CustomerOnly", policy => policy.RequireRole(nameof(UserRole.Customer)))
                 .AddPolicy("AdminOnly", policy => policy.RequireRole(nameof(UserRole.Admin)))
                 .AddPolicy("DealerOnly", policy => policy.RequireRole(nameof(UserRole.Dealer)));
+
+            // OpenTelemetry
+
+            services.AddOpenTelemetry()
+                .ConfigureResource(r => r.AddService(serviceName: "GearUp"))
+                .WithTracing(t => t.AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddEntityFrameworkCoreInstrumentation()
+                    .AddOtlpExporter(o =>
+                    {
+                        o.Endpoint = new Uri("http://localhost:4317");
+                    }));
+
 
 
             // CORS Policy

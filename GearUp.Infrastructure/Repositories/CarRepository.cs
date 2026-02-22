@@ -40,7 +40,6 @@ namespace GearUp.Infrastructure.Repositories
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
                 .Where(car => car.IsDeleted == false && car.ValidationStatus == CarValidationStatus.Approved && car.Status == CarStatus.Available)
-                .Include(c => c.Images)
                 .OrderByDescending(c => c.CreatedAt)
                 .ThenByDescending(c => c.Id);
 
@@ -110,7 +109,6 @@ namespace GearUp.Infrastructure.Repositories
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
                 .Where(car => car.IsDeleted == false && car.ValidationStatus == status && car.DealerId == dealerId)
-                .Include(c => c.Images)
                 .OrderByDescending(c => c.CreatedAt)
                 .ThenByDescending(c => c.Id);
 
@@ -180,7 +178,6 @@ namespace GearUp.Infrastructure.Repositories
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
                 .Where(car => car.IsDeleted == false && car.ValidationStatus == CarValidationStatus.Approved && car.DealerId == dealerId)
-                .Include(c => c.Images)
                 .OrderByDescending(c => c.CreatedAt)
                 .ThenByDescending(c => c.Id);
 
@@ -270,7 +267,6 @@ namespace GearUp.Infrastructure.Repositories
                 query = query.Where(c => c.Price <= dto.MaxPrice.Value);
             }
 
-            // Default ordering for cursor pagination
             query = query.OrderByDescending(c => c.CreatedAt).ThenByDescending(c => c.Id);
 
             if (cursor is not null)
@@ -280,7 +276,6 @@ namespace GearUp.Infrastructure.Repositories
             }
 
             var cars = await query
-                .Include(c => c.Images)
                 .Take(PageSize + 1)
                 .Select(c => new CarResponseDto
                 {
@@ -337,17 +332,17 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task<Car?> GetCarEntityByIdAsync(Guid carId)
         {
-            return await _db.Cars.Where(c => c.ValidationStatus == CarValidationStatus.Approved && c.Status == CarStatus.Available).Include(c => c.Images).FirstOrDefaultAsync(c => c.Id == carId);
+            return await _db.Cars.Where(c => c.ValidationStatus != CarValidationStatus.Default && c.Status == CarStatus.Available).Include(c => c.Images).FirstOrDefaultAsync(c => c.Id == carId);
         }
 
         public async Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId)
         {
-            return await _db.CarImages.AsNoTracking().Select(ci => new CarImageDto
+            return await _db.CarImages.AsNoTracking().Where(img => img.CarId == carId).Select(ci => new CarImageDto
             {
                 Id = ci.Id,
                 CarId = ci.CarId,
                 Url = ci.Url
-            }).Where(img => img.CarId == carId).ToListAsync();
+            }).ToListAsync();
         }
 
         public void RemoveCarImageByCarId(Car car)
@@ -359,7 +354,6 @@ namespace GearUp.Infrastructure.Repositories
         {
             return await _db.Cars.Where(c => c.Id == carId)
                 .AsNoTracking()
-                .Include(c => c.Images)
                 .Select(c => new CarResponseDto
                 {
                     Id = c.Id,
@@ -393,13 +387,11 @@ namespace GearUp.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        // Admin methods
         public async Task<CursorPageResult<CarResponseDto>> GetAllCarsForAdminAsync(Cursor? cursor)
         {
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
                 .Where(car => !car.IsDeleted)
-                .Include(c => c.Images)
                 .OrderByDescending(c => c.CreatedAt)
                 .ThenByDescending(c => c.Id);
 
@@ -461,7 +453,6 @@ namespace GearUp.Infrastructure.Repositories
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
                 .Where(car => !car.IsDeleted && car.ValidationStatus == status)
-                .Include(c => c.Images)
                 .OrderByDescending(c => c.CreatedAt)
                 .ThenByDescending(c => c.Id);
 
@@ -523,7 +514,6 @@ namespace GearUp.Infrastructure.Repositories
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
                 .Where(car => !car.IsDeleted && car.DealerId == dealerId)
-                .Include(c => c.Images)
                 .OrderByDescending(c => c.CreatedAt)
                 .ThenByDescending(c => c.Id);
 
