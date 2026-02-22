@@ -41,8 +41,10 @@ using GearUp.Infrastructure.SignalR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -206,16 +208,28 @@ namespace GearUp.Presentation.Extensions
             // OpenTelemetry
 
             services.AddOpenTelemetry()
-                .ConfigureResource(r => r.AddService(serviceName: "GearUp"))
-                .WithTracing(t => t.AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddEntityFrameworkCoreInstrumentation()
-                    .AddOtlpExporter(o =>
-                    {
-                        o.Endpoint = new Uri("http://localhost:4317");
-                    }));
-
-
+                .ConfigureResource(r => r.AddService("GearUp"))
+                .WithTracing(t =>
+                {
+                    t.AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddEntityFrameworkCoreInstrumentation()
+                        .AddOtlpExporter(o =>
+                        {
+                            o.Endpoint = new Uri("http://localhost:4318");
+                            o.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+                        });
+                })
+                .WithMetrics(m =>
+                {
+                    m.AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddOtlpExporter(o =>
+                        {
+                            o.Endpoint = new Uri("http://localhost:4318");
+                            o.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+                        });
+                });
 
             // CORS Policy
             services.AddCors(opt =>
@@ -238,7 +252,7 @@ namespace GearUp.Presentation.Extensions
                         var accessToken = context.Request.Query["access_token"];
                         var path = context.HttpContext.Request.Path;
                         if (!string.IsNullOrEmpty(accessToken) &&
-                            (path.StartsWithSegments("/hubs/post")) || path.StartsWithSegments("/hubs/notification"))
+                            (path.StartsWithSegments("/hubs/post") || path.StartsWithSegments("/hubs/notification") || path.StartsWithSegments("/hubs/chat")))
                         {
                             context.Token = accessToken;
                         }

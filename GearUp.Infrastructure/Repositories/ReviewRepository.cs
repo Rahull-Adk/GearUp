@@ -45,7 +45,7 @@ namespace GearUp.Infrastructure.Repositories
             if (cursor is not null)
             {
                 query = query.Where(r => r.CreatedAt < cursor.CreatedAt ||
-                    (r.CreatedAt == cursor.CreatedAt && r.Id.CompareTo(cursor.Id) < 0));
+                                         (r.CreatedAt == cursor.CreatedAt && r.Id.CompareTo(cursor.Id) < 0));
             }
 
             var reviews = await query
@@ -71,22 +71,17 @@ namespace GearUp.Infrastructure.Repositories
             if (hasMore)
             {
                 var lastItem = reviews[PageSize - 1];
-                nextCursor = Cursor.Encode(new Cursor
-                {
-                    CreatedAt = lastItem.CreatedAt,
-                    Id = lastItem.Id
-                });
+                nextCursor = Cursor.Encode(new Cursor { CreatedAt = lastItem.CreatedAt, Id = lastItem.Id });
             }
 
             return new CursorPageResult<ReviewResponseDto>
             {
-                Items = reviews.Take(PageSize).ToList(),
-                NextCursor = nextCursor,
-                HasMore = hasMore
+                Items = reviews.Take(PageSize).ToList(), NextCursor = nextCursor, HasMore = hasMore
             };
         }
 
-        public async Task<CursorPageResult<ReviewResponseDto>> GetReviewsByReviewerIdAsync(Guid reviewerId, Cursor? cursor)
+        public async Task<CursorPageResult<ReviewResponseDto>> GetReviewsByReviewerIdAsync(Guid reviewerId,
+            Cursor? cursor)
         {
             IQueryable<UserReview> query = _db.UserReviews
                 .AsNoTracking()
@@ -97,7 +92,7 @@ namespace GearUp.Infrastructure.Repositories
             if (cursor is not null)
             {
                 query = query.Where(r => r.CreatedAt < cursor.CreatedAt ||
-                    (r.CreatedAt == cursor.CreatedAt && r.Id.CompareTo(cursor.Id) < 0));
+                                         (r.CreatedAt == cursor.CreatedAt && r.Id.CompareTo(cursor.Id) < 0));
             }
 
             var reviews = await query
@@ -123,48 +118,36 @@ namespace GearUp.Infrastructure.Repositories
             if (hasMore)
             {
                 var lastItem = reviews[PageSize - 1];
-                nextCursor = Cursor.Encode(new Cursor
-                {
-                    CreatedAt = lastItem.CreatedAt,
-                    Id = lastItem.Id
-                });
+                nextCursor = Cursor.Encode(new Cursor { CreatedAt = lastItem.CreatedAt, Id = lastItem.Id });
             }
 
             return new CursorPageResult<ReviewResponseDto>
             {
-                Items = reviews.Take(PageSize).ToList(),
-                NextCursor = nextCursor,
-                HasMore = hasMore
+                Items = reviews.Take(PageSize).ToList(), NextCursor = nextCursor, HasMore = hasMore
             };
         }
 
         public async Task<DealerRatingSummaryDto?> GetDealerRatingSummaryAsync(Guid dealerId)
         {
-            var reviews = await _db.UserReviews
+            var summary = await _db.UserReviews
                 .AsNoTracking()
                 .Where(r => r.RevieweeId == dealerId)
-                .Include(r => r.Reviewee)
-                .ToListAsync();
+                .GroupBy(r => r.RevieweeId)
+                .Select(g => new DealerRatingSummaryDto
+                {
+                    DealerId = dealerId,
+                    DealerName = g.First().Reviewee != null ? g.First().Reviewee!.Name : "Unknown",
+                    AverageRating = Math.Round(g.Average(r => r.Rating), 2),
+                    TotalReviews = g.Count(),
+                    FiveStarCount = g.Count(r => r.Rating >= 4.5),
+                    FourStarCount = g.Count(r => r.Rating >= 3.5 && r.Rating < 4.5),
+                    ThreeStarCount = g.Count(r => r.Rating >= 2.5 && r.Rating < 3.5),
+                    TwoStarCount = g.Count(r => r.Rating >= 1.5 && r.Rating < 2.5),
+                    OneStarCount = g.Count(r => r.Rating < 1.5)
+                })
+                .FirstOrDefaultAsync();
 
-            if (reviews.Count == 0)
-            {
-                return null;
-            }
-
-            var dealer = reviews.First().Reviewee;
-
-            return new DealerRatingSummaryDto
-            {
-                DealerId = dealerId,
-                DealerName = dealer?.Name ?? "Unknown",
-                AverageRating = Math.Round(reviews.Average(r => r.Rating), 2),
-                TotalReviews = reviews.Count,
-                FiveStarCount = reviews.Count(r => r.Rating >= 4.5),
-                FourStarCount = reviews.Count(r => r.Rating is >= 3.5 and < 4.5),
-                ThreeStarCount = reviews.Count(r => r.Rating is >= 2.5 and < 3.5),
-                TwoStarCount = reviews.Count(r => r.Rating is >= 1.5 and < 2.5),
-                OneStarCount = reviews.Count(r => r.Rating < 1.5)
-            };
+            return summary;
         }
 
         public async Task<bool> HasReviewedDealerAsync(Guid reviewerId, Guid dealerId)
