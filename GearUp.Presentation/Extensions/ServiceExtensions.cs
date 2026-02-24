@@ -44,6 +44,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -206,30 +208,18 @@ namespace GearUp.Presentation.Extensions
                 .AddPolicy("DealerOnly", policy => policy.RequireRole(nameof(UserRole.Dealer)));
 
             // OpenTelemetry
-
             services.AddOpenTelemetry()
                 .ConfigureResource(r => r.AddService("GearUp"))
-                .WithTracing(t =>
-                {
-                    t.AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddEntityFrameworkCoreInstrumentation()
-                        .AddOtlpExporter(o =>
-                        {
-                            o.Endpoint = new Uri("http://localhost:4318");
-                            o.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-                        });
-                })
-                .WithMetrics(m =>
-                {
-                    m.AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddOtlpExporter(o =>
-                        {
-                            o.Endpoint = new Uri("http://localhost:4318");
-                            o.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-                        });
-                });
+                .WithTracing(t => t
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddEntityFrameworkCoreInstrumentation()
+                    .AddOtlpExporter())
+                .WithMetrics(m => m
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation()
+                    .AddOtlpExporter());
 
             // CORS Policy
             services.AddCors(opt =>

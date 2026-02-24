@@ -40,6 +40,7 @@ services:
     depends_on:
       - db
       - redis
+      - aspire-dashboard
     networks:
       - gearup_network
     restart: on-failure
@@ -51,6 +52,18 @@ services:
       - "6379:6379"
     networks:
       - gearup_network
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    container_name: aspire-dashboard
+    restart: unless-stopped
+    ports:
+      - "18888:18888"   # UI
+      - "4317:18889"    # OTLP gRPC (standard port)
+      - "4318:18890"    # OTLP HTTP (standard port)
+    networks:
+      - gearup_network
+
 
 volumes:
   gearup_data:
