@@ -64,12 +64,12 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
         options.RoutePrefix = string.Empty;
     });
-
 }
 else
 {
     app.UseRateLimiter();
 }
+
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
@@ -80,9 +80,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
             status = report.Status.ToString(),
             results = report.Entries.Select(e => new
             {
-                name = e.Key,
-                status = e.Value.Status.ToString(),
-                description = e.Value.Description
+                name = e.Key, status = e.Value.Status.ToString(), description = e.Value.Description
             })
         });
         await context.Response.WriteAsync(result);
@@ -114,5 +112,3 @@ finally
 {
     Log.CloseAndFlush();
 }
-
-

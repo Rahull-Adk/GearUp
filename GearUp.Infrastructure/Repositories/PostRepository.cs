@@ -3,6 +3,7 @@ using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Car;
 using GearUp.Application.ServiceDtos.Post;
 using GearUp.Application.ServiceDtos.Socials;
+using GearUp.Domain.Entities.Cars;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,138 @@ namespace GearUp.Infrastructure.Repositories
     public class PostRepository : IPostRepository
     {
         private readonly GearUpDbContext _db;
+
+        private static PostResponseDto MapPostToDto(
+            Post post,
+            string authorUsername,
+            string? authorAvatarUrl,
+            bool isLikedByCurrentUser,
+            CarResponseDto? carDto)
+        {
+            return new PostResponseDto
+            {
+                Id = post.Id,
+                Caption = post.Caption,
+                Content = post.Content,
+                Visibility = post.Visibility,
+                CreatedAt = post.CreatedAt,
+                UpdatedAt = post.UpdatedAt,
+                IsLikedByCurrentUser = isLikedByCurrentUser,
+                AuthorUsername = authorUsername,
+                AuthorAvatarUrl = authorAvatarUrl ?? string.Empty,
+                CarDto = carDto,
+                LikeCount = post.LikeCount,
+                CommentCount = post.CommentCount,
+                ViewCount = post.ViewCount
+            };
+        }
+
+        private static CarResponseDto MapCarToDto(Car car, IReadOnlyDictionary<Guid, List<CarImageDto>> carImageLookup)
+        {
+            carImageLookup.TryGetValue(car.Id, out var carImages);
+
+            return new CarResponseDto
+            {
+                Id = car.Id,
+                Make = car.Make,
+                Model = car.Model,
+                Year = car.Year,
+                Description = car.Description,
+                Title = car.Title,
+                Price = car.Price,
+                Color = car.Color,
+                Mileage = car.Mileage,
+                SeatingCapacity = car.SeatingCapacity,
+                EngineCapacity = car.EngineCapacity,
+                FuelType = car.FuelType,
+                CarCondition = car.Condition,
+                TransmissionType = car.Transmission,
+                CarStatus = car.Status,
+                CarValidationStatus = car.ValidationStatus,
+                VIN = car.VIN,
+                LicensePlate = car.LicensePlate,
+                DealerId = car.DealerId,
+                CreatedAt = car.CreatedAt,
+                UpdatedAt = car.UpdatedAt,
+                CarImages = carImages ?? new List<CarImageDto>()
+            };
+        }
+
+        private static List<Guid> GetDistinctCarIds(IEnumerable<Post> posts)
+        {
+            return posts
+                .Where(p => p.CarId is not null)
+                .Select(p => p.CarId!.Value)
+                .Distinct()
+                .ToList();
+        }
+
+        private async Task<Dictionary<Guid, (string Username, string? AvatarUrl)>> GetUserLookupAsync(IEnumerable<Guid> userIds)
+        {
+            var ids = userIds.Distinct().ToList();
+            if (ids.Count == 0)
+            {
+                return new Dictionary<Guid, (string Username, string? AvatarUrl)>();
+            }
+
+            return await _db.Users
+                .AsNoTracking()
+                .Where(u => ids.Contains(u.Id))
+                .Select(u => new { u.Id, u.Username, u.AvatarUrl })
+                .ToDictionaryAsync(u => u.Id, u => (u.Username, (string?)u.AvatarUrl));
+        }
+
+        private async Task<Dictionary<Guid, Car>> GetCarLookupAsync(IReadOnlyCollection<Guid> carIds)
+        {
+            if (carIds.Count == 0)
+            {
+                return new Dictionary<Guid, Car>();
+            }
+
+            return await _db.Cars
+                .AsNoTracking()
+                .Where(car => carIds.Contains(car.Id))
+                .ToDictionaryAsync(car => car.Id);
+        }
+
+        private async Task<Dictionary<Guid, List<CarImageDto>>> GetCarImageLookupAsync(IReadOnlyCollection<Guid> carIds)
+        {
+            if (carIds.Count == 0)
+            {
+                return new Dictionary<Guid, List<CarImageDto>>();
+            }
+
+            var carImages = await _db.CarImages
+                .AsNoTracking()
+                .Where(ci => carIds.Contains(ci.CarId))
+                .Select(ci => new CarImageDto
+                {
+                    Id = ci.Id,
+                    CarId = ci.CarId,
+                    Url = ci.Url
+                })
+                .ToListAsync();
+
+            return carImages
+                .GroupBy(ci => ci.CarId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
+
+        private async Task<HashSet<Guid>> GetLikedPostIdSetAsync(Guid currUserId, IReadOnlyCollection<Guid> postIds)
+        {
+            if (postIds.Count == 0)
+            {
+                return new HashSet<Guid>();
+            }
+
+            var likedPostIds = await _db.PostLikes
+                .AsNoTracking()
+                .Where(l => l.LikedUserId == currUserId && postIds.Contains(l.PostId))
+                .Select(l => l.PostId)
+                .ToListAsync();
+
+            return likedPostIds.ToHashSet();
+        }
 
         public PostRepository(GearUpDbContext db)
         {
@@ -26,52 +159,45 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task<PostResponseDto?> GetPostByIdAsync(Guid postId, Guid currUserId)
         {
-            return await _db.Posts.AsNoTracking()
-                .Where(p => p.Id == postId && (p.UserId == currUserId || p.Visibility == PostVisibility.Public))
-                .Select(p => new PostResponseDto
-                {
-                    Id = p.Id,
-                    Caption = p.Caption,
-                    Content = p.Content,
-                    Visibility = p.Visibility,
-                    CreatedAt = p.CreatedAt,
-                    UpdatedAt = p.UpdatedAt,
-                    IsLikedByCurrentUser = p.Likes.Any(pl => pl.LikedUserId == currUserId),
-                    AuthorUsername = p.User!.Username,
-                    AuthorAvatarUrl = p.User.AvatarUrl,
-                    CarDto = p.CarId == null
-                        ? null
-                        : new CarResponseDto
-                        {
-                            Id = p.Car!.Id,
-                            Make = p.Car.Make,
-                            Model = p.Car.Model,
-                            Year = p.Car.Year,
-                            Description = p.Car.Description,
-                            Title = p.Car.Title,
-                            Price = p.Car.Price,
-                            Color = p.Car.Color,
-                            Mileage = p.Car.Mileage,
-                            SeatingCapacity = p.Car.SeatingCapacity,
-                            CarImages =
-                                p.Car.Images.Select(ci => new CarImageDto { Id = ci.Id, CarId = ci.CarId, Url = ci.Url }).ToList(),
-                            EngineCapacity = p.Car.EngineCapacity,
-                            FuelType = p.Car.FuelType,
-                            CarCondition = p.Car.Condition,
-                            TransmissionType = p.Car.Transmission,
-                            CarStatus = p.Car.Status,
-                            CarValidationStatus = p.Car.ValidationStatus,
-                            VIN = p.Car.VIN,
-                            LicensePlate = p.Car.LicensePlate,
-                            DealerId = p.Car.DealerId,
-                            CreatedAt = p.Car.CreatedAt,
-                            UpdatedAt = p.Car.UpdatedAt
-                        },
-                    LikeCount = p.Likes.Count,
-                    CommentCount = p.Comments.Count,
-                    ViewCount = p.Views.Count
-                })
+            var post = await _db.Posts
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted && p.Id == postId && (p.UserId == currUserId || p.Visibility == PostVisibility.Public))
                 .FirstOrDefaultAsync();
+
+            if (post is null)
+            {
+                return null;
+            }
+
+            var user = await _db.Users
+                .AsNoTracking()
+                .Where(u => u.Id == post.UserId)
+                .Select(u => new { u.Username, u.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            if (user is null)
+            {
+                return null;
+            }
+
+            var isLikedByCurrentUser = await _db.PostLikes
+                .AsNoTracking()
+                .AnyAsync(pl => pl.PostId == post.Id && pl.LikedUserId == currUserId);
+
+            CarResponseDto? carDto = null;
+            if (post.CarId is not null)
+            {
+                var carIds = new List<Guid> { post.CarId.Value };
+                var cars = await GetCarLookupAsync(carIds);
+                var carImageLookup = await GetCarImageLookupAsync(carIds);
+
+                if (cars.TryGetValue(post.CarId.Value, out var car))
+                {
+                    carDto = MapCarToDto(car, carImageLookup);
+                }
+            }
+
+            return MapPostToDto(post, user.Username, user.AvatarUrl, isLikedByCurrentUser, carDto);
         }
 
         public async Task<CursorPageResult<PostResponseDto?>> GetAllUserPostByUserIdAsync(Cursor? c, Guid currUserId)
@@ -80,7 +206,7 @@ namespace GearUp.Infrastructure.Repositories
 
             IQueryable<Post> query = _db.Posts
                 .AsNoTracking()
-                .Where(p => p.UserId == currUserId)
+                .Where(p => !p.IsDeleted && p.UserId == currUserId)
                 .OrderByDescending(p => p.CreatedAt)
                 .ThenByDescending(p => p.Id);
 
@@ -89,60 +215,61 @@ namespace GearUp.Infrastructure.Repositories
                 query = query.Where(p => p.CreatedAt < c.CreatedAt || (p.CreatedAt == c.CreatedAt && p.Id.CompareTo(c.Id) < 0));
             }
 
-            var rows = await query
+            var posts = await query
                 .Take(pageSize + 1)
-                .Select(p => new PostResponseDto
-                {
-                    Id = p.Id,
-                    Caption = p.Caption,
-                    Content = p.Content,
-                    Visibility = p.Visibility,
-                    CreatedAt = p.CreatedAt,
-                    UpdatedAt = p.UpdatedAt,
-                    AuthorUsername = p.User.Username,
-                    AuthorAvatarUrl = p.User.AvatarUrl,
-                    IsLikedByCurrentUser =
-                        p.Likes.Any(l => l.LikedUserId == currUserId),
-                    LikeCount = p.Likes.Count,
-                    CommentCount = p.Comments.Count,
-                    ViewCount = p.Views.Count,
-                    CarDto = p.CarId == null
-                        ? null
-                        : new CarResponseDto
-                        {
-                            Id = p.Car!.Id,
-                            Make = p.Car.Make,
-                            Model = p.Car.Model,
-                            Year = p.Car.Year,
-                            Description = p.Car.Description,
-                            Title = p.Car.Title,
-                            Price = p.Car.Price,
-                            Color = p.Car.Color,
-                            Mileage = p.Car.Mileage,
-                            SeatingCapacity = p.Car.SeatingCapacity,
-                            EngineCapacity = p.Car.EngineCapacity,
-                            FuelType = p.Car.FuelType,
-                            CarCondition = p.Car.Condition,
-                            TransmissionType = p.Car.Transmission,
-                            CarStatus = p.Car.Status,
-                            CarValidationStatus = p.Car.ValidationStatus,
-                            VIN = p.Car.VIN,
-                            LicensePlate = p.Car.LicensePlate,
-                            DealerId = p.Car.DealerId,
-                            CreatedAt = p.Car.CreatedAt,
-                            UpdatedAt = p.Car.UpdatedAt,
-                            CarImages = p.Car.Images
-                                .Select(i => new CarImageDto { Id = i.Id, CarId = i.CarId, Url = i.Url })
-                                .ToList()
-                        }
-                })
                 .ToListAsync();
-            bool hasMore = rows.Count > pageSize;
+
+            if (posts.Count == 0)
+            {
+                return new CursorPageResult<PostResponseDto?>
+                {
+                    HasMore = false,
+                    Items = [],
+                    NextCursor = null
+                };
+            }
+
+            var author = await _db.Users
+                .AsNoTracking()
+                .Where(u => u.Id == currUserId)
+                .Select(u => new { u.Username, u.AvatarUrl })
+                .FirstOrDefaultAsync();
+
+            if (author is null)
+            {
+                return new CursorPageResult<PostResponseDto?>
+                {
+                    HasMore = false,
+                    Items = [],
+                    NextCursor = null
+                };
+            }
+
+            var postIds = posts.Select(p => p.Id).ToList();
+            var likedSet = await GetLikedPostIdSetAsync(currUserId, postIds);
+
+            var carIds = GetDistinctCarIds(posts);
+            var cars = await GetCarLookupAsync(carIds);
+            var carImageLookup = await GetCarImageLookupAsync(carIds);
+
+            var rows = posts.Select(p =>
+            {
+                CarResponseDto? carDto = null;
+
+                if (p.CarId is not null && cars.TryGetValue(p.CarId.Value, out var car))
+                {
+                    carDto = MapCarToDto(car, carImageLookup);
+                }
+
+                return MapPostToDto(p, author.Username, author.AvatarUrl, likedSet.Contains(p.Id), carDto);
+            }).ToList();
+
+            bool hasMore = posts.Count > pageSize;
             string? nextCursor = null;
 
             if (hasMore)
             {
-                var lastItem = rows[pageSize - 1];
+                var lastItem = posts[pageSize - 1];
                 nextCursor = Cursor.Encode(new Cursor
                 {
                     CreatedAt = lastItem.CreatedAt,
@@ -158,16 +285,37 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<PostCountsDto> GetCountsForPostById(Guid postId, Guid userId)
+        public async Task<PostCountsDto?> GetCountsForPostById(Guid postId, Guid userId)
         {
-            var data =  await _db.Posts.Where(p => p.Id == postId && p.Visibility == PostVisibility.Public).Select(p => new PostCountsDto
+            var postCounts = await _db.Posts
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted && p.Visibility == PostVisibility.Public && p.Id == postId)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.LikeCount,
+                    p.CommentCount,
+                    p.ViewCount
+                })
+                .FirstOrDefaultAsync();
+
+            if (postCounts is null)
             {
-                LikeCount = p.Likes.Count,
-                CommentCount = p.Comments.Count,
-                ViewCount = p.Views.Count,
-                IsLikedByCurrentUser = p.Likes.Any(pl => pl.LikedUserId == userId)
-            }).FirstOrDefaultAsync();
-            return data;
+                return null;
+            }
+
+            var isLikedByCurrentUser = await _db.PostLikes
+                .AsNoTracking()
+                .AnyAsync(pl => pl.PostId == postId && pl.LikedUserId == userId);
+
+            return new PostCountsDto
+            {
+                PostId = postCounts.Id,
+                LikeCount = postCounts.LikeCount,
+                CommentCount = postCounts.CommentCount,
+                ViewCount = postCounts.ViewCount,
+                IsLikedByCurrentUser = isLikedByCurrentUser
+            };
         }
 
         public async Task<int> GetPostViewCountAsync(Guid postId)
@@ -179,68 +327,62 @@ namespace GearUp.Infrastructure.Repositories
         {
             const int pageSize = 10;
 
-            IQueryable<Post> query = _db.Posts.AsNoTracking().Where(p => p.Visibility == PostVisibility.Public)
-                .OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id).AsNoTracking();
+            IQueryable<Post> query = _db.Posts.AsNoTracking().Where(p => !p.IsDeleted && p.Visibility == PostVisibility.Public)
+                .OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id);
 
             if (c is not null)
             {
                 query = query.Where(p => p.CreatedAt < c.CreatedAt || (p.CreatedAt == c.CreatedAt && p.Id.CompareTo(c.Id) < 0) ) ;
             }
 
-
-            var rows = await query
+            var posts = await query
                 .Take(pageSize + 1)
-                .Select(p => new PostResponseDto
-                {
-                    Id = p.Id,
-                    Caption = p.Caption,
-                    Content = p.Content,
-                    Visibility = p.Visibility,
-                    CreatedAt = p.CreatedAt,
-                    UpdatedAt = p.UpdatedAt,
-                    AuthorUsername = p.User!.Username,
-                    AuthorAvatarUrl = p.User.AvatarUrl,
-                    IsLikedByCurrentUser =
-                        p.Likes.Any(l => l.LikedUserId == currUserId),
-                    LikeCount = p.LikeCount,
-                    CommentCount = p.Comments.Count,
-                    ViewCount = p.Views.Count,
-                    CarDto = p.CarId == null
-                        ? null
-                        : new CarResponseDto
-                        {
-                            Id = p.Car!.Id,
-                            Make = p.Car.Make,
-                            Model = p.Car.Model,
-                            Year = p.Car.Year,
-                            Description = p.Car.Description,
-                            Title = p.Car.Title,
-                            Price = p.Car.Price,
-                            Color = p.Car.Color,
-                            Mileage = p.Car.Mileage,
-                            SeatingCapacity = p.Car.SeatingCapacity,
-                            EngineCapacity = p.Car.EngineCapacity,
-                            FuelType = p.Car.FuelType,
-                            CarCondition = p.Car.Condition,
-                            TransmissionType = p.Car.Transmission,
-                            CarStatus = p.Car.Status,
-                            CarValidationStatus = p.Car.ValidationStatus,
-                            VIN = p.Car.VIN,
-                            LicensePlate = p.Car.LicensePlate,
-                            DealerId = p.Car.DealerId,
-                            CreatedAt = p.Car.CreatedAt,
-                            UpdatedAt = p.Car.UpdatedAt,
-                            CarImages = p.Car.Images
-                                .Select(i => new CarImageDto { Id = i.Id, CarId = i.CarId, Url = i.Url })
-                                .ToList()
-                        }
-                })
                 .ToListAsync();
+
+            if (posts.Count == 0)
+            {
+                return new CursorPageResult<PostResponseDto>
+                {
+                    HasMore = false,
+                    Items = [],
+                    NextCursor = null
+                };
+            }
+
+            var users = await GetUserLookupAsync(posts.Select(p => p.UserId));
+
+            var carIds = GetDistinctCarIds(posts);
+            var cars = await GetCarLookupAsync(carIds);
+            var carImageLookup = await GetCarImageLookupAsync(carIds);
+
+            var postIds = posts.Select(p => p.Id).ToList();
+            var likedSet = await GetLikedPostIdSetAsync(currUserId, postIds);
+
+            var result = posts.Select(p =>
+            {
+                if (!users.TryGetValue(p.UserId, out var user))
+                {
+                    return null;
+                }
+
+                CarResponseDto? carDto = null;
+
+                if (p.CarId != null && cars.TryGetValue(p.CarId.Value, out var car))
+                {
+                    carDto = MapCarToDto(car, carImageLookup);
+                }
+
+                return MapPostToDto(p, user.Username, user.AvatarUrl, likedSet.Contains(p.Id), carDto);
+            })
+            .Where(p => p is not null)
+            .Select(p => p!)
+            .ToList();
+
             string? nextCursor = null;
-            bool hasMore = rows.Count > pageSize;
+            bool hasMore = posts.Count > pageSize;
             if (hasMore)
             {
-                var lastItem = rows[pageSize - 1];
+                var lastItem = posts[pageSize - 1];
                 nextCursor = Cursor.Encode(new Cursor
                 {
                     CreatedAt = lastItem.CreatedAt,
@@ -249,7 +391,7 @@ namespace GearUp.Infrastructure.Repositories
             }
             return new CursorPageResult<PostResponseDto>
             {
-                Items = rows.Take(pageSize).ToList(),
+                Items = result.Take(pageSize).ToList(),
                 NextCursor = nextCursor,
                 HasMore = hasMore
             };
@@ -257,7 +399,7 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task<Post?> GetPostEntityByIdAsync(Guid postId)
         {
-            return await _db.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+            return await _db.Posts.FirstOrDefaultAsync(p =>  !p.IsDeleted && p.Id == postId);
         }
 
         public async Task<CursorPageResult<UserEngagementDto>> GetPostLikersAsync(Guid postId, Cursor? cursor)
@@ -310,7 +452,7 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task<bool> PostExistAsync(Guid postId)
         {
-            return await _db.Posts.AnyAsync(p => p.Id == postId);
+            return await _db.Posts.AnyAsync(p =>  !p.IsDeleted && p.Id == postId);
         }
     }
 }

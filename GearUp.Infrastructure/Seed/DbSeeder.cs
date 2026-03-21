@@ -244,8 +244,8 @@ public class DbSeeder
 
     private async Task SeedFakeNestedCommentAsync(int targetCount)
     {
-        int existing = await _context.PostLikes
-            .CountAsync();
+        int existing = await _context.PostComments
+            .CountAsync(c => c.Content.EndsWith("nested_comment"));
         if (existing >= targetCount)
             return;
         int toCreate = targetCount - existing;

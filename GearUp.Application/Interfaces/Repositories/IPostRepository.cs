@@ -12,7 +12,7 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<CursorPageResult<PostResponseDto>> GetLatestFeedAsync(Cursor? c, Guid currUserId);
         Task<PostResponseDto?> GetPostByIdAsync(Guid postId, Guid currUserId);
         Task<CursorPageResult<PostResponseDto?>> GetAllUserPostByUserIdAsync(Cursor? c, Guid currUserId);
-        Task<PostCountsDto> GetCountsForPostById(Guid postId, Guid userId);
+        Task<PostCountsDto?> GetCountsForPostById(Guid postId, Guid userId);
         Task<int> GetPostViewCountAsync(Guid postId);
         Task<bool> PostExistAsync(Guid PostId);
         Task<Post?> GetPostEntityByIdAsync(Guid postId);

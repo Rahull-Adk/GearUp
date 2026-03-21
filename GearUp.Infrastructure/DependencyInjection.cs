@@ -12,7 +12,7 @@ namespace GearUp.Infrastructure
     {
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString, string audience, string issuer, string accessToken_SecretKey, string brevo_api_key, string fromEmail, string emailVerificationToken_SecretKey, string clientUrl, ILogger<EmailSender> logger)
         {
-            services.AddDbContext<GearUpDbContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+            services.AddDbContext<GearUpDbContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))/*LogTo(Console.WriteLine, LogLevel.Information)*/);
 
             services.AddSingleton<ITokenGenerator>(new TokenGenerator(accessToken_SecretKey, audience, issuer, emailVerificationToken_SecretKey));
 
