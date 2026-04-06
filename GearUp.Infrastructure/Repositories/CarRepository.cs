@@ -246,6 +246,8 @@ namespace GearUp.Infrastructure.Repositories
         {
             IQueryable<Car> query = _db.Cars.AsNoTracking();
             query = query.Where(car => car.ValidationStatus == CarValidationStatus.Approved && car.Status == CarStatus.Available);
+            bool isAscending = string.Equals(dto.SortOrder, "asc", StringComparison.OrdinalIgnoreCase);
+            bool isPriceSort = string.Equals(dto.SortBy, "price", StringComparison.OrdinalIgnoreCase);
 
             if (!string.IsNullOrEmpty(dto.Query))
             {
@@ -267,12 +269,40 @@ namespace GearUp.Infrastructure.Repositories
                 query = query.Where(c => c.Price <= dto.MaxPrice.Value);
             }
 
-            query = query.OrderByDescending(c => c.CreatedAt).ThenByDescending(c => c.Id);
+            if (isPriceSort)
+            {
+                query = isAscending
+                    ? query.OrderBy(c => c.Price).ThenBy(c => c.CreatedAt).ThenBy(c => c.Id)
+                    : query.OrderByDescending(c => c.Price).ThenByDescending(c => c.CreatedAt).ThenByDescending(c => c.Id);
+            }
+            else
+            {
+                query = isAscending
+                    ? query.OrderBy(c => c.CreatedAt).ThenBy(c => c.Id)
+                    : query.OrderByDescending(c => c.CreatedAt).ThenByDescending(c => c.Id);
+            }
 
             if (cursor is not null)
             {
-                query = query.Where(c => c.CreatedAt < cursor.CreatedAt ||
-                    (c.CreatedAt == cursor.CreatedAt && c.Id.CompareTo(cursor.Id) < 0));
+                if (isPriceSort)
+                {
+                    var cursorPrice = cursor.Price!.Value;
+                    query = isAscending
+                        ? query.Where(c => c.Price > cursorPrice ||
+                            (c.Price == cursorPrice && c.CreatedAt > cursor.CreatedAt) ||
+                            (c.Price == cursorPrice && c.CreatedAt == cursor.CreatedAt && c.Id.CompareTo(cursor.Id) > 0))
+                        : query.Where(c => c.Price < cursorPrice ||
+                            (c.Price == cursorPrice && c.CreatedAt < cursor.CreatedAt) ||
+                            (c.Price == cursorPrice && c.CreatedAt == cursor.CreatedAt && c.Id.CompareTo(cursor.Id) < 0));
+                }
+                else
+                {
+                    query = isAscending
+                        ? query.Where(c => c.CreatedAt > cursor.CreatedAt ||
+                            (c.CreatedAt == cursor.CreatedAt && c.Id.CompareTo(cursor.Id) > 0))
+                        : query.Where(c => c.CreatedAt < cursor.CreatedAt ||
+                            (c.CreatedAt == cursor.CreatedAt && c.Id.CompareTo(cursor.Id) < 0));
+                }
             }
 
             var cars = await query
@@ -318,6 +348,7 @@ namespace GearUp.Infrastructure.Repositories
                 nextCursor = Cursor.Encode(new Cursor
                 {
                     CreatedAt = lastItem.CreatedAt,
+                    Price = isPriceSort ? lastItem.Price : null,
                     Id = lastItem.Id
                 });
             }

@@ -423,8 +423,8 @@ namespace GearUp.Infrastructure.Repositories
                 .Select(pl => new UserEngagementDto
                 {
                     UserId = pl.LikedUserId,
-                    UserName = pl.LikedUser.Username,
-                    ProfilePictureUrl = pl.LikedUser.AvatarUrl,
+                    UserName = pl.LikedUser != null ? pl.LikedUser.Username : string.Empty,
+                    ProfilePictureUrl = pl.LikedUser != null ? pl.LikedUser.AvatarUrl : string.Empty,
                     UpdatedAt = pl.UpdatedAt
                 })
                 .ToListAsync();

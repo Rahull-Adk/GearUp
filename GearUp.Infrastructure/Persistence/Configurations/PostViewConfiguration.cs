@@ -9,7 +9,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<PostView> builder)
         {
             builder.HasKey(pv => pv.Id);
-            builder.HasQueryFilter(pv => !pv.Post.IsDeleted);
+            builder.HasQueryFilter(pv => pv.Post != null && !pv.Post.IsDeleted);
 
             // Composite index for view existence checks (HasViewTimeElapsedAsync) and counting
             builder.HasIndex(pv => new { pv.PostId, pv.ViewedUserId, pv.ViewedAt });

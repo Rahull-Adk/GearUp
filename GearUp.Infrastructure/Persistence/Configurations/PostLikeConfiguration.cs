@@ -9,7 +9,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<PostLike> builder)
         {
             builder.HasKey(pl => pl.Id);
-            builder.HasQueryFilter(pl => !pl.LikedUser.IsDeleted);
+            builder.HasQueryFilter(pl => pl.LikedUser != null && !pl.LikedUser.IsDeleted);
 
             builder.HasIndex(pl => new { pl.PostId, pl.LikedUserId }).IsUnique();
             builder.HasIndex(pl => new { pl.PostId, pl.UpdatedAt, pl.LikedUserId }).IsDescending(true, true, true);

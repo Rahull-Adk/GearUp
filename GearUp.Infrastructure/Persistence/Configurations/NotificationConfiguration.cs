@@ -9,7 +9,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<Notification> builder)
         {
             builder.HasKey(n => n.Id);
-            builder.HasQueryFilter(n => !n.ReceiverUser.IsDeleted);
+            builder.HasQueryFilter(n => n.ReceiverUser != null && !n.ReceiverUser.IsDeleted);
 
             builder
                 .HasOne(n => n.ReceiverUser)
