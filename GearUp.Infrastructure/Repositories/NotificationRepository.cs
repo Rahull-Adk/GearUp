@@ -95,14 +95,10 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task MarkAllNotificationsAsReadAsync(Guid userId)
         {
-            var notifications = await _db.Notifications
+            await _db.Notifications
                 .Where(n => n.ReceiverUserId == userId && !n.IsRead)
-                .ToListAsync();
-
-            foreach (var notification in notifications)
-            {
-                notification.MarkAsRead();
-            }
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(n => n.IsRead, true));
         }
 
         public async Task DeleteNotificationAsync(Guid notificationId)
@@ -116,11 +112,9 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task DeleteAllNotificationsByUserIdAsync(Guid userId)
         {
-            var notifications = await _db.Notifications
+            await _db.Notifications
                 .Where(n => n.ReceiverUserId == userId)
-                .ToListAsync();
-
-            _db.Notifications.RemoveRange(notifications);
+                .ExecuteDeleteAsync();
         }
     }
 }
