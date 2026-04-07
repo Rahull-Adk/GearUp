@@ -169,6 +169,7 @@ CLOUDINARY_URL=cloudinary_url
 ADMIN_USERNAME=admin
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=your_secure_admin_password
+RUN_DB_TASKS_IN_DEVELOPMENT=false
 ```
 
 ### 4️⃣ Run the Application
@@ -182,8 +183,8 @@ docker compose up --build
 **Without Docker:**
 
 ```bash
-dotnet ef database update
-cd GearUp.API
+dotnet ef database update --project GearUp.Infrastructure --startup-project GearUp.Presentation
+cd GearUp.Presentation
 dotnet run
 ```
 
@@ -195,11 +196,30 @@ API available at: [http://localhost:5255/swagger](http://localhost:5255/swagger)
 
 ```bash
 # Add migration
-dotnet ef migrations add Init --project GearUp.Infrastructure --startup-project GearUp.API
+dotnet ef migrations add Init --project GearUp.Infrastructure --startup-project GearUp.Presentation
 
 # Apply migration
-dotnet ef database update --project GearUp.Infrastructure --startup-project GearUp.API
+dotnet ef database update --project GearUp.Infrastructure --startup-project GearUp.Presentation
 ```
+
+### Startup behavior (important)
+
+`Program.cs` no longer runs migrations/seeding unconditionally on app boot.
+
+Use one of these explicit paths instead:
+
+1. **Development-only startup tasks**
+
+   Set `RUN_DB_TASKS_IN_DEVELOPMENT=true` and run with `ASPNETCORE_ENVIRONMENT=Development`.
+
+2. **One-off deploy task (recommended for CI/CD)**
+
+   Set `RUN_DB_TASKS_ONCE_AND_EXIT=true` and run the app once. It will:
+   - run `Database.Migrate()`
+   - run `AdminSeeder` + `DbSeeder`
+   - exit without starting the web host
+
+The GitHub Actions workflow `.github/workflows/dotnet-ci.yml` now includes a `workflow_dispatch` input (`run_deploy_db_tasks`) for this one-off deploy sequence.
 
 ---
 

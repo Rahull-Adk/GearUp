@@ -46,11 +46,22 @@ string adminPassword = builder.Configuration["ADMIN_PASSWORD"]!;
 
 var app = builder.Build();
 
-var shouldRunStartupDatabaseTasks = app.Environment.IsDevelopment() ||
-                                    builder.Configuration.GetValue<bool>("RUN_DB_MIGRATIONS_ON_STARTUP");
+var runDbTasksOnceAndExit = builder.Configuration.GetValue<bool>("RUN_DB_TASKS_ONCE_AND_EXIT");
+var runDbTasksInDevelopment = app.Environment.IsDevelopment() &&
+                              builder.Configuration.GetValue<bool>("RUN_DB_TASKS_IN_DEVELOPMENT");
 
-if (shouldRunStartupDatabaseTasks)
+if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
 {
+    if (runDbTasksInDevelopment)
+    {
+        Log.Information("Running startup database tasks in development mode because RUN_DB_TASKS_IN_DEVELOPMENT=true.");
+    }
+
+    if (runDbTasksOnceAndExit)
+    {
+        Log.Information("Running one-off database tasks because RUN_DB_TASKS_ONCE_AND_EXIT=true.");
+    }
+
     using var scope = app.Services.CreateScope();
     var hasher = new PasswordHasher<User>();
     var db = scope.ServiceProvider.GetRequiredService<GearUpDbContext>();
@@ -58,10 +69,17 @@ if (shouldRunStartupDatabaseTasks)
     db.Database.Migrate();
     await AdminSeeder.SeedAdminAsync(db, hasher, adminUsername, adminEmail, adminPassword);
     await seeder.SeedAsync();
+
+    if (runDbTasksOnceAndExit)
+    {
+        Log.Information("Completed one-off database tasks. Exiting without starting web host.");
+        Log.CloseAndFlush();
+        return;
+    }
 }
 else
 {
-    Log.Information("Skipping startup database migration and seeding tasks.");
+    Log.Information("Skipping startup database migration and seeding tasks. Use RUN_DB_TASKS_IN_DEVELOPMENT=true (development only) or RUN_DB_TASKS_ONCE_AND_EXIT=true (one-off).");
 }
 
 if (app.Environment.IsDevelopment())

@@ -5,6 +5,13 @@ on:
     branches: [ master, develop ]
   pull_request:
     branches: [ master, develop ]
+  workflow_dispatch:
+    inputs:
+      run_deploy_db_tasks:
+        description: "Run production database migration and seeding one-off task"
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -37,3 +44,34 @@ jobs:
       with:
         name: vulnerability-report
         path: vulnerabilities.txt
+
+  deploy-db-tasks:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_deploy_db_tasks
+    runs-on: ubuntu-latest
+    env:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: ${{ secrets.DEFAULT_CONNECTION_STRING }}
+      Redis__ConnectionString: ${{ secrets.REDIS_CONNECTION_STRING }}
+      ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      RUN_DB_TASKS_ONCE_AND_EXIT: true
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Install EF Core CLI
+      run: dotnet tool install --global dotnet-ef
+
+    - name: Apply EF Core migrations
+      run: dotnet ef database update --project GearUp.Infrastructure --startup-project GearUp.Presentation
+
+    - name: Run one-off seed task and exit
+      run: dotnet run --project GearUp.Presentation --configuration Release --no-build
