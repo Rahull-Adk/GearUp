@@ -54,7 +54,8 @@ namespace GearUp.Presentation.Controllers
         [HttpGet("kyc")]
         public async Task<IActionResult> GetKycRequests([FromQuery] string? cursor)
         {
-            var result = await _generalAdminService.GetAllKycs(cursor);
+            var adminUserId = Guid.Parse(User.FindFirst(c => c.Type == "id")!.Value);
+            var result = await _generalAdminService.GetAllKycs(adminUserId, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -79,7 +80,8 @@ namespace GearUp.Presentation.Controllers
         [HttpGet("kyc/status/{status}")]
         public async Task<IActionResult> GetKycRequestsByStatus([FromRoute] KycStatus status, [FromQuery] string? cursor)
         {
-            var result = await _generalAdminService.GetKycsByStatus(status, cursor);
+            var adminUserId = Guid.Parse(User.FindFirst(c => c.Type == "id")!.Value);
+            var result = await _generalAdminService.GetKycsByStatus(adminUserId, status, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
