@@ -11,19 +11,19 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<bool> IsUniqueVin(string vin);
         Task AddCarAsync(Car car);
         Task AddCarImagesAsync(IEnumerable<CarImage> carImages);
-        Task<CursorPageResult<CarResponseDto>> GetAllCarsAsync(Cursor? cursor, CancellationToken cancellationToken = default);
-        Task<CursorPageResult<CarResponseDto>> SearchCarsAsync(CarSearchDto dto, Cursor? cursor, CancellationToken cancellationToken = default);
-        Task<CursorPageResult<CarResponseDto>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, Cursor? cursor, CancellationToken cancellationToken = default);
+        Task<CursorPageResult<CarListDto>> GetAllCarsAsync(Cursor? cursor, CancellationToken cancellationToken = default);
+        Task<CursorPageResult<CarListDto>> SearchCarsAsync(CarSearchDto dto, Cursor? cursor, CancellationToken cancellationToken = default);
+        Task<CursorPageResult<CarListDto>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, Cursor? cursor, CancellationToken cancellationToken = default);
         Task<CarResponseDto?> GetCarByIdAsync(Guid carId, CancellationToken cancellationToken = default);
         Task<Car?> GetCarEntityByIdAsync(Guid carId);
         Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId, CancellationToken cancellationToken = default);
-        Task<CursorPageResult<CarResponseDto>> GetDealerCarsAsync(Guid dealerId, Cursor? cursor, CancellationToken cancellationToken = default);
+        Task<CursorPageResult<CarListDto>> GetDealerCarsAsync(Guid dealerId, Cursor? cursor, CancellationToken cancellationToken = default);
         void RemoveCarImageByCarId(Car car);
 
         // Admin methods
-        Task<CursorPageResult<CarResponseDto>> GetAllCarsForAdminAsync(Cursor? cursor);
-        Task<CursorPageResult<CarResponseDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, Cursor? cursor);
-        Task<CursorPageResult<CarResponseDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, Cursor? cursor);
+        Task<CursorPageResult<CarListDto>> GetAllCarsForAdminAsync(Cursor? cursor, CancellationToken cancellationToken = default);
+        Task<CursorPageResult<CarListDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, Cursor? cursor, CancellationToken cancellationToken = default);
+        Task<CursorPageResult<CarListDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, Cursor? cursor, CancellationToken cancellationToken = default);
         Task SaveChangesAsync();
     }
 }

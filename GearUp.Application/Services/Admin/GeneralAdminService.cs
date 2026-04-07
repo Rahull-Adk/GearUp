@@ -209,7 +209,7 @@ namespace GearUp.Application.Services.Admin
         }
 
         // Car methods
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetAllCars(string? cursorString)
+        public async Task<Result<CursorPageResult<CarListDto>>> GetAllCars(string? cursorString)
         {
             _logger.LogInformation("Fetching all cars for admin review");
 
@@ -218,14 +218,14 @@ namespace GearUp.Application.Services.Admin
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
                 }
             }
 
             var cars = await _carRepository.GetAllCarsForAdminAsync(cursor);
 
             _logger.LogInformation("Cars retrieved successfully");
-            return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars retrieved successfully", 200);
+            return Result<CursorPageResult<CarListDto>>.Success(cars, "Cars retrieved successfully", 200);
         }
 
         public async Task<Result<CarResponseDto>> GetCarById(Guid carId)
@@ -242,7 +242,7 @@ namespace GearUp.Application.Services.Admin
             return Result<CarResponseDto>.Success(car, "Car retrieved successfully", 200);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetCarsByDealerId(Guid dealerId, string? cursorString)
+        public async Task<Result<CursorPageResult<CarListDto>>> GetCarsByDealerId(Guid dealerId, string? cursorString)
         {
             _logger.LogInformation("Fetching cars for dealer with ID: {DealerId}", dealerId);
 
@@ -251,29 +251,29 @@ namespace GearUp.Application.Services.Admin
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
                 }
             }
 
             var dealer = await _userRepository.GetUserEntityByIdAsync(dealerId);
             if (dealer == null)
             {
-                return Result<CursorPageResult<CarResponseDto>>.Failure("Dealer not found", 404);
+                return Result<CursorPageResult<CarListDto>>.Failure("Dealer not found", 404);
             }
 
             var cars = await _carRepository.GetCarsByDealerIdForAdminAsync(dealerId, cursor);
 
             _logger.LogInformation("Cars retrieved successfully for dealer");
-            return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars retrieved successfully", 200);
+            return Result<CursorPageResult<CarListDto>>.Success(cars, "Cars retrieved successfully", 200);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetCarsByValidationStatus(CarValidationStatus status, string? cursorString)
+        public async Task<Result<CursorPageResult<CarListDto>>> GetCarsByValidationStatus(CarValidationStatus status, string? cursorString)
         {
             _logger.LogInformation("Fetching cars with validation status: {Status}", status);
 
             if (status != CarValidationStatus.Approved && status != CarValidationStatus.Pending && status != CarValidationStatus.Rejected)
             {
-                return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid car validation status", 400);
+                return Result<CursorPageResult<CarListDto>>.Failure("Invalid car validation status", 400);
             }
 
             Cursor? cursor = null;
@@ -281,14 +281,14 @@ namespace GearUp.Application.Services.Admin
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
                 }
             }
 
             var cars = await _carRepository.GetCarsByValidationStatusAsync(status, cursor);
 
             _logger.LogInformation("Cars retrieved successfully");
-            return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars retrieved successfully", 200);
+            return Result<CursorPageResult<CarListDto>>.Success(cars, "Cars retrieved successfully", 200);
         }
 
         public async Task<Result<string>> UpdateCarValidationStatus(Guid carId, CarValidationStatus status, Guid reviewerId, string? rejectionReason = null)

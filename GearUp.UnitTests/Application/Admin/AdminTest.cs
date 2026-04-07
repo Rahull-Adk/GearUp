@@ -226,7 +226,7 @@ namespace GearUp.UnitTests.Application.Admin
             var mockUser = User.CreateLocalUser("user", "user@gmail.com", "proshane");
 
             _mockAdminRepository.Setup(a => a.GetKycEntityByIdAsync(guidKycId)).ReturnsAsync(mockKyc);
-            _mockUserRepository.Setup(u => u.GetUserEntityByIdAsync(mockKyc.UserId)).ReturnsAsync(mockUser);
+            _mockUserRepository.Setup(u => u.GetUserEntityByIdAsync(mockKyc.UserId, It.IsAny<CancellationToken>())).ReturnsAsync(mockUser);
 
             // Act
             var svc = CreateService();

@@ -86,13 +86,13 @@ namespace GearUp.UnitTests.Application.Cars
         public async Task GetAllCars_NoCars_ReturnsEmptyItems()
         {
             var service = CreateService();
-            var pageResult = new CursorPageResult<CarResponseDto>
+            var pageResult = new CursorPageResult<CarListDto>
             {
-                Items = new List<CarResponseDto>(),
+                Items = new List<CarListDto>(),
                 HasMore = false,
                 NextCursor = null
             };
-            _carRepo.Setup(r => r.GetAllCarsAsync(null)).ReturnsAsync(pageResult);
+            _carRepo.Setup(r => r.GetAllCarsAsync(null, It.IsAny<CancellationToken>())).ReturnsAsync(pageResult);
             // mapper mapping not used in service (repository returns DTOs), keep for compatibility
             var result = await service.GetAllCarsAsync(null);
             Assert.True(result.IsSuccess);
@@ -106,7 +106,7 @@ namespace GearUp.UnitTests.Application.Cars
             var service = CreateService();
             var id = Guid.NewGuid();
 
-            _carRepo.Setup(r => r.GetCarByIdAsync(id)).ReturnsAsync((CarResponseDto?)null);
+            _carRepo.Setup(r => r.GetCarByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((CarResponseDto?)null);
 
             var result = await service.GetCarByIdAsync(id);
 

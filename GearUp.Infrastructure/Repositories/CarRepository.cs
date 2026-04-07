@@ -35,7 +35,7 @@ namespace GearUp.Infrastructure.Repositories
             await _db.CarImages.AddRangeAsync(carImages);
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> GetAllCarsAsync(Cursor? cursor, CancellationToken cancellationToken = default)
+        public async Task<CursorPageResult<CarListDto>> GetAllCarsAsync(Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
@@ -51,35 +51,19 @@ namespace GearUp.Infrastructure.Repositories
 
             var cars = await query
                 .Take(PageSize + 1)
-                .Select(c => new CarResponseDto
+                .Select(c => new CarListDto
                 {
                     Id = c.Id,
+                    ThumbnailUrl = c.Images.OrderBy(img => img.Id).Select(img => img.Url).FirstOrDefault() ?? string.Empty,
                     Title = c.Title,
-                    Description = c.Description,
                     Make = c.Make,
                     Model = c.Model,
-                    DealerId = c.DealerId,
-                    Year = c.Year,
-                    Color = c.Color,
-                    Price = c.Price,
+                    TransmissionType = c.Transmission,
                     Mileage = c.Mileage,
                     SeatingCapacity = c.SeatingCapacity,
-                    EngineCapacity = c.EngineCapacity,
-                    FuelType = c.FuelType,
-                    CarCondition = c.Condition,
-                    TransmissionType = c.Transmission,
-                    VIN = c.VIN,
-                    LicensePlate = c.LicensePlate,
-                    CarStatus = c.Status,
-                    CarValidationStatus = c.ValidationStatus,
-                    CreatedAt = c.CreatedAt,
-                    UpdatedAt = c.UpdatedAt,
-                    CarImages = c.Images.Select(img => new CarImageDto
-                    {
-                        Id = img.Id,
-                        CarId = img.CarId,
-                        Url = img.Url
-                    }).ToList()
+                    Price = c.Price,
+                    Color = c.Color,
+                    CreatedAt = c.CreatedAt
                 })
                 .ToListAsync(cancellationToken);
 
@@ -96,7 +80,7 @@ namespace GearUp.Infrastructure.Repositories
                 });
             }
 
-            return new CursorPageResult<CarResponseDto>
+            return new CursorPageResult<CarListDto>
             {
                 Items = cars.Take(PageSize).ToList(),
                 NextCursor = nextCursor,
@@ -104,7 +88,7 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, Cursor? cursor, CancellationToken cancellationToken = default)
+        public async Task<CursorPageResult<CarListDto>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
@@ -120,35 +104,19 @@ namespace GearUp.Infrastructure.Repositories
 
             var cars = await query
                 .Take(PageSize + 1)
-                .Select(c => new CarResponseDto
+                .Select(c => new CarListDto
                 {
                     Id = c.Id,
+                    ThumbnailUrl = c.Images.OrderBy(img => img.Id).Select(img => img.Url).FirstOrDefault() ?? string.Empty,
                     Title = c.Title,
-                    Description = c.Description,
                     Make = c.Make,
                     Model = c.Model,
-                    DealerId = c.DealerId,
-                    Year = c.Year,
-                    Color = c.Color,
-                    Price = c.Price,
+                    TransmissionType = c.Transmission,
                     Mileage = c.Mileage,
                     SeatingCapacity = c.SeatingCapacity,
-                    EngineCapacity = c.EngineCapacity,
-                    FuelType = c.FuelType,
-                    CarCondition = c.Condition,
-                    TransmissionType = c.Transmission,
-                    VIN = c.VIN,
-                    LicensePlate = c.LicensePlate,
-                    CarStatus = c.Status,
-                    CarValidationStatus = c.ValidationStatus,
-                    CreatedAt = c.CreatedAt,
-                    UpdatedAt = c.UpdatedAt,
-                    CarImages = c.Images.Select(img => new CarImageDto
-                    {
-                        Id = img.Id,
-                        CarId = img.CarId,
-                        Url = img.Url
-                    }).ToList()
+                    Price = c.Price,
+                    Color = c.Color,
+                    CreatedAt = c.CreatedAt
                 })
                 .ToListAsync(cancellationToken);
 
@@ -165,7 +133,7 @@ namespace GearUp.Infrastructure.Repositories
                 });
             }
 
-            return new CursorPageResult<CarResponseDto>
+            return new CursorPageResult<CarListDto>
             {
                 Items = cars.Take(PageSize).ToList(),
                 NextCursor = nextCursor,
@@ -173,7 +141,7 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> GetDealerCarsAsync(Guid dealerId, Cursor? cursor, CancellationToken cancellationToken = default)
+        public async Task<CursorPageResult<CarListDto>> GetDealerCarsAsync(Guid dealerId, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
@@ -189,35 +157,19 @@ namespace GearUp.Infrastructure.Repositories
 
             var cars = await query
                 .Take(PageSize + 1)
-                .Select(c => new CarResponseDto
+                .Select(c => new CarListDto
                 {
                     Id = c.Id,
+                    ThumbnailUrl = c.Images.OrderBy(img => img.Id).Select(img => img.Url).FirstOrDefault() ?? string.Empty,
                     Title = c.Title,
-                    Description = c.Description,
                     Make = c.Make,
                     Model = c.Model,
-                    DealerId = c.DealerId,
-                    Year = c.Year,
-                    Color = c.Color,
-                    Price = c.Price,
+                    TransmissionType = c.Transmission,
                     Mileage = c.Mileage,
                     SeatingCapacity = c.SeatingCapacity,
-                    EngineCapacity = c.EngineCapacity,
-                    FuelType = c.FuelType,
-                    CarCondition = c.Condition,
-                    TransmissionType = c.Transmission,
-                    VIN = c.VIN,
-                    LicensePlate = c.LicensePlate,
-                    CarStatus = c.Status,
-                    CarValidationStatus = c.ValidationStatus,
-                    CreatedAt = c.CreatedAt,
-                    UpdatedAt = c.UpdatedAt,
-                    CarImages = c.Images.Select(img => new CarImageDto
-                    {
-                        Id = img.Id,
-                        CarId = img.CarId,
-                        Url = img.Url
-                    }).ToList()
+                    Price = c.Price,
+                    Color = c.Color,
+                    CreatedAt = c.CreatedAt
                 })
                 .ToListAsync(cancellationToken);
 
@@ -234,7 +186,7 @@ namespace GearUp.Infrastructure.Repositories
                 });
             }
 
-            return new CursorPageResult<CarResponseDto>
+            return new CursorPageResult<CarListDto>
             {
                 Items = cars.Take(PageSize).ToList(),
                 NextCursor = nextCursor,
@@ -242,7 +194,7 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> SearchCarsAsync(CarSearchDto dto, Cursor? cursor, CancellationToken cancellationToken = default)
+        public async Task<CursorPageResult<CarListDto>> SearchCarsAsync(CarSearchDto dto, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars.AsNoTracking();
             query = query.Where(car => car.ValidationStatus == CarValidationStatus.Approved && car.Status == CarStatus.Available);
@@ -307,35 +259,19 @@ namespace GearUp.Infrastructure.Repositories
 
             var cars = await query
                 .Take(PageSize + 1)
-                .Select(c => new CarResponseDto
+                .Select(c => new CarListDto
                 {
                     Id = c.Id,
+                    ThumbnailUrl = c.Images.OrderBy(img => img.Id).Select(img => img.Url).FirstOrDefault() ?? string.Empty,
                     Title = c.Title,
-                    Description = c.Description,
                     Make = c.Make,
                     Model = c.Model,
-                    DealerId = c.DealerId,
-                    Year = c.Year,
-                    Color = c.Color,
-                    Price = c.Price,
+                    TransmissionType = c.Transmission,
                     Mileage = c.Mileage,
                     SeatingCapacity = c.SeatingCapacity,
-                    EngineCapacity = c.EngineCapacity,
-                    FuelType = c.FuelType,
-                    CarCondition = c.Condition,
-                    TransmissionType = c.Transmission,
-                    VIN = c.VIN,
-                    LicensePlate = c.LicensePlate,
-                    CarStatus = c.Status,
-                    CarValidationStatus = c.ValidationStatus,
-                    CreatedAt = c.CreatedAt,
-                    UpdatedAt = c.UpdatedAt,
-                    CarImages = c.Images.Select(img => new CarImageDto
-                    {
-                        Id = img.Id,
-                        CarId = img.CarId,
-                        Url = img.Url
-                    }).ToList()
+                    Price = c.Price,
+                    Color = c.Color,
+                    CreatedAt = c.CreatedAt
                 })
                 .ToListAsync(cancellationToken);
 
@@ -353,7 +289,7 @@ namespace GearUp.Infrastructure.Repositories
                 });
             }
 
-            return new CursorPageResult<CarResponseDto>
+            return new CursorPageResult<CarListDto>
             {
                 Items = cars.Take(PageSize).ToList(),
                 NextCursor = nextCursor,
@@ -418,7 +354,7 @@ namespace GearUp.Infrastructure.Repositories
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> GetAllCarsForAdminAsync(Cursor? cursor)
+        public async Task<CursorPageResult<CarListDto>> GetAllCarsForAdminAsync(Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
@@ -434,29 +370,21 @@ namespace GearUp.Infrastructure.Repositories
 
             var cars = await query
                 .Take(PageSize + 1)
-                .Select(c => new CarResponseDto
+                .Select(c => new CarListDto
                 {
                     Id = c.Id,
+                    ThumbnailUrl = c.Images.OrderBy(img => img.Id).Select(img => img.Url).FirstOrDefault() ?? string.Empty,
                     Title = c.Title,
-                    Description = c.Description,
                     Make = c.Make,
                     Model = c.Model,
-                    DealerId = c.DealerId,
-                    Year = c.Year,
-                    Color = c.Color,
+                    TransmissionType = c.Transmission,
+                    Mileage = c.Mileage,
+                    SeatingCapacity = c.SeatingCapacity,
                     Price = c.Price,
-                    VIN = c.VIN,
-                    CarStatus = c.Status,
-                    CarValidationStatus = c.ValidationStatus,
-                    CreatedAt = c.CreatedAt,
-                    CarImages = c.Images.Select(img => new CarImageDto
-                    {
-                        Id = img.Id,
-                        CarId = img.CarId,
-                        Url = img.Url
-                    }).ToList()
+                    Color = c.Color,
+                    CreatedAt = c.CreatedAt
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             bool hasMore = cars.Count > PageSize;
             string? nextCursor = null;
@@ -471,7 +399,7 @@ namespace GearUp.Infrastructure.Repositories
                 });
             }
 
-            return new CursorPageResult<CarResponseDto>
+            return new CursorPageResult<CarListDto>
             {
                 Items = cars.Take(PageSize).ToList(),
                 NextCursor = nextCursor,
@@ -479,7 +407,7 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, Cursor? cursor)
+        public async Task<CursorPageResult<CarListDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
@@ -495,29 +423,21 @@ namespace GearUp.Infrastructure.Repositories
 
             var cars = await query
                 .Take(PageSize + 1)
-                .Select(c => new CarResponseDto
+                .Select(c => new CarListDto
                 {
                     Id = c.Id,
+                    ThumbnailUrl = c.Images.OrderBy(img => img.Id).Select(img => img.Url).FirstOrDefault() ?? string.Empty,
                     Title = c.Title,
-                    Description = c.Description,
                     Make = c.Make,
                     Model = c.Model,
-                    DealerId = c.DealerId,
-                    Year = c.Year,
-                    Color = c.Color,
+                    TransmissionType = c.Transmission,
+                    Mileage = c.Mileage,
+                    SeatingCapacity = c.SeatingCapacity,
                     Price = c.Price,
-                    VIN = c.VIN,
-                    CarStatus = c.Status,
-                    CarValidationStatus = c.ValidationStatus,
-                    CreatedAt = c.CreatedAt,
-                    CarImages = c.Images.Select(img => new CarImageDto
-                    {
-                        Id = img.Id,
-                        CarId = img.CarId,
-                        Url = img.Url
-                    }).ToList()
+                    Color = c.Color,
+                    CreatedAt = c.CreatedAt
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             bool hasMore = cars.Count > PageSize;
             string? nextCursor = null;
@@ -532,7 +452,7 @@ namespace GearUp.Infrastructure.Repositories
                 });
             }
 
-            return new CursorPageResult<CarResponseDto>
+            return new CursorPageResult<CarListDto>
             {
                 Items = cars.Take(PageSize).ToList(),
                 NextCursor = nextCursor,
@@ -540,7 +460,7 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, Cursor? cursor)
+        public async Task<CursorPageResult<CarListDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
@@ -556,29 +476,21 @@ namespace GearUp.Infrastructure.Repositories
 
             var cars = await query
                 .Take(PageSize + 1)
-                .Select(c => new CarResponseDto
+                .Select(c => new CarListDto
                 {
                     Id = c.Id,
+                    ThumbnailUrl = c.Images.OrderBy(img => img.Id).Select(img => img.Url).FirstOrDefault() ?? string.Empty,
                     Title = c.Title,
-                    Description = c.Description,
                     Make = c.Make,
                     Model = c.Model,
-                    DealerId = c.DealerId,
-                    Year = c.Year,
-                    Color = c.Color,
+                    TransmissionType = c.Transmission,
+                    Mileage = c.Mileage,
+                    SeatingCapacity = c.SeatingCapacity,
                     Price = c.Price,
-                    VIN = c.VIN,
-                    CarStatus = c.Status,
-                    CarValidationStatus = c.ValidationStatus,
-                    CreatedAt = c.CreatedAt,
-                    CarImages = c.Images.Select(img => new CarImageDto
-                    {
-                        Id = img.Id,
-                        CarId = img.CarId,
-                        Url = img.Url
-                    }).ToList()
+                    Color = c.Color,
+                    CreatedAt = c.CreatedAt
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             bool hasMore = cars.Count > PageSize;
             string? nextCursor = null;
@@ -593,7 +505,7 @@ namespace GearUp.Infrastructure.Repositories
                 });
             }
 
-            return new CursorPageResult<CarResponseDto>
+            return new CursorPageResult<CarListDto>
             {
                 Items = cars.Take(PageSize).ToList(),
                 NextCursor = nextCursor,
