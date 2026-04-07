@@ -203,6 +203,25 @@ dotnet ef database update --project GearUp.Infrastructure --startup-project Gear
 
 ---
 
+
+## 🧰 DbContext Pooling & Resiliency Startup Notes
+
+`GearUp.Infrastructure/DependencyInjection.cs` configures EF Core MySQL with pooled contexts for throughput and resilience:
+
+* `AddDbContextPool<GearUpDbContext>(poolSize: 128)` to reduce DbContext allocation overhead.
+* `EnableRetryOnFailure(...)` for transient MySQL/network fault handling (`maxRetryCount: 5`, `maxRetryDelay: 10s`).
+* `CommandTimeout(60)` to allow heavier read/query workloads without premature command cancellation.
+
+### Pooled-context safety assumptions
+
+Because pooled contexts are reused, do **not** store per-request mutable state on `GearUpDbContext` instances. The current `GearUpDbContext` implementation is compatible with pooling because it only exposes `DbSet<>` properties and model configuration, with no request/user-specific fields.
+
+When adding new behavior, keep these rules:
+
+1. Keep request-specific state in scoped services, not on `GearUpDbContext` fields/properties.
+2. Avoid changing context-level settings dynamically per request (for example mutable tracking defaults on a shared instance).
+3. Continue injecting repositories/services as scoped dependencies so each request gets a leased context instance from the pool.
+
 ## 🔐 Authentication & Authorization
 
 GearUp uses **JWT Bearer Tokens** for secure authentication.

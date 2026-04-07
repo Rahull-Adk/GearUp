@@ -10,9 +10,29 @@ namespace GearUp.Infrastructure
 {
     public static class DependencyInjection
     {
+        private const int DbContextPoolSize = 128;
+        private const int DbCommandTimeoutSeconds = 60;
+        private const int MaxRetryCount = 5;
+        private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(10);
+
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString, string audience, string issuer, string accessToken_SecretKey, string brevo_api_key, string fromEmail, string emailVerificationToken_SecretKey, string clientUrl, ILogger<EmailSender> logger)
         {
-            services.AddDbContext<GearUpDbContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))/*.LogTo(Console.WriteLine, LogLevel.Information)*/);
+            var serverVersion = ServerVersion.AutoDetect(connectionString);
+
+            services.AddDbContextPool<GearUpDbContext>(
+                options =>
+                    options.UseMySql(
+                        connectionString,
+                        serverVersion,
+                        mysqlOptions =>
+                        {
+                            mysqlOptions.EnableRetryOnFailure(
+                                maxRetryCount: MaxRetryCount,
+                                maxRetryDelay: MaxRetryDelay,
+                                errorNumbersToAdd: null);
+                            mysqlOptions.CommandTimeout(DbCommandTimeoutSeconds);
+                        }),
+                poolSize: DbContextPoolSize);
 
             services.AddSingleton<ITokenGenerator>(new TokenGenerator(accessToken_SecretKey, audience, issuer, emailVerificationToken_SecretKey));
 
