@@ -22,14 +22,14 @@ namespace GearUp.Application.Services.Users
             _logger = logger;
         }
 
-        public async Task<Result<KycUserResponseDto>> SubmitKycService(string userId, KycRequestDto req)
+        public async Task<Result<KycUserResponseDto>> SubmitKycService(string userId, KycRequestDto req, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Submitting KYC for user ID: {UserId}", userId);
 
             if (string.IsNullOrEmpty(userId))
                 return Result<KycUserResponseDto>.Failure("Unauthorized", 401);
 
-            var user = await _userRepo.GetUserEntityByIdAsync(Guid.Parse(userId));
+            var user = await _userRepo.GetUserEntityByIdAsync(Guid.Parse(userId), cancellationToken);
             if (user == null)
                 return Result<KycUserResponseDto>.Failure("User not found", 404);
 

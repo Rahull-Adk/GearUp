@@ -20,9 +20,9 @@ namespace GearUp.Application.Interfaces.Services
             Guid? carId = null);
 
 
-        Task<Result<CursorPageResult<NotificationDto>>> GetNotificationsAsync(Guid userId, string? cursor, int pageSize = 20);
+        Task<Result<CursorPageResult<NotificationDto>>> GetNotificationsAsync(Guid userId, string? cursor, int pageSize = 20, CancellationToken cancellationToken = default);
 
-        Task<Result<int>> GetUnreadCountAsync(Guid userId);
+        Task<Result<int>> GetUnreadCountAsync(Guid userId, CancellationToken cancellationToken = default);
 
         Task<Result<bool>> MarkAsReadAsync(Guid notificationId, Guid userId);
 
@@ -33,4 +33,3 @@ namespace GearUp.Application.Interfaces.Services
         Task<Result<bool>> DeleteAllNotificationsAsync(Guid userId);
     }
 }
-

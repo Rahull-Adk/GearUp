@@ -43,7 +43,7 @@ namespace GearUp.Application.Services.Posts
             _cacheService = cacheService;
         }
 
-        public async Task<Result<CursorPageResult<PostResponseDto>>> GetLatestFeedAsync(Guid userId, string? cursor)
+        public async Task<Result<CursorPageResult<PostResponseDto>>> GetLatestFeedAsync(Guid userId, string? cursor, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching page posts for user: {UserId}", userId);
             Cursor? c = null;
@@ -62,7 +62,7 @@ namespace GearUp.Application.Services.Posts
                 return Result<CursorPageResult<PostResponseDto>>.Success(cachedFeed, "Post fecthed successfully.");
             }
 
-            var postsPaged = await _postRepository.GetLatestFeedAsync(c, userId);
+            var postsPaged = await _postRepository.GetLatestFeedAsync(c, userId, cancellationToken);
             await _cacheService.SetAsync(cacheKey, postsPaged, FeedCacheTtl);
 
             _logger.LogInformation("Posts fetched successfully from database");
@@ -70,7 +70,7 @@ namespace GearUp.Application.Services.Posts
             return Result<CursorPageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
         }
 
-        public async Task<Result<CursorPageResult<PostResponseDto?>>> GetMyPosts(Guid userId, string? cursorString)
+        public async Task<Result<CursorPageResult<PostResponseDto?>>> GetMyPosts(Guid userId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching posts for user: {UserId}", userId);
 
@@ -91,7 +91,7 @@ namespace GearUp.Application.Services.Posts
                 return Result<CursorPageResult<PostResponseDto?>>.Success(cachedPosts, "Post fetched successfully.");
             }
 
-            var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(cursor, userId);
+            var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(cursor, userId, cancellationToken);
             await _cacheService.SetAsync(cacheKey, postsPaged, FeedCacheTtl);
 
             _logger.LogInformation("Posts fetched successfully from database");
@@ -100,10 +100,10 @@ namespace GearUp.Application.Services.Posts
         }
 
 
-        public async Task<Result<PostResponseDto>> GetPostByIdAsync(Guid id, Guid currUserId)
+        public async Task<Result<PostResponseDto>> GetPostByIdAsync(Guid id, Guid currUserId, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching post with Id: {PostId}", id);
-            var post = await _postRepository.GetPostByIdAsync(id, currUserId);
+            var post = await _postRepository.GetPostByIdAsync(id, currUserId, cancellationToken);
             if (post == null)
             {
                 _logger.LogWarning("Post with Id: {PostId} not found", id);
@@ -128,7 +128,7 @@ namespace GearUp.Application.Services.Posts
                 hasChanges = true;
 
                 // Get post entity and increment view count
-                var postEntity = await _postRepository.GetPostEntityByIdAsync(id);
+                var postEntity = await _postRepository.GetPostEntityByIdAsync(id, cancellationToken);
                 if (postEntity != null)
                 {
                     postEntity.IncrementViewCount();
@@ -182,10 +182,10 @@ namespace GearUp.Application.Services.Posts
             return Result<PostResponseDto>.Success(null!, "Post created successfully", 201);
         }
 
-        public async Task<Result<CursorPageResult<UserEngagementDto>>> GetPostLikersAsync(Guid postId, string? cursorString)
+        public async Task<Result<CursorPageResult<UserEngagementDto>>> GetPostLikersAsync(Guid postId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting all users liked for Post with Id: {PostId}", postId);
-            var postEntity = await _postRepository.GetPostEntityByIdAsync(postId);
+            var postEntity = await _postRepository.GetPostEntityByIdAsync(postId, cancellationToken);
             if (postEntity == null)
                 return Result<CursorPageResult<UserEngagementDto>>.Failure("Post not found", 404);
 
@@ -198,7 +198,7 @@ namespace GearUp.Application.Services.Posts
                 }
             }
 
-            var likedUsers = await _postRepository.GetPostLikersAsync(postId, cursor);
+            var likedUsers = await _postRepository.GetPostLikersAsync(postId, cursor, cancellationToken);
 
             return Result<CursorPageResult<UserEngagementDto>>.Success(likedUsers);
         }

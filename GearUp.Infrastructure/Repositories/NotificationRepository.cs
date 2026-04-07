@@ -21,12 +21,12 @@ namespace GearUp.Infrastructure.Repositories
             await _db.Notifications.AddAsync(notification);
         }
 
-        public async Task<Notification?> GetNotificationByIdAsync(Guid notificationId)
+        public async Task<Notification?> GetNotificationByIdAsync(Guid notificationId, CancellationToken cancellationToken = default)
         {
-            return await _db.Notifications.FirstOrDefaultAsync(n => n.Id == notificationId);
+            return await _db.Notifications.FirstOrDefaultAsync(n => n.Id == notificationId, cancellationToken);
         }
 
-        public async Task<CursorPageResult<NotificationDto>> GetNotificationsByUserIdAsync(Guid userId, Cursor? cursor, int pageSize = 20)
+        public async Task<CursorPageResult<NotificationDto>> GetNotificationsByUserIdAsync(Guid userId, Cursor? cursor, int pageSize = 20, CancellationToken cancellationToken = default)
         {
             IQueryable<Notification> query = _db.Notifications
                 .AsNoTracking()
@@ -57,7 +57,7 @@ namespace GearUp.Infrastructure.Repositories
                     AppointmentId = n.AppointmentId,
                     SentAt = n.CreatedAt
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             bool hasMore = rows.Count > pageSize;
             string? nextCursor = null;
@@ -80,11 +80,11 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<int> GetUnreadNotificationCountAsync(Guid userId)
+        public async Task<int> GetUnreadNotificationCountAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             return await _db.Notifications
                 .AsNoTracking()
-                .CountAsync(n => n.ReceiverUserId == userId && !n.IsRead);
+                .CountAsync(n => n.ReceiverUserId == userId && !n.IsRead, cancellationToken);
         }
 
         public async Task MarkNotificationAsReadAsync(Guid notificationId)

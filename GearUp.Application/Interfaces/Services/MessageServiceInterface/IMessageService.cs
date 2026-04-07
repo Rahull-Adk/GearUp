@@ -7,9 +7,9 @@ namespace GearUp.Application.Interfaces.Services.MessageServiceInterface
     public interface IMessageService
     {
         Task<Result<MessageResponseDto>> SendMessageAsync(SendMessageRequestDto dto, Guid senderId);
-        Task<Result<CursorPageResult<ConversationResponseDto>>> GetConversationsAsync(Guid userId, string? cursor);
-        Task<Result<ConversationDetailResponseDto>> GetConversationAsync(Guid conversationId, Guid userId, string? cursor);
-        Task<Result<ConversationDetailResponseDto>> GetOrCreateConversationWithUserAsync(Guid currentUserId, Guid otherUserId);
+        Task<Result<CursorPageResult<ConversationResponseDto>>> GetConversationsAsync(Guid userId, string? cursor, CancellationToken cancellationToken = default);
+        Task<Result<ConversationDetailResponseDto>> GetConversationAsync(Guid conversationId, Guid userId, string? cursor, CancellationToken cancellationToken = default);
+        Task<Result<ConversationDetailResponseDto>> GetOrCreateConversationWithUserAsync(Guid currentUserId, Guid otherUserId, CancellationToken cancellationToken = default);
         Task<Result<bool>> MarkConversationAsReadAsync(Guid conversationId, Guid userId);
     }
 }

@@ -35,7 +35,7 @@ namespace GearUp.Infrastructure.Repositories
             await _db.CarImages.AddRangeAsync(carImages);
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> GetAllCarsAsync(Cursor? cursor)
+        public async Task<CursorPageResult<CarResponseDto>> GetAllCarsAsync(Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
@@ -81,7 +81,7 @@ namespace GearUp.Infrastructure.Repositories
                         Url = img.Url
                     }).ToList()
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             bool hasMore = cars.Count > PageSize;
             string? nextCursor = null;
@@ -104,7 +104,7 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, Cursor? cursor)
+        public async Task<CursorPageResult<CarResponseDto>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
@@ -150,7 +150,7 @@ namespace GearUp.Infrastructure.Repositories
                         Url = img.Url
                     }).ToList()
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             bool hasMore = cars.Count > PageSize;
             string? nextCursor = null;
@@ -173,7 +173,7 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> GetDealerCarsAsync(Guid dealerId, Cursor? cursor)
+        public async Task<CursorPageResult<CarResponseDto>> GetDealerCarsAsync(Guid dealerId, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars
                 .AsNoTracking()
@@ -219,7 +219,7 @@ namespace GearUp.Infrastructure.Repositories
                         Url = img.Url
                     }).ToList()
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             bool hasMore = cars.Count > PageSize;
             string? nextCursor = null;
@@ -242,7 +242,7 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<CursorPageResult<CarResponseDto>> SearchCarsAsync(CarSearchDto dto, Cursor? cursor)
+        public async Task<CursorPageResult<CarResponseDto>> SearchCarsAsync(CarSearchDto dto, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Car> query = _db.Cars.AsNoTracking();
             query = query.Where(car => car.ValidationStatus == CarValidationStatus.Approved && car.Status == CarStatus.Available);
@@ -337,7 +337,7 @@ namespace GearUp.Infrastructure.Repositories
                         Url = img.Url
                     }).ToList()
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             bool hasMore = cars.Count > PageSize;
             string? nextCursor = null;
@@ -366,14 +366,14 @@ namespace GearUp.Infrastructure.Repositories
             return await _db.Cars.Where(c => c.ValidationStatus != CarValidationStatus.Default && c.Status == CarStatus.Available).Include(c => c.Images).FirstOrDefaultAsync(c => c.Id == carId);
         }
 
-        public async Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId)
+        public async Task<List<CarImageDto>> GetCarImagesByCarIdAsync(Guid carId, CancellationToken cancellationToken = default)
         {
             return await _db.CarImages.AsNoTracking().Where(img => img.CarId == carId).Select(ci => new CarImageDto
             {
                 Id = ci.Id,
                 CarId = ci.CarId,
                 Url = ci.Url
-            }).ToListAsync();
+            }).ToListAsync(cancellationToken);
         }
 
         public void RemoveCarImageByCarId(Car car)
@@ -381,7 +381,7 @@ namespace GearUp.Infrastructure.Repositories
             _db.CarImages.RemoveRange(car.Images);
         }
 
-        public async Task<CarResponseDto?> GetCarByIdAsync(Guid carId)
+        public async Task<CarResponseDto?> GetCarByIdAsync(Guid carId, CancellationToken cancellationToken = default)
         {
             return await _db.Cars.Where(c => c.Id == carId)
                 .AsNoTracking()
@@ -415,7 +415,7 @@ namespace GearUp.Infrastructure.Repositories
                         Url = img.Url
                     }).ToList()
                 })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
         public async Task<CursorPageResult<CarResponseDto>> GetAllCarsForAdminAsync(Cursor? cursor)

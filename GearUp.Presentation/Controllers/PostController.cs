@@ -21,29 +21,29 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize]
         [HttpGet("{postId:guid}")]
-        public async Task<IActionResult> GetPostById([FromRoute] Guid postId)
+        public async Task<IActionResult> GetPostById([FromRoute] Guid postId, CancellationToken cancellationToken = default)
         {
             var currUserId = User.FindFirst(u => u.Type == "id")?.Value ?? Guid.Empty.ToString();
-            var result = await _postService.GetPostByIdAsync(postId, Guid.Parse(currUserId));
+            var result = await _postService.GetPostByIdAsync(postId, Guid.Parse(currUserId), cancellationToken);
             return StatusCode(result.Status, result);
         }
 
         [Authorize]
         [HttpGet("")]
-        public async Task<IActionResult> GetFeed([FromQuery] string? cursor)
+        public async Task<IActionResult> GetFeed([FromQuery] string? cursor, CancellationToken cancellationToken = default)
         {
             var currUserId = User.FindFirst(u => u.Type == "id")?.Value ?? Guid.Empty.ToString();
-            var pageResult = await _postService.GetLatestFeedAsync(Guid.Parse(currUserId), cursor!);
+            var pageResult = await _postService.GetLatestFeedAsync(Guid.Parse(currUserId), cursor!, cancellationToken);
             return Ok(pageResult);
         }
 
         [Authorize(Policy = "DealerOnly")]
         [HttpGet("me")]
 
-        public async Task<IActionResult> GetMyPosts([FromQuery] string? cursor)
+        public async Task<IActionResult> GetMyPosts([FromQuery] string? cursor, CancellationToken cancellationToken = default)
         {
             var currUserId = User.FindFirst(u => u.Type == "id")?.Value ?? Guid.Empty.ToString();
-            var result = await _postService.GetMyPosts(Guid.Parse(currUserId), cursor);
+            var result = await _postService.GetMyPosts(Guid.Parse(currUserId), cursor, cancellationToken);
             return StatusCode(result.Status, result);
         }
 
@@ -76,9 +76,9 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize]
         [HttpGet("{postId:guid}/like")]
-        public async Task<IActionResult> GetLikedUsers([FromRoute] Guid postId, [FromQuery] string? cursor)
+        public async Task<IActionResult> GetLikedUsers([FromRoute] Guid postId, [FromQuery] string? cursor, CancellationToken cancellationToken = default)
         {
-            var likedUsers = await _postService.GetPostLikersAsync(postId, cursor);
+            var likedUsers = await _postService.GetPostLikersAsync(postId, cursor, cancellationToken);
             return StatusCode(likedUsers.Status, likedUsers);
         }
 

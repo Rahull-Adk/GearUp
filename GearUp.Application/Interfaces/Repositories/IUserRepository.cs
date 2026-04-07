@@ -16,7 +16,7 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<RegisterResponseDto?> GetUserByEmailAsync(string email);
 
         Task<User?> GetUserEntityByUsernameAsync(string username);
-        Task<User?> GetUserEntityByIdAsync(Guid id);
+        Task<User?> GetUserEntityByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task SaveChangesAsync();
         Task<bool> UserExistAsync(Guid userId);
     }

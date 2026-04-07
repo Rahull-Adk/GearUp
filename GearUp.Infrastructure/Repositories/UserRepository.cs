@@ -92,9 +92,9 @@ namespace GearUp.Infrastructure.Repositories
             await _db.SaveChangesAsync();
         }
 
-        public async Task<User?> GetUserEntityByIdAsync(Guid id)
+        public async Task<User?> GetUserEntityByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return await _db.Users.SingleOrDefaultAsync(u => u.Id == id);
+            return await _db.Users.SingleOrDefaultAsync(u => u.Id == id, cancellationToken);
         }
     }
 }

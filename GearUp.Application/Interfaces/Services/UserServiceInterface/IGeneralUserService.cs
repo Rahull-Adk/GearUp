@@ -9,6 +9,6 @@ namespace GearUp.Application.Interfaces.Services.UserServiceInterface
     {
         Task<Result<RegisterResponseDto>> GetCurrentUserProfileService(string userId);
         Task<Result<RegisterResponseDto>> GetUserProfile(string username);
-        Task<Result<CursorPageResult<PostResponseDto?>>> GetPostsByDealerId(Guid dealerId, string? cursor);
+        Task<Result<CursorPageResult<PostResponseDto?>>> GetPostsByDealerId(Guid dealerId, string? cursor, CancellationToken cancellationToken = default);
     }
 }

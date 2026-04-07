@@ -40,7 +40,7 @@ namespace GearUp.Application.Services.Users
             _logger.LogInformation("User profile fetched successfully for user ID: {UserId}", userId);
             return Result<RegisterResponseDto>.Success(user, "User fetched Successfully", 200);
         }
-        public async Task<Result<CursorPageResult<PostResponseDto?>>> GetPostsByDealerId(Guid dealerId, string? cursorString)
+        public async Task<Result<CursorPageResult<PostResponseDto?>>> GetPostsByDealerId(Guid dealerId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching posts for user: {UserId}", dealerId);
 
@@ -53,7 +53,7 @@ namespace GearUp.Application.Services.Users
                 }
             }
 
-            var postsPaged = await _postRepo.GetAllUserPostByUserIdAsync(cursor, dealerId);
+            var postsPaged = await _postRepo.GetAllUserPostByUserIdAsync(cursor, dealerId, cancellationToken);
 
             _logger.LogInformation("Posts fetched successfully from database");
 

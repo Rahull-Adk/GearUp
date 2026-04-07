@@ -9,13 +9,13 @@ namespace GearUp.Application.Interfaces.Repositories
     public interface IPostRepository
     {
         Task AddPostAsync(Post post);
-        Task<CursorPageResult<PostResponseDto>> GetLatestFeedAsync(Cursor? c, Guid currUserId);
-        Task<PostResponseDto?> GetPostByIdAsync(Guid postId, Guid currUserId);
-        Task<CursorPageResult<PostResponseDto?>> GetAllUserPostByUserIdAsync(Cursor? c, Guid currUserId);
+        Task<CursorPageResult<PostResponseDto>> GetLatestFeedAsync(Cursor? c, Guid currUserId, CancellationToken cancellationToken = default);
+        Task<PostResponseDto?> GetPostByIdAsync(Guid postId, Guid currUserId, CancellationToken cancellationToken = default);
+        Task<CursorPageResult<PostResponseDto?>> GetAllUserPostByUserIdAsync(Cursor? c, Guid currUserId, CancellationToken cancellationToken = default);
         Task<PostCountsDto?> GetCountsForPostById(Guid postId, Guid userId);
         Task<int> GetPostViewCountAsync(Guid postId);
         Task<bool> PostExistAsync(Guid PostId);
-        Task<Post?> GetPostEntityByIdAsync(Guid postId);
-        Task<CursorPageResult<UserEngagementDto>> GetPostLikersAsync(Guid postId, Cursor? cursor);
+        Task<Post?> GetPostEntityByIdAsync(Guid postId, CancellationToken cancellationToken = default);
+        Task<CursorPageResult<UserEngagementDto>> GetPostLikersAsync(Guid postId, Cursor? cursor, CancellationToken cancellationToken = default);
     }
 }
