@@ -3,11 +3,14 @@ using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.ServiceDtos.Post;
 using GearUp.Application.ServiceDtos.Socials;
 using GearUp.Domain.Entities.Posts;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace GearUp.Application.Services.Posts
 {
@@ -20,11 +23,15 @@ namespace GearUp.Application.Services.Posts
         private readonly ICarRepository _carRepository;
         private readonly IPostRepository _postRepository;
         private readonly IViewRepository _viewRepository;
-        private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
+
+        private const string FeedVersionScope = "posts:feed:version";
+        private static readonly TimeSpan FeedCacheTtl = TimeSpan.FromSeconds(60);
+        private static readonly TimeSpan FeedVersionTtl = TimeSpan.FromMinutes(10);
 
         public PostService(ILogger<IPostService> logger, IValidator<CreatePostRequestDto> createPostValidator,
             ICommonRepository commonRepository, ICarRepository carRepository, IPostRepository postRepository,
-            IUserRepository userRepository, IViewRepository viewRepository)
+            IUserRepository userRepository, IViewRepository viewRepository, ICacheService cacheService)
         {
             _logger = logger;
             _createPostValidator = createPostValidator;
@@ -33,6 +40,7 @@ namespace GearUp.Application.Services.Posts
             _postRepository = postRepository;
             _userRepository = userRepository;
             _viewRepository = viewRepository;
+            _cacheService = cacheService;
         }
 
         public async Task<Result<CursorPageResult<PostResponseDto>>> GetLatestFeedAsync(Guid userId, string? cursor)
@@ -46,7 +54,16 @@ namespace GearUp.Application.Services.Posts
                 return Result<CursorPageResult<PostResponseDto>>.Failure("Invalid cursor format.", 400);
             }
 
+            var cacheKey = await BuildFeedCacheKeyAsync("latest", userId, cursor);
+            var cachedFeed = await _cacheService.GetAsync<CursorPageResult<PostResponseDto>>(cacheKey);
+            if (cachedFeed != null)
+            {
+                _logger.LogInformation("Returning cached latest posts feed for user: {UserId}", userId);
+                return Result<CursorPageResult<PostResponseDto>>.Success(cachedFeed, "Post fecthed successfully.");
+            }
+
             var postsPaged = await _postRepository.GetLatestFeedAsync(c, userId);
+            await _cacheService.SetAsync(cacheKey, postsPaged, FeedCacheTtl);
 
             _logger.LogInformation("Posts fetched successfully from database");
 
@@ -66,7 +83,16 @@ namespace GearUp.Application.Services.Posts
                 }
             }
 
+            var cacheKey = await BuildFeedCacheKeyAsync("mine", userId, cursorString);
+            var cachedPosts = await _cacheService.GetAsync<CursorPageResult<PostResponseDto?>>(cacheKey);
+            if (cachedPosts != null)
+            {
+                _logger.LogInformation("Returning cached posts for user: {UserId}", userId);
+                return Result<CursorPageResult<PostResponseDto?>>.Success(cachedPosts, "Post fetched successfully.");
+            }
+
             var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(cursor, userId);
+            await _cacheService.SetAsync(cacheKey, postsPaged, FeedCacheTtl);
 
             _logger.LogInformation("Posts fetched successfully from database");
 
@@ -144,6 +170,7 @@ namespace GearUp.Application.Services.Posts
             var post = Post.CreatePost(req.Caption, req.Content, req.Visibility, dealerId, req.CarId);
             await _postRepository.AddPostAsync(post);
             await _commonRepository.SaveChangesAsync();
+            await InvalidateFeedCachesAsync();
             _logger.LogInformation("Post created successfully with Id: {PostId}", post.Id);
 
             return Result<PostResponseDto>.Success(null!, "Post created successfully", 201);
@@ -189,6 +216,7 @@ namespace GearUp.Application.Services.Posts
 
             postEntity.SoftDelete();
             await _commonRepository.SaveChangesAsync();
+            await InvalidateFeedCachesAsync();
 
             _logger.LogInformation("Post with Id: {PostId} deleted", id);
             return Result<bool>.Success(true, "Post deleted successfully", 200);
@@ -216,9 +244,42 @@ namespace GearUp.Application.Services.Posts
 
             postEntity.UpdateContent(dto.Caption, dto.Content, dto.Visibility);
             await _commonRepository.SaveChangesAsync();
+            await InvalidateFeedCachesAsync();
 
             _logger.LogInformation("Post with Id: {PostId} updated", id);
             return Result<string>.Success(null!, "Post updated successfully", 200);
+        }
+
+        private async Task<string> BuildFeedCacheKeyAsync(string scope, Guid userId, string? cursorOrFilter)
+        {
+            var version = await GetOrCreateCacheVersionAsync(FeedVersionScope);
+            var hash = HashValue(cursorOrFilter ?? "none");
+            return $"posts:{scope}:u:{userId}:v:{version}:h:{hash}";
+        }
+
+        private async Task InvalidateFeedCachesAsync()
+        {
+            await _cacheService.RemoveAsync(FeedVersionScope);
+        }
+
+        private async Task<string> GetOrCreateCacheVersionAsync(string scope)
+        {
+            var key = $"{scope}";
+            var version = await _cacheService.GetAsync<string>(key);
+            if (!string.IsNullOrWhiteSpace(version))
+            {
+                return version;
+            }
+
+            version = Guid.NewGuid().ToString("N");
+            await _cacheService.SetAsync(key, version, FeedVersionTtl);
+            return version;
+        }
+
+        private static string HashValue(string value)
+        {
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+            return Convert.ToHexString(bytes).ToLowerInvariant();
         }
     }
 }

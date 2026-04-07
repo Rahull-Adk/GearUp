@@ -8,6 +8,8 @@ using GearUp.Application.ServiceDtos.Car;
 using GearUp.Domain.Entities;
 using GearUp.Domain.Enums;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace GearUp.Application.Services.Admin
 {
@@ -18,22 +20,28 @@ namespace GearUp.Application.Services.Admin
         private readonly ICarRepository _carRepository;
         private readonly ILogger<GeneralAdminService> _logger;
         private readonly INotificationService _notificationService;
+        private readonly ICacheService _cacheService;
+        private const string KycVersionScope = "admin:kyc:version";
+        private static readonly TimeSpan KycCacheTtl = TimeSpan.FromSeconds(90);
+        private static readonly TimeSpan VersionTtl = TimeSpan.FromMinutes(10);
 
         public GeneralAdminService(
             IAdminRepository adminRepository,
             IUserRepository userRepository,
             ICarRepository carRepository,
             ILogger<GeneralAdminService> logger,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            ICacheService cacheService)
         {
             _adminRepository = adminRepository;
             _userRepository = userRepository;
             _carRepository = carRepository;
             _logger = logger;
             _notificationService = notificationService;
+            _cacheService = cacheService;
         }
 
-        public async Task<Result<CursorPageResult<ToAdminKycResponseDto>>> GetAllKycs(string? cursorString)
+        public async Task<Result<CursorPageResult<ToAdminKycResponseDto>>> GetAllKycs(Guid adminUserId, string? cursorString)
         {
             _logger.LogInformation("Fetching all KYC submissions");
 
@@ -46,7 +54,15 @@ namespace GearUp.Application.Services.Admin
                 }
             }
 
+            var cacheKey = await BuildKycCacheKeyAsync("all", adminUserId, cursorString);
+            var cachedKycs = await _cacheService.GetAsync<CursorPageResult<ToAdminKycResponseDto>>(cacheKey);
+            if (cachedKycs != null)
+            {
+                return Result<CursorPageResult<ToAdminKycResponseDto>>.Success(cachedKycs, "KYC submissions retrieved successfully", 200);
+            }
+
             var kycs = await _adminRepository.GetAllKycSubmissionsAsync(cursor);
+            await _cacheService.SetAsync(cacheKey, kycs, KycCacheTtl);
 
             _logger.LogInformation("KYC submissions retrieved successfully");
             return Result<CursorPageResult<ToAdminKycResponseDto>>.Success(kycs, "KYC submissions retrieved successfully", 200);
@@ -65,7 +81,7 @@ namespace GearUp.Application.Services.Admin
             return Result<ToAdminKycResponseDto>.Success(kyc, "KYC submission retrieved successfully", 200);
         }
 
-        public async Task<Result<CursorPageResult<ToAdminKycResponseDto>>> GetKycsByStatus(KycStatus status, string? cursorString)
+        public async Task<Result<CursorPageResult<ToAdminKycResponseDto>>> GetKycsByStatus(Guid adminUserId, KycStatus status, string? cursorString)
         {
             _logger.LogInformation("Fetching KYC submissions with status: {Status}", status);
 
@@ -83,7 +99,15 @@ namespace GearUp.Application.Services.Admin
                 }
             }
 
+            var cacheKey = await BuildKycCacheKeyAsync($"status:{status}", adminUserId, cursorString);
+            var cachedKycs = await _cacheService.GetAsync<CursorPageResult<ToAdminKycResponseDto>>(cacheKey);
+            if (cachedKycs != null)
+            {
+                return Result<CursorPageResult<ToAdminKycResponseDto>>.Success(cachedKycs, "KYC submissions retrieved successfully", 200);
+            }
+
             var kycs = await _adminRepository.GetKycSubmissionsByStatusAsync(status, cursor);
+            await _cacheService.SetAsync(cacheKey, kycs, KycCacheTtl);
             _logger.LogInformation("KYC submissions retrieved successfully");
             return Result<CursorPageResult<ToAdminKycResponseDto>>.Success(kycs, "KYC submissions retrieved successfully", 200);
         }
@@ -152,9 +176,36 @@ namespace GearUp.Application.Services.Admin
                 userId,
                 kycId: kycId
             );
+            await _cacheService.RemoveAsync(KycVersionScope);
 
             _logger.LogInformation("KYC submission status updated successfully");
             return Result<string>.Success(null!, "KYC status updated successfully", 200);
+        }
+
+        private async Task<string> BuildKycCacheKeyAsync(string scope, Guid adminUserId, string? cursor)
+        {
+            var version = await GetOrCreateVersionAsync();
+            var hash = HashValue(cursor ?? "none");
+            return $"admin:kyc:{scope}:u:{adminUserId}:v:{version}:h:{hash}";
+        }
+
+        private async Task<string> GetOrCreateVersionAsync()
+        {
+            var version = await _cacheService.GetAsync<string>(KycVersionScope);
+            if (!string.IsNullOrWhiteSpace(version))
+            {
+                return version;
+            }
+
+            version = Guid.NewGuid().ToString("N");
+            await _cacheService.SetAsync(KycVersionScope, version, VersionTtl);
+            return version;
+        }
+
+        private static string HashValue(string value)
+        {
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+            return Convert.ToHexString(bytes).ToLowerInvariant();
         }
 
         // Car methods

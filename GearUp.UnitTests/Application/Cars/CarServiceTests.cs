@@ -26,6 +26,7 @@ namespace GearUp.UnitTests.Application.Cars
         private readonly Mock<ICarRepository> _carRepo = new();
         private readonly Mock<ICommonRepository> _commonRepo = new();
         private readonly Mock<ICarImageService> _carImageService = new();
+        private readonly Mock<ICacheService> _cacheService = new();
 
         private CarService CreateService() => new(
             _createValidator.Object,
@@ -34,7 +35,8 @@ namespace GearUp.UnitTests.Application.Cars
             _commonRepo.Object,
             _carImageService.Object,
             _updateValidator.Object,
-            _userRepository.Object
+            _userRepository.Object,
+            _cacheService.Object
         );
 
         private static ValidationResult Valid() => new ValidationResult();

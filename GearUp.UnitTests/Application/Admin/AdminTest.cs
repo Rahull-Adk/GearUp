@@ -18,13 +18,15 @@ namespace GearUp.UnitTests.Application.Admin
         private readonly Mock<ICarRepository> _mockCarRepository = new();
         private readonly Mock<ILogger<GeneralAdminService>> _mockLogger = new();
         private readonly Mock<INotificationService> _mockNotificationService = new();
+        private readonly Mock<ICacheService> _mockCacheService = new();
 
         private GeneralAdminService CreateService() => new(
             _mockAdminRepository.Object,
             _mockUserRepository.Object,
             _mockCarRepository.Object,
             _mockLogger.Object,
-            _mockNotificationService.Object
+            _mockNotificationService.Object,
+            _mockCacheService.Object
         );
 
 
@@ -59,7 +61,7 @@ namespace GearUp.UnitTests.Application.Admin
 
             //Act
             var svc = CreateService();
-            var result = await svc.GetAllKycs(null);
+            var result = await svc.GetAllKycs(Guid.NewGuid(), null);
 
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
@@ -82,7 +84,7 @@ namespace GearUp.UnitTests.Application.Admin
 
             // Act
             var svc = CreateService();
-            var result = await svc.GetAllKycs(null);
+            var result = await svc.GetAllKycs(Guid.NewGuid(), null);
             // Assert
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
@@ -157,7 +159,7 @@ namespace GearUp.UnitTests.Application.Admin
 
             //Act
             var svc = CreateService();
-            var result = await svc.GetKycsByStatus(status, null);
+            var result = await svc.GetKycsByStatus(Guid.NewGuid(), status, null);
             // Assert
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
@@ -183,7 +185,7 @@ namespace GearUp.UnitTests.Application.Admin
             _mockAdminRepository.Setup(a => a.GetKycSubmissionsByStatusAsync(status, null)).ReturnsAsync(empty);
             //Act
             var svc = CreateService();
-            var result = await svc.GetKycsByStatus(status, null);
+            var result = await svc.GetKycsByStatus(Guid.NewGuid(), status, null);
             // Assert
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
@@ -200,7 +202,7 @@ namespace GearUp.UnitTests.Application.Admin
             var invalidStatus = (KycStatus)999; // Invalid enum value
             // Act
             var svc = CreateService();
-            var result = await svc.GetKycsByStatus(invalidStatus, null);
+            var result = await svc.GetKycsByStatus(Guid.NewGuid(), invalidStatus, null);
             // Assert
             Assert.NotNull(result);
             Assert.Equal(400, result.Status);
