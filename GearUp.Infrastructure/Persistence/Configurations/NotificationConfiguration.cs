@@ -12,6 +12,13 @@ namespace GearUp.Infrastructure.Persistence.Configurations
             builder.HasQueryFilter(n => n.ReceiverUser != null && !n.ReceiverUser.IsDeleted);
 
             builder
+                .HasIndex(n => new { n.ReceiverUserId, n.CreatedAt, n.Id })
+                .IsDescending(false, true, true);
+
+            builder
+                .HasIndex(n => new { n.ReceiverUserId, n.IsRead });
+
+            builder
                 .HasOne(n => n.ReceiverUser)
                 .WithMany(u => u.Notifications)
                 .HasForeignKey(n => n.ReceiverUserId)

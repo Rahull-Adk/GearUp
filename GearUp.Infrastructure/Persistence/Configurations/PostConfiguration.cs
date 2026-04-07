@@ -43,8 +43,6 @@ namespace GearUp.Infrastructure.Persistence.Configurations
 
             builder.HasIndex(p => new { p.IsDeleted, p.Visibility, p.CreatedAt, p.Id });
             builder.HasIndex(p => new { p.IsDeleted, p.UserId, p.CreatedAt, p.Id });
-
-            builder.HasIndex(p => new { p.UserId, p.CreatedAt, p.Id });
         }
     }
 }
