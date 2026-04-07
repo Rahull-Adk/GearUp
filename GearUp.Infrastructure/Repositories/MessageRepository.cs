@@ -54,21 +54,34 @@ namespace GearUp.Infrastructure.Repositories
                 .ThenByDescending(c => c.Id);
 
             var conversations = await query.Take(PageSize + 1).ToListAsync();
+            var pageConversations = conversations.Take(PageSize).ToList();
+            var pageConversationIds = pageConversations.Select(c => c.Id).ToList();
+
+            var unreadCounts = await (
+                from m in _db.Messages.AsNoTracking()
+                join p in _db.ConversationParticipants.AsNoTracking()
+                    on m.ConversationId equals p.ConversationId
+                where pageConversationIds.Contains(m.ConversationId)
+                      && p.UserId == userId
+                      && m.SenderId != userId
+                      && (p.LastReadAt == null || m.SentAt > p.LastReadAt)
+                group m by m.ConversationId
+                into g
+                select new
+                {
+                    ConversationId = g.Key,
+                    Count = g.Count()
+                }).ToDictionaryAsync(x => x.ConversationId, x => x.Count);
 
             var result = new List<ConversationResponseDto>();
 
-            foreach (var conv in conversations.Take(PageSize))
+            foreach (var conv in pageConversations)
             {
                 var otherParticipant = conv.Participants.FirstOrDefault(p => p.UserId != userId);
                 if (otherParticipant?.User == null) continue;
 
-                var myParticipant = conv.Participants.First(p => p.UserId == userId);
                 var lastMessage = conv.Messages.FirstOrDefault();
-
-                var unreadCount = await _db.Messages
-                    .CountAsync(m => m.ConversationId == conv.Id &&
-                                     m.SenderId != userId &&
-                                     (myParticipant.LastReadAt == null || m.SentAt > myParticipant.LastReadAt));
+                unreadCounts.TryGetValue(conv.Id, out var unreadCount);
 
                 result.Add(new ConversationResponseDto
                 {
