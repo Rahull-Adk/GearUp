@@ -119,21 +119,27 @@ namespace GearUp.Application.Services.Posts
             }
 
             bool viewTimeElapsed = await _viewRepository.HasViewTimeElapsedAsync(id, currUserId);
+            bool hasChanges = false;
 
             if (viewTimeElapsed)
             {
                 var view = PostView.CreatePostView(post.Id, currUserId);
                 await _viewRepository.CreatePostViewAsync(view);
+                hasChanges = true;
 
                 // Get post entity and increment view count
                 var postEntity = await _postRepository.GetPostEntityByIdAsync(id);
                 if (postEntity != null)
                 {
                     postEntity.IncrementViewCount();
+                    hasChanges = true;
                 }
             }
 
-            await _commonRepository.SaveChangesAsync();
+            if (hasChanges)
+            {
+                await _commonRepository.SaveChangesAsync();
+            }
             _logger.LogInformation("Post with Id: {PostId} fetched successfully", id);
             return Result<PostResponseDto>.Success(post, "Post fetched successfully", 200);
         }
