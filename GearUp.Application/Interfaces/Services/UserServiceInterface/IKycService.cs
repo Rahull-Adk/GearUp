@@ -5,6 +5,6 @@ namespace GearUp.Application.Interfaces.Services.UserServiceInterface
 {
     public interface IKycService
     {
-        Task<Result<KycUserResponseDto>> SubmitKycService(string userId, KycRequestDto req);
+        Task<Result<KycUserResponseDto>> SubmitKycService(string userId, KycRequestDto req, CancellationToken cancellationToken = default);
     }
 }

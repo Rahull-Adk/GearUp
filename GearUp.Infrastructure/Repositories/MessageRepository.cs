@@ -17,25 +17,25 @@ namespace GearUp.Infrastructure.Repositories
             _db = db;
         }
 
-        public async Task<Conversation?> GetConversationByIdAsync(Guid conversationId)
+        public async Task<Conversation?> GetConversationByIdAsync(Guid conversationId, CancellationToken cancellationToken = default)
         {
             return await _db.Conversations
                 .Include(c => c.Participants)
                     .ThenInclude(p => p.User)
-                .FirstOrDefaultAsync(c => c.Id == conversationId);
+                .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
         }
 
-        public async Task<Conversation?> GetConversationByParticipantsAsync(Guid userId1, Guid userId2)
+        public async Task<Conversation?> GetConversationByParticipantsAsync(Guid userId1, Guid userId2, CancellationToken cancellationToken = default)
         {
             return await _db.Conversations
                 .Include(c => c.Participants)
                     .ThenInclude(p => p.User)
                 .Where(c => c.Participants.Any(p => p.UserId == userId1) &&
                             c.Participants.Any(p => p.UserId == userId2))
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public async Task<CursorPageResult<ConversationResponseDto>> GetUserConversationsAsync(Guid userId, Cursor? cursor)
+        public async Task<CursorPageResult<ConversationResponseDto>> GetUserConversationsAsync(Guid userId, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Conversation> query = _db.Conversations
                 .AsNoTracking()
@@ -53,7 +53,7 @@ namespace GearUp.Infrastructure.Repositories
             query = query.OrderByDescending(c => c.LastMessageAt ?? c.CreatedAt)
                 .ThenByDescending(c => c.Id);
 
-            var conversations = await query.Take(PageSize + 1).ToListAsync();
+            var conversations = await query.Take(PageSize + 1).ToListAsync(cancellationToken);
             var pageConversations = conversations.Take(PageSize).ToList();
             var pageConversationIds = pageConversations.Select(c => c.Id).ToList();
 
@@ -71,7 +71,7 @@ namespace GearUp.Infrastructure.Repositories
                 {
                     ConversationId = g.Key,
                     Count = g.Count()
-                }).ToDictionaryAsync(x => x.ConversationId, x => x.Count);
+                }).ToDictionaryAsync(x => x.ConversationId, x => x.Count, cancellationToken);
 
             var result = new List<ConversationResponseDto>();
 
@@ -117,7 +117,7 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<CursorPageResult<Message>> GetConversationMessagesAsync(Guid conversationId, Cursor? cursor)
+        public async Task<CursorPageResult<Message>> GetConversationMessagesAsync(Guid conversationId, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             IQueryable<Message> query = _db.Messages
                 .AsNoTracking()
@@ -132,7 +132,7 @@ namespace GearUp.Infrastructure.Repositories
                     (m.SentAt == cursor.CreatedAt && m.Id.CompareTo(cursor.Id) < 0));
             }
 
-            var messages = await query.Take(PageSize + 1).ToListAsync();
+            var messages = await query.Take(PageSize + 1).ToListAsync(cancellationToken);
 
             bool hasMore = messages.Count > PageSize;
             string? nextCursor = null;
@@ -155,10 +155,10 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<bool> IsParticipantInConversationAsync(Guid conversationId, Guid userId)
+        public async Task<bool> IsParticipantInConversationAsync(Guid conversationId, Guid userId, CancellationToken cancellationToken = default)
         {
             return await _db.ConversationParticipants
-                .AnyAsync(p => p.ConversationId == conversationId && p.UserId == userId);
+                .AnyAsync(p => p.ConversationId == conversationId && p.UserId == userId, cancellationToken);
         }
 
         public async Task AddConversationAsync(Conversation conversation)

@@ -94,7 +94,7 @@ namespace GearUp.Infrastructure.Repositories
                 .ToList();
         }
 
-        private async Task<Dictionary<Guid, (string Username, string? AvatarUrl)>> GetUserLookupAsync(IEnumerable<Guid> userIds)
+        private async Task<Dictionary<Guid, (string Username, string? AvatarUrl)>> GetUserLookupAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default)
         {
             var ids = userIds.Distinct().ToList();
             if (ids.Count == 0)
@@ -106,10 +106,10 @@ namespace GearUp.Infrastructure.Repositories
                 .AsNoTracking()
                 .Where(u => ids.Contains(u.Id))
                 .Select(u => new { u.Id, u.Username, u.AvatarUrl })
-                .ToDictionaryAsync(u => u.Id, u => (u.Username, (string?)u.AvatarUrl));
+                .ToDictionaryAsync(u => u.Id, u => (u.Username, (string?)u.AvatarUrl), cancellationToken);
         }
 
-        private async Task<Dictionary<Guid, CarResponseDto>> GetCarLookupAsync(IReadOnlyCollection<Guid> carIds)
+        private async Task<Dictionary<Guid, CarResponseDto>> GetCarLookupAsync(IReadOnlyCollection<Guid> carIds, CancellationToken cancellationToken = default)
         {
             if (carIds.Count == 0)
             {
@@ -144,10 +144,10 @@ namespace GearUp.Infrastructure.Repositories
                     UpdatedAt = car.UpdatedAt,
                     CarImages = new List<CarImageDto>()
                 })
-                .ToDictionaryAsync(car => car.Id);
+                .ToDictionaryAsync(car => car.Id, cancellationToken);
         }
 
-        private async Task<Dictionary<Guid, List<CarImageDto>>> GetCarImageLookupAsync(IReadOnlyCollection<Guid> carIds)
+        private async Task<Dictionary<Guid, List<CarImageDto>>> GetCarImageLookupAsync(IReadOnlyCollection<Guid> carIds, CancellationToken cancellationToken = default)
         {
             if (carIds.Count == 0)
             {
@@ -163,14 +163,14 @@ namespace GearUp.Infrastructure.Repositories
                     CarId = ci.CarId,
                     Url = ci.Url
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             return carImages
                 .GroupBy(ci => ci.CarId)
                 .ToDictionary(g => g.Key, g => g.ToList());
         }
 
-        private async Task<HashSet<Guid>> GetLikedPostIdSetAsync(Guid currUserId, IReadOnlyCollection<Guid> postIds)
+        private async Task<HashSet<Guid>> GetLikedPostIdSetAsync(Guid currUserId, IReadOnlyCollection<Guid> postIds, CancellationToken cancellationToken = default)
         {
             if (postIds.Count == 0)
             {
@@ -181,7 +181,7 @@ namespace GearUp.Infrastructure.Repositories
                 .AsNoTracking()
                 .Where(l => l.LikedUserId == currUserId && postIds.Contains(l.PostId))
                 .Select(l => l.PostId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             return likedPostIds.ToHashSet();
         }
@@ -196,7 +196,7 @@ namespace GearUp.Infrastructure.Repositories
             await _db.Posts.AddAsync(post);
         }
 
-        public async Task<PostResponseDto?> GetPostByIdAsync(Guid postId, Guid currUserId)
+        public async Task<PostResponseDto?> GetPostByIdAsync(Guid postId, Guid currUserId, CancellationToken cancellationToken = default)
         {
             var post = await _db.Posts
                 .AsNoTracking()
@@ -215,7 +215,7 @@ namespace GearUp.Infrastructure.Repositories
                     CommentCount = p.CommentCount,
                     ViewCount = p.ViewCount
                 })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (post is null)
             {
@@ -226,7 +226,7 @@ namespace GearUp.Infrastructure.Repositories
                 .AsNoTracking()
                 .Where(u => u.Id == post.UserId)
                 .Select(u => new { u.Username, u.AvatarUrl })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (user is null)
             {
@@ -235,14 +235,14 @@ namespace GearUp.Infrastructure.Repositories
 
             var isLikedByCurrentUser = await _db.PostLikes
                 .AsNoTracking()
-                .AnyAsync(pl => pl.PostId == post.Id && pl.LikedUserId == currUserId);
+                .AnyAsync(pl => pl.PostId == post.Id && pl.LikedUserId == currUserId, cancellationToken);
 
             CarResponseDto? carDto = null;
             if (post.CarId is not null)
             {
                 var carIds = new List<Guid> { post.CarId.Value };
-                var cars = await GetCarLookupAsync(carIds);
-                var carImageLookup = await GetCarImageLookupAsync(carIds);
+                var cars = await GetCarLookupAsync(carIds, cancellationToken);
+                var carImageLookup = await GetCarImageLookupAsync(carIds, cancellationToken);
 
                 if (cars.TryGetValue(post.CarId.Value, out var car))
                 {
@@ -253,7 +253,7 @@ namespace GearUp.Infrastructure.Repositories
             return MapPostToDto(post, user.Username, user.AvatarUrl, isLikedByCurrentUser, carDto);
         }
 
-        public async Task<CursorPageResult<PostResponseDto?>> GetAllUserPostByUserIdAsync(Cursor? c, Guid currUserId)
+        public async Task<CursorPageResult<PostResponseDto?>> GetAllUserPostByUserIdAsync(Cursor? c, Guid currUserId, CancellationToken cancellationToken = default)
         {
             const int pageSize = 10;
 
@@ -284,7 +284,7 @@ namespace GearUp.Infrastructure.Repositories
                     CommentCount = p.CommentCount,
                     ViewCount = p.ViewCount
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             if (posts.Count == 0)
             {
@@ -300,7 +300,7 @@ namespace GearUp.Infrastructure.Repositories
                 .AsNoTracking()
                 .Where(u => u.Id == currUserId)
                 .Select(u => new { u.Username, u.AvatarUrl })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (author is null)
             {
@@ -313,11 +313,11 @@ namespace GearUp.Infrastructure.Repositories
             }
 
             var postIds = posts.Select(p => p.Id).ToList();
-            var likedSet = await GetLikedPostIdSetAsync(currUserId, postIds);
+            var likedSet = await GetLikedPostIdSetAsync(currUserId, postIds, cancellationToken);
 
             var carIds = GetDistinctCarIds(posts);
-            var cars = await GetCarLookupAsync(carIds);
-            var carImageLookup = await GetCarImageLookupAsync(carIds);
+            var cars = await GetCarLookupAsync(carIds, cancellationToken);
+            var carImageLookup = await GetCarImageLookupAsync(carIds, cancellationToken);
 
             var rows = posts.Select(p =>
             {
@@ -390,7 +390,7 @@ namespace GearUp.Infrastructure.Repositories
             return await _db.PostViews.CountAsync(pv => pv.PostId == postId);
         }
 
-        public async Task<CursorPageResult<PostResponseDto>> GetLatestFeedAsync(Cursor? c, Guid currUserId)
+        public async Task<CursorPageResult<PostResponseDto>> GetLatestFeedAsync(Cursor? c, Guid currUserId, CancellationToken cancellationToken = default)
         {
             const int pageSize = 10;
 
@@ -418,7 +418,7 @@ namespace GearUp.Infrastructure.Repositories
                     CommentCount = p.CommentCount,
                     ViewCount = p.ViewCount
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             if (posts.Count == 0)
             {
@@ -430,14 +430,14 @@ namespace GearUp.Infrastructure.Repositories
                 };
             }
 
-            var users = await GetUserLookupAsync(posts.Select(p => p.UserId));
+            var users = await GetUserLookupAsync(posts.Select(p => p.UserId), cancellationToken);
 
             var carIds = GetDistinctCarIds(posts);
-            var cars = await GetCarLookupAsync(carIds);
-            var carImageLookup = await GetCarImageLookupAsync(carIds);
+            var cars = await GetCarLookupAsync(carIds, cancellationToken);
+            var carImageLookup = await GetCarImageLookupAsync(carIds, cancellationToken);
 
             var postIds = posts.Select(p => p.Id).ToList();
-            var likedSet = await GetLikedPostIdSetAsync(currUserId, postIds);
+            var likedSet = await GetLikedPostIdSetAsync(currUserId, postIds, cancellationToken);
 
             var result = posts.Select(p =>
             {
@@ -478,12 +478,12 @@ namespace GearUp.Infrastructure.Repositories
             };
         }
 
-        public async Task<Post?> GetPostEntityByIdAsync(Guid postId)
+        public async Task<Post?> GetPostEntityByIdAsync(Guid postId, CancellationToken cancellationToken = default)
         {
-            return await _db.Posts.FirstOrDefaultAsync(p =>  !p.IsDeleted && p.Id == postId);
+            return await _db.Posts.FirstOrDefaultAsync(p =>  !p.IsDeleted && p.Id == postId, cancellationToken);
         }
 
-        public async Task<CursorPageResult<UserEngagementDto>> GetPostLikersAsync(Guid postId, Cursor? cursor)
+        public async Task<CursorPageResult<UserEngagementDto>> GetPostLikersAsync(Guid postId, Cursor? cursor, CancellationToken cancellationToken = default)
         {
             const int pageSize = 20;
 
@@ -508,7 +508,7 @@ namespace GearUp.Infrastructure.Repositories
                     ProfilePictureUrl = pl.LikedUser != null ? pl.LikedUser.AvatarUrl : string.Empty,
                     UpdatedAt = pl.UpdatedAt
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             bool hasMore = rows.Count > pageSize;
             string? nextCursor = null;

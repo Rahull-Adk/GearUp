@@ -118,7 +118,7 @@ namespace GearUp.Application.Services.Cars
             return Result<CarResponseDto>.Success(null!, "Car added successfully.", 201);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetAllCarsAsync(string? cursorString)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetAllCarsAsync(string? cursorString, CancellationToken cancellationToken = default)
         {
             Cursor? cursor = null;
             if (!string.IsNullOrEmpty(cursorString))
@@ -136,15 +136,15 @@ namespace GearUp.Application.Services.Cars
                 return Result<CursorPageResult<CarResponseDto>>.Success(cachedCars, "Cars fetched successfully", 200);
             }
 
-            var cars = await _carRepository.GetAllCarsAsync(cursor);
+            var cars = await _carRepository.GetAllCarsAsync(cursor, cancellationToken);
             await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
 
             return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
         }
 
-        public async Task<Result<CarResponseDto>> GetCarByIdAsync(Guid carId)
+        public async Task<Result<CarResponseDto>> GetCarByIdAsync(Guid carId, CancellationToken cancellationToken = default)
         {
-            var car = await _carRepository.GetCarByIdAsync(carId);
+            var car = await _carRepository.GetCarByIdAsync(carId, cancellationToken);
             if (car == null)
             {
                 _logger.LogWarning("Car ID: {CarId} not found.", carId);
@@ -234,7 +234,7 @@ namespace GearUp.Application.Services.Cars
 
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetDealerCarsAsync(Guid dealerId, string? cursorString)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetDealerCarsAsync(Guid dealerId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting cars of {DealerId}", dealerId);
 
@@ -262,7 +262,7 @@ namespace GearUp.Application.Services.Cars
                 }
             }
 
-            var cars = await _carRepository.GetDealerCarsAsync(dealerId, cursor);
+            var cars = await _carRepository.GetDealerCarsAsync(dealerId, cursor, cancellationToken);
 
             return Result<CursorPageResult<CarResponseDto>>.Success(cars, $"Cars fetched successfully");
         }
@@ -285,7 +285,7 @@ namespace GearUp.Application.Services.Cars
             return Result<CarResponseDto>.Success(null!, "Validation passed", 200);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> SearchCarsAsync(CarSearchDto? searchDto, string? cursorString)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> SearchCarsAsync(CarSearchDto? searchDto, string? cursorString, CancellationToken cancellationToken = default)
         {
             if (searchDto == null)
             {
@@ -318,12 +318,12 @@ namespace GearUp.Application.Services.Cars
                 return Result<CursorPageResult<CarResponseDto>>.Success(cachedCars, "Cars fetched successfully", 200);
             }
 
-            var cars = await _carRepository.SearchCarsAsync(searchDto, cursor);
+            var cars = await _carRepository.SearchCarsAsync(searchDto, cursor, cancellationToken);
             await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
             return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, string? cursorString)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting cars of {DealerId}", dealerId);
 
@@ -357,7 +357,7 @@ namespace GearUp.Application.Services.Cars
                 return Result<CursorPageResult<CarResponseDto>>.Success(cachedCars, $"{status} cars fetched successfully");
             }
 
-            var cars = await _carRepository.GetMyCarsAsync(dealerId, status, cursor);
+            var cars = await _carRepository.GetMyCarsAsync(dealerId, status, cursor, cancellationToken);
             await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
 
             return Result<CursorPageResult<CarResponseDto>>.Success(cars, $"{status} cars fetched successfully");
