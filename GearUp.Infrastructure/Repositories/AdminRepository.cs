@@ -76,7 +76,9 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task<ToAdminKycResponseDto?> GetKycSubmissionByIdAsync(Guid kycId)
         {
-            return await _db.KycSubmissions.Where(k => k.Id == kycId)
+            return await _db.KycSubmissions
+                .AsNoTracking()
+                .Where(k => k.Id == kycId)
                 .Select(k => new ToAdminKycResponseDto
                 {
                     Id = k.Id,
