@@ -45,14 +45,23 @@ string adminEmail = builder.Configuration["ADMIN_EMAIL"]!;
 string adminPassword = builder.Configuration["ADMIN_PASSWORD"]!;
 
 var app = builder.Build();
-using (var scope = app.Services.CreateScope())
+
+var shouldRunStartupDatabaseTasks = app.Environment.IsDevelopment() ||
+                                    builder.Configuration.GetValue<bool>("RUN_DB_MIGRATIONS_ON_STARTUP");
+
+if (shouldRunStartupDatabaseTasks)
 {
+    using var scope = app.Services.CreateScope();
     var hasher = new PasswordHasher<User>();
     var db = scope.ServiceProvider.GetRequiredService<GearUpDbContext>();
     var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
     db.Database.Migrate();
     await AdminSeeder.SeedAdminAsync(db, hasher, adminUsername, adminEmail, adminPassword);
     await seeder.SeedAsync();
+}
+else
+{
+    Log.Information("Skipping startup database migration and seeding tasks.");
 }
 
 if (app.Environment.IsDevelopment())
