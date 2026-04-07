@@ -17,8 +17,8 @@ namespace GearUp.Infrastructure.Persistence.Configurations
             builder.Property(m => m.ImageUrl)
                 .HasMaxLength(500);
 
-            builder.HasIndex(m => m.ConversationId);
-            builder.HasIndex(m => m.SentAt);
+            builder.HasIndex(m => new { m.ConversationId, m.SentAt, m.SenderId, m.Id })
+                .IsDescending(false, true, false, true);
 
             builder.HasOne(m => m.Sender)
                 .WithMany()

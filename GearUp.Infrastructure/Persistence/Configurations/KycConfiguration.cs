@@ -56,6 +56,12 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .HasMaxLength(500)
                 .IsRequired(false);
 
+            builder.HasIndex(k => new { k.SubmittedAt, k.Id })
+                .IsDescending(true, true);
+
+            builder.HasIndex(k => new { k.Status, k.SubmittedAt, k.Id })
+                .IsDescending(false, true, true);
+
         }
     }
 }
