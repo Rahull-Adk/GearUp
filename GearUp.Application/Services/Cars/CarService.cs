@@ -118,28 +118,28 @@ namespace GearUp.Application.Services.Cars
             return Result<CarResponseDto>.Success(null!, "Car added successfully.", 201);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetAllCarsAsync(string? cursorString, CancellationToken cancellationToken = default)
+        public async Task<Result<CursorPageResult<CarListDto>>> GetAllCarsAsync(string? cursorString, CancellationToken cancellationToken = default)
         {
             Cursor? cursor = null;
             if (!string.IsNullOrEmpty(cursorString))
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
                 }
             }
 
             var cacheKey = await BuildCarCacheKeyAsync("all", Guid.Empty, cursorString);
-            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarResponseDto>>(cacheKey);
+            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarListDto>>(cacheKey);
             if (cachedCars != null)
             {
-                return Result<CursorPageResult<CarResponseDto>>.Success(cachedCars, "Cars fetched successfully", 200);
+                return Result<CursorPageResult<CarListDto>>.Success(cachedCars, "Cars fetched successfully", 200);
             }
 
             var cars = await _carRepository.GetAllCarsAsync(cursor, cancellationToken);
             await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
 
-            return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
+            return Result<CursorPageResult<CarListDto>>.Success(cars, "Cars fetched successfully", 200);
         }
 
         public async Task<Result<CarResponseDto>> GetCarByIdAsync(Guid carId, CancellationToken cancellationToken = default)
@@ -234,7 +234,7 @@ namespace GearUp.Application.Services.Cars
 
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetDealerCarsAsync(Guid dealerId, string? cursorString, CancellationToken cancellationToken = default)
+        public async Task<Result<CursorPageResult<CarListDto>>> GetDealerCarsAsync(Guid dealerId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting cars of {DealerId}", dealerId);
 
@@ -242,12 +242,12 @@ namespace GearUp.Application.Services.Cars
             if (dealer == null)
             {
                 _logger.LogInformation("Dealer with id {DealerId} does not exist", dealerId);
-                return Result<CursorPageResult<CarResponseDto>>.Failure("Dealer not found", 404);
+                return Result<CursorPageResult<CarListDto>>.Failure("Dealer not found", 404);
             }
 
             if (dealer.Role != UserRole.Dealer)
             {
-                return Result<CursorPageResult<CarResponseDto>>.Failure(
+                return Result<CursorPageResult<CarListDto>>.Failure(
                     "Cars are only available for dealer accounts.",
                     403
                 );
@@ -258,13 +258,13 @@ namespace GearUp.Application.Services.Cars
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
                 }
             }
 
             var cars = await _carRepository.GetDealerCarsAsync(dealerId, cursor, cancellationToken);
 
-            return Result<CursorPageResult<CarResponseDto>>.Success(cars, $"Cars fetched successfully");
+            return Result<CursorPageResult<CarListDto>>.Success(cars, $"Cars fetched successfully");
         }
 
         private Result<CarResponseDto> ValidateCarUpdate(Car? existingCar, UpdateCarDto request, Guid dealerId)
@@ -285,21 +285,21 @@ namespace GearUp.Application.Services.Cars
             return Result<CarResponseDto>.Success(null!, "Validation passed", 200);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> SearchCarsAsync(CarSearchDto? searchDto, string? cursorString, CancellationToken cancellationToken = default)
+        public async Task<Result<CursorPageResult<CarListDto>>> SearchCarsAsync(CarSearchDto? searchDto, string? cursorString, CancellationToken cancellationToken = default)
         {
             if (searchDto == null)
             {
-                return Result<CursorPageResult<CarResponseDto>>.Failure("Search criteria cannot be null", 400);
+                return Result<CursorPageResult<CarListDto>>.Failure("Search criteria cannot be null", 400);
             }
 
             if(searchDto.Query == null && searchDto.Color == null && searchDto.MinPrice == null && searchDto.MaxPrice == null)
             {
-                return Result<CursorPageResult<CarResponseDto>>.Failure("At least one search criteria must be provided", 400);
+                return Result<CursorPageResult<CarListDto>>.Failure("At least one search criteria must be provided", 400);
             }
 
             if(searchDto.MinPrice != null && searchDto.MaxPrice != null && searchDto.MinPrice > searchDto.MaxPrice)
             {
-                return Result<CursorPageResult<CarResponseDto>>.Failure("MinPrice cannot be greater than MaxPrice", 400);
+                return Result<CursorPageResult<CarListDto>>.Failure("MinPrice cannot be greater than MaxPrice", 400);
             }
 
             Cursor? cursor = null;
@@ -307,23 +307,23 @@ namespace GearUp.Application.Services.Cars
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
                 }
             }
 
             var cacheKey = await BuildCarCacheKeyAsync("search", Guid.Empty, cursorString, searchDto);
-            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarResponseDto>>(cacheKey);
+            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarListDto>>(cacheKey);
             if (cachedCars != null)
             {
-                return Result<CursorPageResult<CarResponseDto>>.Success(cachedCars, "Cars fetched successfully", 200);
+                return Result<CursorPageResult<CarListDto>>.Success(cachedCars, "Cars fetched successfully", 200);
             }
 
             var cars = await _carRepository.SearchCarsAsync(searchDto, cursor, cancellationToken);
             await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
-            return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
+            return Result<CursorPageResult<CarListDto>>.Success(cars, "Cars fetched successfully", 200);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, string? cursorString, CancellationToken cancellationToken = default)
+        public async Task<Result<CursorPageResult<CarListDto>>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting cars of {DealerId}", dealerId);
 
@@ -331,14 +331,14 @@ namespace GearUp.Application.Services.Cars
             if (dealerExists == null)
             {
                 _logger.LogInformation("Dealer with id {DealerId} does not exist", dealerId);
-                return Result<CursorPageResult<CarResponseDto>>.Failure("Dealer not found", 404);
+                return Result<CursorPageResult<CarListDto>>.Failure("Dealer not found", 404);
             }
 
             if (status != CarValidationStatus.Approved && status != CarValidationStatus.Pending &&
                 status != CarValidationStatus.Rejected)
             {
                 _logger.LogInformation("Invalid car status");
-                return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid car status", 404);
+                return Result<CursorPageResult<CarListDto>>.Failure("Invalid car status", 404);
             }
 
             Cursor? cursor = null;
@@ -346,21 +346,21 @@ namespace GearUp.Application.Services.Cars
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarResponseDto>>.Failure("Invalid cursor", 400);
+                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
                 }
             }
 
             var cacheKey = await BuildCarCacheKeyAsync("my", dealerId, cursorString, status.ToString());
-            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarResponseDto>>(cacheKey);
+            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarListDto>>(cacheKey);
             if (cachedCars != null)
             {
-                return Result<CursorPageResult<CarResponseDto>>.Success(cachedCars, $"{status} cars fetched successfully");
+                return Result<CursorPageResult<CarListDto>>.Success(cachedCars, $"{status} cars fetched successfully");
             }
 
             var cars = await _carRepository.GetMyCarsAsync(dealerId, status, cursor, cancellationToken);
             await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
 
-            return Result<CursorPageResult<CarResponseDto>>.Success(cars, $"{status} cars fetched successfully");
+            return Result<CursorPageResult<CarListDto>>.Success(cars, $"{status} cars fetched successfully");
 
         }
 

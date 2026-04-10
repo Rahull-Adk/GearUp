@@ -34,7 +34,7 @@ namespace GearUp.Infrastructure.Repositories
             string authorUsername,
             string? authorAvatarUrl,
             bool isLikedByCurrentUser,
-            CarResponseDto? carDto)
+            CarListDto? carDto)
         {
             return new PostResponseDto
             {
@@ -51,37 +51,6 @@ namespace GearUp.Infrastructure.Repositories
                 LikeCount = post.LikeCount,
                 CommentCount = post.CommentCount,
                 ViewCount = post.ViewCount
-            };
-        }
-
-        private static CarResponseDto MapCarToDto(CarResponseDto car, IReadOnlyDictionary<Guid, List<CarImageDto>> carImageLookup)
-        {
-            carImageLookup.TryGetValue(car.Id, out var carImages);
-
-            return new CarResponseDto
-            {
-                Id = car.Id,
-                Make = car.Make,
-                Model = car.Model,
-                Year = car.Year,
-                Description = car.Description,
-                Title = car.Title,
-                Price = car.Price,
-                Color = car.Color,
-                Mileage = car.Mileage,
-                SeatingCapacity = car.SeatingCapacity,
-                EngineCapacity = car.EngineCapacity,
-                FuelType = car.FuelType,
-                CarCondition = car.Condition,
-                TransmissionType = car.Transmission,
-                CarStatus = car.Status,
-                CarValidationStatus = car.ValidationStatus,
-                VIN = car.VIN,
-                LicensePlate = car.LicensePlate,
-                DealerId = car.DealerId,
-                CreatedAt = car.CreatedAt,
-                UpdatedAt = car.UpdatedAt,
-                CarImages = carImages ?? new List<CarImageDto>()
             };
         }
 
@@ -109,65 +78,31 @@ namespace GearUp.Infrastructure.Repositories
                 .ToDictionaryAsync(u => u.Id, u => (u.Username, (string?)u.AvatarUrl), cancellationToken);
         }
 
-        private async Task<Dictionary<Guid, CarResponseDto>> GetCarLookupAsync(IReadOnlyCollection<Guid> carIds, CancellationToken cancellationToken = default)
+        private async Task<Dictionary<Guid, CarListDto>> GetCarLookupAsync(IReadOnlyCollection<Guid> carIds, CancellationToken cancellationToken = default)
         {
             if (carIds.Count == 0)
             {
-                return new Dictionary<Guid, CarResponseDto>();
+                return new Dictionary<Guid, CarListDto>();
             }
 
             return await _db.Cars
                 .AsNoTracking()
                 .Where(car => carIds.Contains(car.Id))
-                .Select(car => new CarResponseDto
+                .Select(car => new CarListDto
                 {
                     Id = car.Id,
+                    ThumbnailUrl = car.Images.OrderBy(img => img.Id).Select(img => img.Url).FirstOrDefault() ?? string.Empty,
+                    Title = car.Title,
                     Make = car.Make,
                     Model = car.Model,
-                    Year = car.Year,
-                    Description = car.Description,
-                    Title = car.Title,
-                    Price = car.Price,
-                    Color = car.Color,
+                    TransmissionType = car.Transmission,
                     Mileage = car.Mileage,
                     SeatingCapacity = car.SeatingCapacity,
-                    EngineCapacity = car.EngineCapacity,
-                    FuelType = car.FuelType,
-                    CarCondition = car.Condition,
-                    TransmissionType = car.Transmission,
-                    CarStatus = car.Status,
-                    CarValidationStatus = car.ValidationStatus,
-                    VIN = car.VIN,
-                    LicensePlate = car.LicensePlate,
-                    DealerId = car.DealerId,
-                    CreatedAt = car.CreatedAt,
-                    UpdatedAt = car.UpdatedAt,
-                    CarImages = new List<CarImageDto>()
+                    Price = car.Price,
+                    Color = car.Color,
+                    CreatedAt = car.CreatedAt
                 })
                 .ToDictionaryAsync(car => car.Id, cancellationToken);
-        }
-
-        private async Task<Dictionary<Guid, List<CarImageDto>>> GetCarImageLookupAsync(IReadOnlyCollection<Guid> carIds, CancellationToken cancellationToken = default)
-        {
-            if (carIds.Count == 0)
-            {
-                return new Dictionary<Guid, List<CarImageDto>>();
-            }
-
-            var carImages = await _db.CarImages
-                .AsNoTracking()
-                .Where(ci => carIds.Contains(ci.CarId))
-                .Select(ci => new CarImageDto
-                {
-                    Id = ci.Id,
-                    CarId = ci.CarId,
-                    Url = ci.Url
-                })
-                .ToListAsync(cancellationToken);
-
-            return carImages
-                .GroupBy(ci => ci.CarId)
-                .ToDictionary(g => g.Key, g => g.ToList());
         }
 
         private async Task<HashSet<Guid>> GetLikedPostIdSetAsync(Guid currUserId, IReadOnlyCollection<Guid> postIds, CancellationToken cancellationToken = default)
@@ -237,16 +172,15 @@ namespace GearUp.Infrastructure.Repositories
                 .AsNoTracking()
                 .AnyAsync(pl => pl.PostId == post.Id && pl.LikedUserId == currUserId, cancellationToken);
 
-            CarResponseDto? carDto = null;
+            CarListDto? carDto = null;
             if (post.CarId is not null)
             {
                 var carIds = new List<Guid> { post.CarId.Value };
                 var cars = await GetCarLookupAsync(carIds, cancellationToken);
-                var carImageLookup = await GetCarImageLookupAsync(carIds, cancellationToken);
 
                 if (cars.TryGetValue(post.CarId.Value, out var car))
                 {
-                    carDto = MapCarToDto(car, carImageLookup);
+                    carDto = car;
                 }
             }
 
@@ -317,15 +251,14 @@ namespace GearUp.Infrastructure.Repositories
 
             var carIds = GetDistinctCarIds(posts);
             var cars = await GetCarLookupAsync(carIds, cancellationToken);
-            var carImageLookup = await GetCarImageLookupAsync(carIds, cancellationToken);
 
             var rows = posts.Select(p =>
             {
-                CarResponseDto? carDto = null;
+                CarListDto? carDto = null;
 
                 if (p.CarId is not null && cars.TryGetValue(p.CarId.Value, out var car))
                 {
-                    carDto = MapCarToDto(car, carImageLookup);
+                    carDto = car;
                 }
 
                 return MapPostToDto(p, author.Username, author.AvatarUrl, likedSet.Contains(p.Id), carDto);
@@ -434,7 +367,6 @@ namespace GearUp.Infrastructure.Repositories
 
             var carIds = GetDistinctCarIds(posts);
             var cars = await GetCarLookupAsync(carIds, cancellationToken);
-            var carImageLookup = await GetCarImageLookupAsync(carIds, cancellationToken);
 
             var postIds = posts.Select(p => p.Id).ToList();
             var likedSet = await GetLikedPostIdSetAsync(currUserId, postIds, cancellationToken);
@@ -446,11 +378,11 @@ namespace GearUp.Infrastructure.Repositories
                     return null;
                 }
 
-                CarResponseDto? carDto = null;
+                CarListDto? carDto = null;
 
                 if (p.CarId != null && cars.TryGetValue(p.CarId.Value, out var car))
                 {
-                    carDto = MapCarToDto(car, carImageLookup);
+                    carDto = car;
                 }
 
                 return MapPostToDto(p, user.Username, user.AvatarUrl, likedSet.Contains(p.Id), carDto);

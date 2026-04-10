@@ -7,6 +7,7 @@ namespace GearUp.Application.Common.Pagination
     {
         public DateTime CreatedAt { get; init; }
         public Guid Id { get; init; }
+        public double? Price { get; init; }
 
         public static string Encode(Cursor c)
         {

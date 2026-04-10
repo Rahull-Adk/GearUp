@@ -11,7 +11,7 @@ namespace GearUp.Application.ServiceDtos.Post
         public string AuthorUsername { get; set; } = string.Empty;
         public string AuthorAvatarUrl { get; set; } = string.Empty;
         public PostVisibility Visibility { get; set; }
-        public CarResponseDto? CarDto { get; set; } = new CarResponseDto();
+        public CarListDto? CarDto { get; set; } = new CarListDto();
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
