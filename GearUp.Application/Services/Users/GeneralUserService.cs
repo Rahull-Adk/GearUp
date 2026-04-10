@@ -1,4 +1,3 @@
-using AutoMapper;
 using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;

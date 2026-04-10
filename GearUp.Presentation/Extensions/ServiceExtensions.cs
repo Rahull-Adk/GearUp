@@ -1,6 +1,5 @@
 using System.Text;
 using System.Threading.RateLimiting;
-using AutoMapper;
 using CloudinaryDotNet;
 using FluentValidation;
 using GearUp.Application.Common;
@@ -15,7 +14,6 @@ using GearUp.Application.Interfaces.Services.MessageServiceInterface;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.Interfaces.Services.ReviewServiceInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
-using GearUp.Application.Mappings;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.ServiceDtos.Car;
 using GearUp.Application.ServiceDtos.Post;
@@ -41,8 +39,6 @@ using GearUp.Infrastructure.SignalR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore.Migrations.Operations;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -87,18 +83,6 @@ namespace GearUp.Presentation.Extensions
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
 
-
-            var mapperConfig = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile(new UserMappingProfile());
-                cfg.AddProfile(new KycMappingProfile());
-                cfg.AddProfile(new CarMappingProfile());
-            }, NullLoggerFactory.Instance);
-
-            mapperConfig.AssertConfigurationIsValid();
-
-            var mapper = mapperConfig.CreateMapper();
-            services.AddSingleton(mapper);
 
             services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();
             services.AddSignalR();

@@ -1,4 +1,3 @@
-using AutoMapper;
 using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;

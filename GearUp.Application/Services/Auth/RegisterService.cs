@@ -1,4 +1,3 @@
-using AutoMapper;
 using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
@@ -47,7 +46,7 @@ namespace GearUp.Application.Services.Auth
                 {
                     return Result<RegisterResponseDto>.Failure("Account with this email already exists. Please login", 400);
                 }
-            
+
                 var isUsernameExists = await _userRepo.GetUserEntityByUsernameAsync(data.Username);
                 if(isUsernameExists != null)
                 {

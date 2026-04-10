@@ -1,4 +1,3 @@
-using AutoMapper;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
@@ -16,17 +15,15 @@ namespace GearUp.Application.Services.Users
     public class ProfileUpdateService : IProfileUpdateService
     {
         private readonly IUserRepository _userRepo;
-        private readonly IMapper _mapper;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IEmailSender _emailSender;
         private readonly ITokenGenerator _tokenGenerator;
         private readonly IDocumentProcessor _documentProcessor;
         private readonly ICloudinaryImageUploader _cloudinaryImageUploader;
         private readonly ILogger<ProfileUpdateService> _logger;
-        public ProfileUpdateService(IUserRepository userRepo, IMapper mapper, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader, ILogger<ProfileUpdateService> logger)
+        public ProfileUpdateService(IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader, ILogger<ProfileUpdateService> logger)
         {
             _userRepo = userRepo;
-            _mapper = mapper;
             _passwordHasher = passwordHasher;
             _emailSender = emailSender;
             _documentProcessor = documentProcessor;

@@ -1,4 +1,3 @@
-using AutoMapper;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.EmailServiceInterface;
@@ -16,7 +15,6 @@ namespace GearUp.UnitTests.Application.Users
     public class ProfileUpdateServiceTests
     {
         private readonly Mock<IUserRepository> _userRepo = new();
-        private readonly Mock<IMapper> _mapper = new();
         private readonly Mock<IPasswordHasher<User>> _passwordHasher = new();
         private readonly Mock<IEmailSender> _emailSender = new();
         private readonly Mock<ITokenGenerator> _tokenGenerator = new();
@@ -27,7 +25,6 @@ namespace GearUp.UnitTests.Application.Users
 
         private ProfileUpdateService CreateService() => new(
         _userRepo.Object,
-        _mapper.Object,
         _passwordHasher.Object,
         _emailSender.Object,
         _tokenGenerator.Object,
@@ -50,16 +47,6 @@ namespace GearUp.UnitTests.Application.Users
             _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, It.IsAny<string>())).Returns(PasswordVerificationResult.Failed);
             var dto = new UpdateUserRequestDto(null, "Jane", null, null, "123", null, null, null);
-            _mapper.Setup(m => m.Map<UpdateUserResponseDto>(user)).Returns(new UpdateUserResponseDto(
-            Id: user.Id,
-            Username: user.Username,
-            Email: user.Email,
-            PendingEmail: user.PendingEmail,
-            Name: user.Name,
-            AvatarUrl: user.AvatarUrl,
-            IsEmailVerified: user.IsEmailVerified,
-            IsPendingEmailVerified: user.IsPendingEmailVerified,
-            UpdatedAt: DateTime.UtcNow));
             var svc = CreateService();
             var res = await svc.UpdateUserProfileService(user.Id.ToString(), dto);
             Assert.True(res.IsSuccess);

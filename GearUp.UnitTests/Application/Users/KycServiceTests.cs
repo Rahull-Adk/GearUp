@@ -1,10 +1,9 @@
-using AutoMapper;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.ServiceDtos.User;
 using GearUp.Application.Services.Users;
-using GearUp.Domain.Entities; 
+using GearUp.Domain.Entities;
 using GearUp.Domain.Entities.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;

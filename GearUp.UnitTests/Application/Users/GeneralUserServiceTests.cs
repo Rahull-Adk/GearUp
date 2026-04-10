@@ -1,4 +1,3 @@
-using AutoMapper;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.ServiceDtos.Auth;
