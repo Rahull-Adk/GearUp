@@ -8,7 +8,6 @@ using GearUp.Domain.Entities.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
 
 namespace GearUp.UnitTests.Application.Users
 {
@@ -20,7 +19,6 @@ namespace GearUp.UnitTests.Application.Users
         private readonly Mock<ITokenGenerator> _tokenGenerator = new();
         private readonly Mock<IDocumentProcessor> _docProcessor = new();
         private readonly Mock<ICloudinaryImageUploader> _uploader = new();
-        private readonly Mock<ICacheService> _cache = new();
         private readonly Mock<ILogger<ProfileUpdateService>> _logger = new();
 
         private ProfileUpdateService CreateService() => new(

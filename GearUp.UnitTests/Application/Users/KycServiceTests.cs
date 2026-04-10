@@ -8,7 +8,6 @@ using GearUp.Domain.Entities.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
 
 namespace GearUp.UnitTests.Application.Users
 {

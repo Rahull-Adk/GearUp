@@ -1,6 +1,5 @@
 using FluentValidation;
 using FluentValidation.Results;
-using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
@@ -12,7 +11,6 @@ using GearUp.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
 
 namespace GearUp.UnitTests.Application.Cars
 {
