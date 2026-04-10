@@ -45,14 +45,41 @@ string adminEmail = builder.Configuration["ADMIN_EMAIL"]!;
 string adminPassword = builder.Configuration["ADMIN_PASSWORD"]!;
 
 var app = builder.Build();
-using (var scope = app.Services.CreateScope())
+
+var runDbTasksOnceAndExit = builder.Configuration.GetValue<bool>("RUN_DB_TASKS_ONCE_AND_EXIT");
+var runDbTasksInDevelopment = app.Environment.IsDevelopment() &&
+                              builder.Configuration.GetValue<bool>("RUN_DB_TASKS_IN_DEVELOPMENT");
+
+if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
 {
+    if (runDbTasksInDevelopment)
+    {
+        Log.Information("Running startup database tasks in development mode because RUN_DB_TASKS_IN_DEVELOPMENT=true.");
+    }
+
+    if (runDbTasksOnceAndExit)
+    {
+        Log.Information("Running one-off database tasks because RUN_DB_TASKS_ONCE_AND_EXIT=true.");
+    }
+
+    using var scope = app.Services.CreateScope();
     var hasher = new PasswordHasher<User>();
     var db = scope.ServiceProvider.GetRequiredService<GearUpDbContext>();
     var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
     db.Database.Migrate();
     await AdminSeeder.SeedAdminAsync(db, hasher, adminUsername, adminEmail, adminPassword);
     await seeder.SeedAsync();
+
+    if (runDbTasksOnceAndExit)
+    {
+        Log.Information("Completed one-off database tasks. Exiting without starting web host.");
+        Log.CloseAndFlush();
+        return;
+    }
+}
+else
+{
+    Log.Information("Skipping startup database migration and seeding tasks. Use RUN_DB_TASKS_IN_DEVELOPMENT=true (development only) or RUN_DB_TASKS_ONCE_AND_EXIT=true (one-off).");
 }
 
 if (app.Environment.IsDevelopment())
@@ -64,12 +91,12 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
         options.RoutePrefix = string.Empty;
     });
-
 }
 else
 {
     app.UseRateLimiter();
 }
+
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
@@ -80,9 +107,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
             status = report.Status.ToString(),
             results = report.Entries.Select(e => new
             {
-                name = e.Key,
-                status = e.Value.Status.ToString(),
-                description = e.Value.Description
+                name = e.Key, status = e.Value.Status.ToString(), description = e.Value.Description
             })
         });
         await context.Response.WriteAsync(result);
@@ -114,5 +139,3 @@ finally
 {
     Log.CloseAndFlush();
 }
-
-

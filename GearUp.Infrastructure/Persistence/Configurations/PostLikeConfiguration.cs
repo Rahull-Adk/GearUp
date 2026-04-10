@@ -9,13 +9,10 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<PostLike> builder)
         {
             builder.HasKey(pl => pl.Id);
-            builder.HasQueryFilter(pl => !pl.LikedUser.IsDeleted);
+            builder.HasQueryFilter(pl => pl.LikedUser != null && !pl.LikedUser.IsDeleted);
 
-            // Unique constraint to prevent duplicate likes + efficient lookup for like checks
             builder.HasIndex(pl => new { pl.PostId, pl.LikedUserId }).IsUnique();
-
-            // Index for cursor pagination when fetching post likers
-            builder.HasIndex(pl => new { pl.PostId, pl.UpdatedAt, pl.LikedUserId });
+            builder.HasIndex(pl => new { pl.PostId, pl.UpdatedAt, pl.LikedUserId }).IsDescending(true, true, true);
         }
     }
 }

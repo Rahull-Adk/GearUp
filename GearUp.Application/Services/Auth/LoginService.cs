@@ -12,10 +12,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 
 namespace GearUp.Application.Services.Auth
 {
-    public sealed class LoginService : ILoginService
+    public sealed partial class LoginService : ILoginService
     {
         private readonly IUserRepository _userRepository;
         private readonly ITokenRepository _tokenRepository;
@@ -26,7 +27,11 @@ namespace GearUp.Application.Services.Auth
         private readonly IValidator<AdminLoginRequestDto> _adminLoginValidator;
         private readonly IValidator<PasswordResetReqDto> _passwordResetValidator;
         private readonly ILogger<LoginService> _logger;
-        public LoginService(IUserRepository userRepository, ITokenRepository tokenRepository, IPasswordHasher<User> passwordHasher, ITokenGenerator tokenGenerator, IEmailSender emailSender, IValidator<LoginRequestDto> loginValidator, IValidator<AdminLoginRequestDto> adminLoginValidator ,  IValidator<PasswordResetReqDto> passwordResetValidator, ILogger<LoginService> logger)
+
+        public LoginService(IUserRepository userRepository, ITokenRepository tokenRepository,
+            IPasswordHasher<User> passwordHasher, ITokenGenerator tokenGenerator, IEmailSender emailSender,
+            IValidator<LoginRequestDto> loginValidator, IValidator<AdminLoginRequestDto> adminLoginValidator,
+            IValidator<PasswordResetReqDto> passwordResetValidator, ILogger<LoginService> logger)
         {
             _userRepository = userRepository;
             _tokenRepository = tokenRepository;
@@ -38,21 +43,29 @@ namespace GearUp.Application.Services.Auth
             _passwordResetValidator = passwordResetValidator;
             _logger = logger;
         }
+
+        private static readonly ActivitySource _activitySource =
+            new("GearUp.Auth");
+
         public async Task<Result<LoginResponseDto>> LoginUser(LoginRequestDto req)
         {
+            using var activity = _activitySource.StartActivity("Login");
             _logger.LogInformation("Attempting to log in user with identifier: {Identifier}", req.UsernameOrEmail);
-            var validationResult = await _loginValidator.ValidateAsync(req);
-            if (!validationResult.IsValid)
+            using (_activitySource.StartActivity("Validations"))
             {
-                var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                return Result<LoginResponseDto>.Failure(errors, 400);
+                var validationResult = await _loginValidator.ValidateAsync(req);
+                if (!validationResult.IsValid)
+                {
+                    var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
+                    return Result<LoginResponseDto>.Failure(errors, 400);
+                }
             }
 
-            Regex emailRegex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+            Regex emailRegex = MyRegex();
             var user = emailRegex.IsMatch(req.UsernameOrEmail)
                 ? await _userRepository.GetUserEntityByEmailAsync(req.UsernameOrEmail)
                 : await _userRepository.GetUserEntityByUsernameAsync(req.UsernameOrEmail);
-            if(user is not null && user.Role == UserRole.Admin)
+            if (user is not null && user.Role == UserRole.Admin)
                 return Result<LoginResponseDto>.Failure("User not Found", 404);
             return await HandleLogin(user!, req.Password);
         }
@@ -75,31 +88,40 @@ namespace GearUp.Application.Services.Auth
         }
 
 
-
-        private async Task<Result<LoginResponseDto>> HandleLogin(User user, string password)
+        private async Task<Result<LoginResponseDto>> HandleLogin(User? user, string password)
         {
             if (user == null)
                 return Result<LoginResponseDto>.Failure("User not found", 404);
 
-            var passwordVerification = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
-            if (passwordVerification == PasswordVerificationResult.Failed)
-                return Result<LoginResponseDto>.Failure("Invalid Credentials", 401);
+            using (_activitySource.StartActivity("VerifyHashedPassword"))
+            {
+                var passwordVerification = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+
+
+                if (passwordVerification == PasswordVerificationResult.Failed)
+                    return Result<LoginResponseDto>.Failure("Invalid Credentials", 401);
+            }
 
             if (user.Role != UserRole.Admin && !user.IsEmailVerified)
                 return Result<LoginResponseDto>.Failure("Email not verified. Please verify your email to login.", 403);
 
-            var accessClaims = new[]
+            var accessToken = string.Empty;
+            var refreshToken = string.Empty;
+
+
+            using (_activitySource.StartActivity("Token Generations"))
             {
-        new Claim("id", user.Id.ToString()),
-        new Claim("email", user.Email),
-        new Claim("role", user.Role.ToString()),
-        new Claim("purpose", "access_token")
-    };
+                var accessClaims = new[]
+                {
+                    new Claim("id", user.Id.ToString()), new Claim("email", user.Email),
+                    new Claim("role", user.Role.ToString()), new Claim("purpose", "access_token")
+                };
 
-            var accessToken = _tokenGenerator.GenerateAccessToken(accessClaims);
-            var refreshToken = _tokenGenerator.GenerateRefreshToken();
+                accessToken = _tokenGenerator.GenerateAccessToken(accessClaims);
+                refreshToken = _tokenGenerator.GenerateRefreshToken();
+            }
+
             var expiresAt = DateTime.UtcNow.AddDays(7);
-
             var refreshTokenEntity = RefreshToken.CreateRefreshToken(refreshToken, expiresAt, user.Id);
             await _tokenRepository.AddRefreshTokenAsync(refreshTokenEntity);
             await _userRepository.SaveChangesAsync();
@@ -121,32 +143,36 @@ namespace GearUp.Application.Services.Auth
                 _logger.LogWarning("Refresh token is missing.");
                 return Result<LoginResponseDto>.Failure("Refresh token is missing", 401);
             }
+
             var storedToken = await _tokenRepository.GetRefreshTokenAsync(refreshToken);
             if (storedToken == null || storedToken.IsRevoked || storedToken.ExpiresAt < DateTime.UtcNow)
             {
                 return Result<LoginResponseDto>.Failure("Invalid or expired refresh token", 401);
             }
+
             // Use GetUserEntityByIdAsync to retrieve the actual User entity (test and implementation provide this)
             var user = await _userRepository.GetUserEntityByIdAsync(storedToken.UserId);
             if (user == null)
             {
                 return Result<LoginResponseDto>.Failure("User not found", 404);
             }
+
             var accessClaims = new[]
-               {
-                   new Claim("id", user.Id.ToString()),
-                   new Claim("email", user.Email),
-                   new Claim(ClaimTypes.Role, user.Role.ToString()),
-                   new Claim("purpose", "access_token")
+            {
+                new Claim("id", user.Id.ToString()), new Claim("email", user.Email),
+                new Claim(ClaimTypes.Role, user.Role.ToString()), new Claim("purpose", "access_token")
             };
             var newAccessToken = _tokenGenerator.GenerateAccessToken(accessClaims);
             var newRefreshToken = _tokenGenerator.GenerateRefreshToken();
-            var refreshTokenEntity = RefreshToken.CreateRefreshToken(newRefreshToken, DateTime.UtcNow.AddDays(7), user.Id);
+            var refreshTokenEntity =
+                RefreshToken.CreateRefreshToken(newRefreshToken, DateTime.UtcNow.AddDays(7), user.Id);
             await _tokenRepository.AddRefreshTokenAsync(refreshTokenEntity);
             storedToken.Revoke();
             await _userRepository.SaveChangesAsync();
             _logger.LogInformation("Refresh token rotated successfully for user {UserId}.", user.Id);
-            return Result<LoginResponseDto>.Success(new LoginResponseDto { AccessToken = newAccessToken, RefreshToken = newRefreshToken }, "Token Rotated Successfully", 200);
+            return Result<LoginResponseDto>.Success(
+                new LoginResponseDto { AccessToken = newAccessToken, RefreshToken = newRefreshToken },
+                "Token Rotated Successfully", 200);
         }
 
         public async Task<Result<string>> SendPasswordResetToken(string email)
@@ -166,7 +192,8 @@ namespace GearUp.Application.Services.Auth
 
             var token = _tokenGenerator.GeneratePasswordResetToken();
 
-            var passwordRefreshTokenEntity = PasswordResetToken.CreatePasswordResetToken(token, DateTime.UtcNow.AddHours(1), user.Id);
+            var passwordRefreshTokenEntity =
+                PasswordResetToken.CreatePasswordResetToken(token, DateTime.UtcNow.AddHours(1), user.Id);
             await _tokenRepository.AddPasswordResetTokenAsync(passwordRefreshTokenEntity);
             await _userRepository.SaveChangesAsync();
 
@@ -193,22 +220,28 @@ namespace GearUp.Application.Services.Auth
                 _logger.LogWarning("Invalid or expired password reset token.");
                 return Result<string>.Failure("Invalid or expired password reset token", 401);
             }
+
             var user = await _userRepository.GetUserEntityByIdAsync(storedToken.UserId);
-            
+
             if (user == null)
             {
                 return Result<string>.Failure("User not found", 404);
             }
+
             var samePassword = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, req.NewPassword);
-            if(samePassword == PasswordVerificationResult.Success)
+            if (samePassword == PasswordVerificationResult.Success)
             {
                 return Result<string>.Failure("New password cannot be the same as the old password", 400);
             }
+
             var hashedPassword = _passwordHasher.HashPassword(user, req.NewPassword);
             user.SetPassword(hashedPassword);
             await _userRepository.SaveChangesAsync();
             _logger.LogInformation("Password reset successfully for user {UserId}.", user.Id);
             return Result<string>.Success(null, "Password reset successfully", 200);
         }
+
+        [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
+        private static partial Regex MyRegex();
     }
 }

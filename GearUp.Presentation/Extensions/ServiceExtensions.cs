@@ -211,6 +211,7 @@ namespace GearUp.Presentation.Extensions
             services.AddOpenTelemetry()
                 .ConfigureResource(r => r.AddService("GearUp"))
                 .WithTracing(t => t
+                    .AddSource("GearUp.Auth")
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddEntityFrameworkCoreInstrumentation()

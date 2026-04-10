@@ -126,7 +126,7 @@ namespace GearUp.Application.Services.Messages
             return Result<MessageResponseDto>.Success(responseDto, "Message sent successfully.", 201);
         }
 
-        public async Task<Result<CursorPageResult<ConversationResponseDto>>> GetConversationsAsync(Guid userId, string? cursorString)
+        public async Task<Result<CursorPageResult<ConversationResponseDto>>> GetConversationsAsync(Guid userId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting conversations for user {UserId}", userId);
 
@@ -139,22 +139,22 @@ namespace GearUp.Application.Services.Messages
                 }
             }
 
-            var conversations = await _messageRepository.GetUserConversationsAsync(userId, cursor);
+            var conversations = await _messageRepository.GetUserConversationsAsync(userId, cursor, cancellationToken);
 
             return Result<CursorPageResult<ConversationResponseDto>>.Success(conversations, "Conversations retrieved successfully.");
         }
 
-        public async Task<Result<ConversationDetailResponseDto>> GetConversationAsync(Guid conversationId, Guid userId, string? cursorString)
+        public async Task<Result<ConversationDetailResponseDto>> GetConversationAsync(Guid conversationId, Guid userId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting conversation {ConversationId} for user {UserId}", conversationId, userId);
 
-            var conversation = await _messageRepository.GetConversationByIdAsync(conversationId);
+            var conversation = await _messageRepository.GetConversationByIdAsync(conversationId, cancellationToken);
             if (conversation == null)
             {
                 return Result<ConversationDetailResponseDto>.Failure("Conversation not found.", 404);
             }
 
-            if (!await _messageRepository.IsParticipantInConversationAsync(conversationId, userId))
+            if (!await _messageRepository.IsParticipantInConversationAsync(conversationId, userId, cancellationToken))
             {
                 return Result<ConversationDetailResponseDto>.Failure("You are not a participant in this conversation.", 403);
             }
@@ -174,7 +174,7 @@ namespace GearUp.Application.Services.Messages
                 }
             }
 
-            var messagesResult = await _messageRepository.GetConversationMessagesAsync(conversationId, cursor);
+            var messagesResult = await _messageRepository.GetConversationMessagesAsync(conversationId, cursor, cancellationToken);
 
             // Mark messages as read
             await _messageRepository.MarkMessagesAsReadAsync(conversationId, userId);
@@ -208,7 +208,7 @@ namespace GearUp.Application.Services.Messages
             return Result<ConversationDetailResponseDto>.Success(response, "Conversation retrieved successfully.");
         }
 
-        public async Task<Result<ConversationDetailResponseDto>> GetOrCreateConversationWithUserAsync(Guid currentUserId, Guid otherUserId)
+        public async Task<Result<ConversationDetailResponseDto>> GetOrCreateConversationWithUserAsync(Guid currentUserId, Guid otherUserId, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting or creating conversation between {CurrentUserId} and {OtherUserId}", currentUserId, otherUserId);
 
@@ -239,7 +239,7 @@ namespace GearUp.Application.Services.Messages
                 return Result<ConversationDetailResponseDto>.Failure("Conversations can only be between customers and dealers.", 400);
             }
 
-            var conversation = await _messageRepository.GetConversationByParticipantsAsync(currentUserId, otherUserId);
+            var conversation = await _messageRepository.GetConversationByParticipantsAsync(currentUserId, otherUserId, cancellationToken);
 
             if (conversation == null)
             {
@@ -250,7 +250,7 @@ namespace GearUp.Application.Services.Messages
                 await _commonRepository.SaveChangesAsync();
 
                 // Reload to get participants with user info
-                conversation = await _messageRepository.GetConversationByIdAsync(conversation.Id);
+                conversation = await _messageRepository.GetConversationByIdAsync(conversation.Id, cancellationToken);
             }
 
             var response = new ConversationDetailResponseDto

@@ -38,7 +38,7 @@ namespace GearUp.Infrastructure.Repositories
                     UserId = ks.UserId,
                     FullName = ks.SubmittedBy!.Name,
                     Email = ks.SubmittedBy!.Email,
-                    PhoneNumber = ks.SubmittedBy!.PhoneNumber,
+                    PhoneNumber = ks.SubmittedBy!.PhoneNumber ?? string.Empty,
                     DateOfBirth = ks.SubmittedBy!.DateOfBirth,
                     Status = ks.Status,
                     DocumentType = ks.DocumentType,
@@ -76,14 +76,16 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task<ToAdminKycResponseDto?> GetKycSubmissionByIdAsync(Guid kycId)
         {
-            return await _db.KycSubmissions.Where(k => k.Id == kycId)
+            return await _db.KycSubmissions
+                .AsNoTracking()
+                .Where(k => k.Id == kycId)
                 .Select(k => new ToAdminKycResponseDto
                 {
                     Id = k.Id,
                     UserId = k.UserId,
                     FullName = k.SubmittedBy!.Name,
                     Email = k.SubmittedBy!.Email,
-                    PhoneNumber = k.SubmittedBy!.PhoneNumber,
+                    PhoneNumber = k.SubmittedBy!.PhoneNumber ?? string.Empty,
                     DateOfBirth = k.SubmittedBy!.DateOfBirth,
                     Status = k.Status,
                     DocumentType = k.DocumentType,
@@ -116,7 +118,7 @@ namespace GearUp.Infrastructure.Repositories
                     UserId = ks.UserId,
                     FullName = ks.SubmittedBy!.Name,
                     Email = ks.SubmittedBy!.Email,
-                    PhoneNumber = ks.SubmittedBy!.PhoneNumber,
+                    PhoneNumber = ks.SubmittedBy!.PhoneNumber ?? string.Empty,
                     DateOfBirth = ks.SubmittedBy!.DateOfBirth,
                     Status = ks.Status,
                     DocumentType = ks.DocumentType,

@@ -20,13 +20,16 @@ namespace GearUp.Infrastructure.Repositories
 
         public async Task<bool> HasViewTimeElapsedAsync(Guid postId, Guid userId)
         {
-            var views = await _db.PostViews.Where(pv => pv.PostId == postId && pv.ViewedUserId == userId).ToListAsync();
+            var latestViewedAt = await _db.PostViews
+                .Where(pv => pv.PostId == postId && pv.ViewedUserId == userId)
+                .OrderByDescending(pv => pv.ViewedAt)
+                .Select(pv => (DateTime?)pv.ViewedAt)
+                .FirstOrDefaultAsync();
 
-            if (views.Count == 0)
+            if (!latestViewedAt.HasValue)
                 return true;
-            var lastestView = views.OrderByDescending(pv => pv.ViewedAt).First();
 
-            return (DateTime.UtcNow - lastestView.ViewedAt).TotalMinutes >= 60;
+            return (DateTime.UtcNow - latestViewedAt.Value).TotalMinutes >= 60;
 
         }
     }

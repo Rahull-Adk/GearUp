@@ -33,23 +33,24 @@ namespace GearUp.Presentation.Controllers
         /// Get all conversations for the current user
         /// </summary>
         [HttpGet("conversations")]
-        public async Task<IActionResult> GetConversations([FromQuery] string? cursor)
+        public async Task<IActionResult> GetConversations([FromQuery] string? cursor, CancellationToken cancellationToken = default)
         {
             var userId = Guid.Parse(User.FindFirst(u => u.Type == "id")!.Value);
-            var result = await _messageService.GetConversationsAsync(userId, cursor);
+            var result = await _messageService.GetConversationsAsync(userId, cursor, cancellationToken);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
         /// <summary>
         /// Get a specific conversation with messages
         /// </summary>
-        [HttpGet("conversations/{conversationId:guid}")]
-        public async Task<IActionResult> GetConversation(
-            [FromRoute] Guid conversationId,
-            [FromQuery] string? cursor)
+            [HttpGet("conversations/{conversationId:guid}")]
+            public async Task<IActionResult> GetConversation(
+                [FromRoute] Guid conversationId,
+            [FromQuery] string? cursor,
+            CancellationToken cancellationToken = default)
         {
             var userId = Guid.Parse(User.FindFirst(u => u.Type == "id")!.Value);
-            var result = await _messageService.GetConversationAsync(conversationId, userId, cursor);
+            var result = await _messageService.GetConversationAsync(conversationId, userId, cursor, cancellationToken);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -57,10 +58,10 @@ namespace GearUp.Presentation.Controllers
         /// Get or create a conversation with another user
         /// </summary>
         [HttpGet("conversations/with/{otherUserId:guid}")]
-        public async Task<IActionResult> GetOrCreateConversation([FromRoute] Guid otherUserId)
+        public async Task<IActionResult> GetOrCreateConversation([FromRoute] Guid otherUserId, CancellationToken cancellationToken = default)
         {
             var userId = Guid.Parse(User.FindFirst(u => u.Type == "id")!.Value);
-            var result = await _messageService.GetOrCreateConversationWithUserAsync(userId, otherUserId);
+            var result = await _messageService.GetOrCreateConversationWithUserAsync(userId, otherUserId, cancellationToken);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 

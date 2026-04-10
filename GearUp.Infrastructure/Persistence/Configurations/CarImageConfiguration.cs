@@ -9,7 +9,8 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<CarImage> builder)
         {
             builder.HasKey(ci => ci.Id);
-            builder.HasQueryFilter(ci => !ci.Car.IsDeleted);
+            builder.HasQueryFilter(ci => ci.Car != null && !ci.Car.IsDeleted);
+            builder.HasIndex(ci => ci.CarId);
         }
     }
 }

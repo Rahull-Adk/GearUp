@@ -9,7 +9,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<RefreshToken> builder)
         {
             builder.HasKey(rt => rt.Id);
-            builder.HasQueryFilter(rt => !rt.User.IsDeleted);
+            builder.HasQueryFilter(rt => rt.User != null && !rt.User.IsDeleted);
         }
     }
 }

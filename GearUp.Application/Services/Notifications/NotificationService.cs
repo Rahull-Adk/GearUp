@@ -16,17 +16,21 @@ namespace GearUp.Application.Services.Notifications
         private readonly ICommonRepository _commonRepository;
         private readonly IRealTimeNotifier _realTimeNotifier;
         private readonly ILogger<NotificationService> _logger;
+        private readonly ICacheService _cacheService;
+        private static readonly TimeSpan CountTtl = TimeSpan.FromSeconds(30);
 
         public NotificationService(
             INotificationRepository notificationRepository,
             ICommonRepository commonRepository,
             IRealTimeNotifier realTimeNotifier,
-            ILogger<NotificationService> logger)
+            ILogger<NotificationService> logger,
+            ICacheService cacheService)
         {
             _notificationRepository = notificationRepository;
             _commonRepository = commonRepository;
             _realTimeNotifier = realTimeNotifier;
             _logger = logger;
+            _cacheService = cacheService;
         }
 
         public async Task<NotificationDto> CreateAndPushNotificationAsync(
@@ -62,6 +66,7 @@ namespace GearUp.Application.Services.Notifications
             // Persist to database
             await _notificationRepository.AddNotificationAsync(notification);
             await _commonRepository.SaveChangesAsync();
+            await InvalidateUnreadCountCacheAsync(receiverUserId);
 
             // Create DTO for real-time push
             var notificationDto = new NotificationDto
@@ -91,7 +96,7 @@ namespace GearUp.Application.Services.Notifications
             return notificationDto;
         }
 
-        public async Task<Result<CursorPageResult<NotificationDto>>> GetNotificationsAsync(Guid userId, string? cursorString, int pageSize = 20)
+        public async Task<Result<CursorPageResult<NotificationDto>>> GetNotificationsAsync(Guid userId, string? cursorString, int pageSize = 20, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting notifications for user {UserId}", userId);
 
@@ -104,16 +109,24 @@ namespace GearUp.Application.Services.Notifications
                 }
             }
 
-            var notifications = await _notificationRepository.GetNotificationsByUserIdAsync(userId, cursor, pageSize);
+            var notifications = await _notificationRepository.GetNotificationsByUserIdAsync(userId, cursor, pageSize, cancellationToken);
 
             return Result<CursorPageResult<NotificationDto>>.Success(notifications, "Notifications retrieved successfully");
         }
 
-        public async Task<Result<int>> GetUnreadCountAsync(Guid userId)
+        public async Task<Result<int>> GetUnreadCountAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting unread notification count for user {UserId}", userId);
 
-            var count = await _notificationRepository.GetUnreadNotificationCountAsync(userId);
+            var cacheKey = GetUnreadCountCacheKey(userId);
+            var cachedCount = await _cacheService.GetAsync<int?>(cacheKey);
+            if (cachedCount.HasValue)
+            {
+                return Result<int>.Success(cachedCount.Value, "Unread count retrieved successfully");
+            }
+
+            var count = await _notificationRepository.GetUnreadNotificationCountAsync(userId, cancellationToken);
+            await _cacheService.SetAsync(cacheKey, count, CountTtl);
 
             return Result<int>.Success(count, "Unread count retrieved successfully");
         }
@@ -136,6 +149,7 @@ namespace GearUp.Application.Services.Notifications
 
             await _notificationRepository.MarkNotificationAsReadAsync(notificationId);
             await _commonRepository.SaveChangesAsync();
+            await InvalidateUnreadCountCacheAsync(userId);
 
             return Result<bool>.Success(true, "Notification marked as read");
         }
@@ -146,6 +160,7 @@ namespace GearUp.Application.Services.Notifications
 
             await _notificationRepository.MarkAllNotificationsAsReadAsync(userId);
             await _commonRepository.SaveChangesAsync();
+            await InvalidateUnreadCountCacheAsync(userId);
 
             return Result<bool>.Success(true, "All notifications marked as read");
         }
@@ -168,6 +183,7 @@ namespace GearUp.Application.Services.Notifications
 
             await _notificationRepository.DeleteNotificationAsync(notificationId);
             await _commonRepository.SaveChangesAsync();
+            await InvalidateUnreadCountCacheAsync(userId);
 
             return Result<bool>.Success(true, "Notification deleted");
         }
@@ -178,9 +194,12 @@ namespace GearUp.Application.Services.Notifications
 
             await _notificationRepository.DeleteAllNotificationsByUserIdAsync(userId);
             await _commonRepository.SaveChangesAsync();
+            await InvalidateUnreadCountCacheAsync(userId);
 
             return Result<bool>.Success(true, "All notifications deleted");
         }
+
+        private static string GetUnreadCountCacheKey(Guid userId) => $"notifications:unread-count:u:{userId}";
+        private async Task InvalidateUnreadCountCacheAsync(Guid userId) => await _cacheService.RemoveAsync(GetUnreadCountCacheKey(userId));
     }
 }
-

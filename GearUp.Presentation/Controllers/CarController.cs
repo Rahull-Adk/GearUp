@@ -36,23 +36,23 @@ namespace GearUp.Presentation.Controllers
         }
 
         [HttpGet("")]
-        public async Task<IActionResult> GetAllCars([FromQuery] string? cursor)
+        public async Task<IActionResult> GetAllCars([FromQuery] string? cursor, CancellationToken cancellationToken = default)
         {
-            var result = await _carService.GetAllCarsAsync(cursor);
+            var result = await _carService.GetAllCarsAsync(cursor, cancellationToken);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> SearchCars([FromQuery] CarSearchDto searchDto, [FromQuery] string? cursor)
+        public async Task<IActionResult> SearchCars([FromQuery] CarSearchDto searchDto, [FromQuery] string? cursor, CancellationToken cancellationToken = default)
         {
-            var result = await _carService.SearchCarsAsync(searchDto, cursor);
+            var result = await _carService.SearchCarsAsync(searchDto, cursor, cancellationToken);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
         [HttpGet("{carId:guid}")]
-        public async Task<IActionResult> GetCarById([FromRoute] Guid carId)
+        public async Task<IActionResult> GetCarById([FromRoute] Guid carId, CancellationToken cancellationToken = default)
         {
-            var result = await _carService.GetCarByIdAsync(carId);
+            var result = await _carService.GetCarByIdAsync(carId, cancellationToken);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -66,10 +66,10 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize(Policy = "DealerOnly")]
         [HttpGet($"my-car")]
-        public async Task<IActionResult> GetMyCars([FromQuery] CarValidationStatus status, [FromQuery] string? cursor)
+        public async Task<IActionResult> GetMyCars([FromQuery] CarValidationStatus status, [FromQuery] string? cursor, CancellationToken cancellationToken = default)
         {
             var currentUserId = User.FindFirst(c => c.Type == "id")?.Value;
-            var result = await _carService.GetMyCarsAsync(Guid.Parse(currentUserId!), status, cursor);
+            var result = await _carService.GetMyCarsAsync(Guid.Parse(currentUserId!), status, cursor, cancellationToken);
             return  StatusCode(result.Status, result.ToApiResponse());
         }
     }

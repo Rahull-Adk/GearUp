@@ -18,8 +18,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{26E900B8-DD2F-435F-AFFC-DCF92705B041}"
+	ProjectSection(SolutionItems) = preProject
+		LoadTests\readme.md = LoadTests\readme.md
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearUp.UnitTests", "GearUp.UnitTests\GearUp.UnitTests.csproj", "{7B3BCBE7-FABE-4A20-B486-2B15988AFDE4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GearUp.LoadTests", "GearUp.LoadTests", "{18F7B187-7C6B-4E42-9841-BCED0CE274AA}"
+	ProjectSection(SolutionItems) = preProject
+		LoadTests\baseline\get_feed_baseline.md = LoadTests\baseline\get_feed_baseline.md
+		LoadTests\baseline\get_feed_script.js = LoadTests\baseline\get_feed_script.js
+		LoadTests\k6-load-testing-guide.md = LoadTests\k6-load-testing-guide.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,6 +67,7 @@ Global
 		{1208C7AF-F240-4DBF-853C-0F5BE949A12E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{E931AEB3-4DDA-4CC6-8ADA-B895A81EA7AD} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{7B3BCBE7-FABE-4A20-B486-2B15988AFDE4} = {26E900B8-DD2F-435F-AFFC-DCF92705B041}
+		{18F7B187-7C6B-4E42-9841-BCED0CE274AA} = {26E900B8-DD2F-435F-AFFC-DCF92705B041}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {701993F6-3952-4CB4-AE8F-59EC887B2BF1}

@@ -57,28 +57,28 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize]
         [HttpGet("{dealerId:guid}/posts")]
-        public async  Task<IActionResult> GetDealerPosts([FromRoute] Guid dealerId,[FromQuery] string? cursor)
+        public async  Task<IActionResult> GetDealerPosts([FromRoute] Guid dealerId,[FromQuery] string? cursor, CancellationToken cancellationToken = default)
         {
-            var result = await _generalUserService.GetPostsByDealerId(dealerId, cursor);
+            var result = await _generalUserService.GetPostsByDealerId(dealerId, cursor, cancellationToken);
             return StatusCode(result.Status, result);
         }
 
 
         [Authorize]
         [HttpGet("{dealerId:guid}/cars")]
-        public async Task<IActionResult> GetMyCars([FromRoute] Guid dealerId, [FromQuery] string? cursor)
+        public async Task<IActionResult> GetMyCars([FromRoute] Guid dealerId, [FromQuery] string? cursor, CancellationToken cancellationToken = default)
         {
-            var result = await _carService.GetDealerCarsAsync(dealerId, cursor);
+            var result = await _carService.GetDealerCarsAsync(dealerId, cursor, cancellationToken);
             return  StatusCode(result.Status, result.ToApiResponse());
         }
 
 
         [Authorize(Policy = "CustomerOnly")]
         [HttpPost("kyc")]
-        public async Task<IActionResult> SubmitKycDocuments([FromForm] KycRequestDto kycDocumentDto)
+        public async Task<IActionResult> SubmitKycDocuments([FromForm] KycRequestDto kycDocumentDto, CancellationToken cancellationToken = default)
         {
             var userId = User.FindFirst(c => c.Type == "id")?.Value;
-            var result = await _kycService.SubmitKycService(userId!, kycDocumentDto);
+            var result = await _kycService.SubmitKycService(userId!, kycDocumentDto, cancellationToken);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 

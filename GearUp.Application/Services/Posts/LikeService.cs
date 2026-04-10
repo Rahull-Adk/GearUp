@@ -215,6 +215,7 @@ namespace GearUp.Application.Services.Posts
             return Result<int>.Success(likeCount, "Comment unliked successfully", 200);
         }
 
+        // Intentionally no feed-wide invalidation for likes/comments to avoid rebuilding entire cached feeds.
 
     }
 }

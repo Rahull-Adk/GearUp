@@ -23,7 +23,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .WithMany(u => u.Cars)
                 .HasForeignKey(c => c.DealerId)
                 .OnDelete(DeleteBehavior.Cascade);
-          
+
             builder.HasMany(c => c.Images)
                     .WithOne(ci => ci.Car)
                     .HasForeignKey(ci => ci.CarId)
@@ -31,6 +31,45 @@ namespace GearUp.Infrastructure.Persistence.Configurations
 
             builder.Property(c => c.CreatedAt).IsRequired();
             builder.Property(c => c.UpdatedAt).IsRequired();
+
+            builder.HasIndex(c => new
+            {
+                c.IsDeleted,
+                c.ValidationStatus,
+                c.Status,
+                c.CreatedAt,
+                c.Id
+            });
+
+            builder.HasIndex(c => new
+            {
+                c.DealerId,
+                c.IsDeleted,
+                c.ValidationStatus,
+                c.CreatedAt,
+                c.Id
+            });
+
+            builder.HasIndex(c => new
+            {
+                c.IsDeleted,
+                c.ValidationStatus,
+                c.Status,
+                c.Color,
+                c.CreatedAt,
+                c.Id
+            });
+
+            builder.HasIndex(c => c.VIN).IsUnique();
+            builder.HasIndex(c => new
+            {
+                c.ValidationStatus,
+                c.Status,
+                c.Price,
+                c.CreatedAt,
+                c.Id
+            });
+
         }
     }
 }

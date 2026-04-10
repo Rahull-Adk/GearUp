@@ -8,7 +8,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<KycSubmissions> builder)
         {
-            builder.HasQueryFilter(k => !k.SubmittedBy.IsDeleted);
+            builder.HasQueryFilter(k => k.SubmittedBy != null && !k.SubmittedBy.IsDeleted);
 
             builder.Property(k => k.Id).HasColumnType("char(36)")
                 .UseCollation("utf8mb4_0900_ai_ci")
@@ -55,6 +55,12 @@ namespace GearUp.Infrastructure.Persistence.Configurations
             builder.Property(k => k.RejectionReason)
                 .HasMaxLength(500)
                 .IsRequired(false);
+
+            builder.HasIndex(k => new { k.SubmittedAt, k.Id })
+                .IsDescending(true, true);
+
+            builder.HasIndex(k => new { k.Status, k.SubmittedAt, k.Id })
+                .IsDescending(false, true, true);
 
         }
     }

@@ -17,7 +17,7 @@ namespace GearUp.Presentation.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetNotifications([FromQuery] string? cursor, [FromQuery] int pageSize = 20)
+        public async Task<IActionResult> GetNotifications([FromQuery] string? cursor, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
         {
             var userId = User.FindFirst(u => u.Type == "id")?.Value;
             if (string.IsNullOrEmpty(userId))
@@ -25,12 +25,12 @@ namespace GearUp.Presentation.Controllers
                 return Unauthorized();
             }
 
-            var result = await _notificationService.GetNotificationsAsync(Guid.Parse(userId), cursor, pageSize);
+            var result = await _notificationService.GetNotificationsAsync(Guid.Parse(userId), cursor, pageSize, cancellationToken);
             return StatusCode(result.Status, result);
         }
 
         [HttpGet("unread-count")]
-        public async Task<IActionResult> GetUnreadCount()
+        public async Task<IActionResult> GetUnreadCount(CancellationToken cancellationToken = default)
         {
             var userId = User.FindFirst(u => u.Type == "id")?.Value;
             if (string.IsNullOrEmpty(userId))
@@ -38,7 +38,7 @@ namespace GearUp.Presentation.Controllers
                 return Unauthorized();
             }
 
-            var result = await _notificationService.GetUnreadCountAsync(Guid.Parse(userId));
+            var result = await _notificationService.GetUnreadCountAsync(Guid.Parse(userId), cancellationToken);
             return StatusCode(result.Status, result);
         }
 
@@ -95,4 +95,3 @@ namespace GearUp.Presentation.Controllers
         }
     }
 }
-

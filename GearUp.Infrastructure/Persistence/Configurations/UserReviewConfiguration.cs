@@ -9,7 +9,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<UserReview> builder)
         {
             builder.HasKey(ur => ur.Id);
-            builder.HasQueryFilter(ur => !ur.Reviewer.IsDeleted && !ur.Reviewee.IsDeleted);
+            builder.HasQueryFilter(ur => ur.Reviewer != null && !ur.Reviewer.IsDeleted && ur.Reviewee != null && !ur.Reviewee.IsDeleted);
 
             builder.Property(ur => ur.ReviewText)
                 .IsRequired()

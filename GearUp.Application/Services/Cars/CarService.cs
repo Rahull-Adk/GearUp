@@ -2,11 +2,15 @@ using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;
 using GearUp.Application.Interfaces.Repositories;
+using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
 using GearUp.Application.ServiceDtos.Car;
 using GearUp.Domain.Entities.Cars;
 using GearUp.Domain.Enums;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace GearUp.Application.Services.Cars
 {
@@ -19,6 +23,11 @@ namespace GearUp.Application.Services.Cars
         private readonly ICommonRepository _commonRepository;
         private readonly ICarImageService _carImageService;
         private readonly IUserRepository _userRepository;
+        private readonly ICacheService _cacheService;
+
+        private const string CarListVersionKey = "cars:list:version";
+        private static readonly TimeSpan CarListCacheTtl = TimeSpan.FromSeconds(90);
+        private static readonly TimeSpan CarCountCacheTtl = TimeSpan.FromMinutes(10);
 
         public CarService(
             IValidator<CreateCarRequestDto> createCarValidator,
@@ -27,7 +36,8 @@ namespace GearUp.Application.Services.Cars
             ICommonRepository commonRepository,
             ICarImageService carImageService,
             IValidator<UpdateCarDto> updateCarDtoValiator,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            ICacheService cacheService)
         {
             _createCarValidator = createCarValidator;
             _logger = logger;
@@ -36,6 +46,7 @@ namespace GearUp.Application.Services.Cars
             _carImageService = carImageService;
             _updateCarValidator = updateCarDtoValiator;
             _userRepository = userRepository;
+            _cacheService = cacheService;
         }
 
         public async Task<Result<CarResponseDto>> CreateCarAsync(CreateCarRequestDto request, Guid dealerId)
@@ -101,12 +112,13 @@ namespace GearUp.Application.Services.Cars
 
             await _carRepository.AddCarAsync(newCar);
             await _commonRepository.SaveChangesAsync();
+            await InvalidateCarListCacheAsync();
             _logger.LogInformation("Car created successfully for dealer ID: {DealerId}", dealerId);
 
             return Result<CarResponseDto>.Success(null!, "Car added successfully.", 201);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetAllCarsAsync(string? cursorString)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetAllCarsAsync(string? cursorString, CancellationToken cancellationToken = default)
         {
             Cursor? cursor = null;
             if (!string.IsNullOrEmpty(cursorString))
@@ -117,14 +129,22 @@ namespace GearUp.Application.Services.Cars
                 }
             }
 
-            var cars = await _carRepository.GetAllCarsAsync(cursor);
+            var cacheKey = await BuildCarCacheKeyAsync("all", Guid.Empty, cursorString);
+            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarResponseDto>>(cacheKey);
+            if (cachedCars != null)
+            {
+                return Result<CursorPageResult<CarResponseDto>>.Success(cachedCars, "Cars fetched successfully", 200);
+            }
+
+            var cars = await _carRepository.GetAllCarsAsync(cursor, cancellationToken);
+            await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
 
             return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
         }
 
-        public async Task<Result<CarResponseDto>> GetCarByIdAsync(Guid carId)
+        public async Task<Result<CarResponseDto>> GetCarByIdAsync(Guid carId, CancellationToken cancellationToken = default)
         {
-            var car = await _carRepository.GetCarByIdAsync(carId);
+            var car = await _carRepository.GetCarByIdAsync(carId, cancellationToken);
             if (car == null)
             {
                 _logger.LogWarning("Car ID: {CarId} not found.", carId);
@@ -176,6 +196,7 @@ namespace GearUp.Application.Services.Cars
             );
 
             await _commonRepository.SaveChangesAsync();
+            await InvalidateCarListCacheAsync();
             _logger.LogInformation("Car updated successfully for car ID: {CarId}", carId);
 
             return Result<CarResponseDto>.Success(null!, "Car updated successfully", 200);
@@ -206,13 +227,14 @@ namespace GearUp.Application.Services.Cars
 
             existingCar.DeleteCar();
             await _commonRepository.SaveChangesAsync();
+            await InvalidateCarListCacheAsync();
 
             _logger.LogInformation("Car deleted successfully for car ID: {CarId}", carId);
             return Result<string>.Success(default!, "Car deleted successfully", 200);
 
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetDealerCarsAsync(Guid dealerId, string? cursorString)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetDealerCarsAsync(Guid dealerId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting cars of {DealerId}", dealerId);
 
@@ -240,7 +262,7 @@ namespace GearUp.Application.Services.Cars
                 }
             }
 
-            var cars = await _carRepository.GetDealerCarsAsync(dealerId, cursor);
+            var cars = await _carRepository.GetDealerCarsAsync(dealerId, cursor, cancellationToken);
 
             return Result<CursorPageResult<CarResponseDto>>.Success(cars, $"Cars fetched successfully");
         }
@@ -263,7 +285,7 @@ namespace GearUp.Application.Services.Cars
             return Result<CarResponseDto>.Success(null!, "Validation passed", 200);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> SearchCarsAsync(CarSearchDto? searchDto, string? cursorString)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> SearchCarsAsync(CarSearchDto? searchDto, string? cursorString, CancellationToken cancellationToken = default)
         {
             if (searchDto == null)
             {
@@ -289,11 +311,19 @@ namespace GearUp.Application.Services.Cars
                 }
             }
 
-            var cars = await _carRepository.SearchCarsAsync(searchDto, cursor);
+            var cacheKey = await BuildCarCacheKeyAsync("search", Guid.Empty, cursorString, searchDto);
+            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarResponseDto>>(cacheKey);
+            if (cachedCars != null)
+            {
+                return Result<CursorPageResult<CarResponseDto>>.Success(cachedCars, "Cars fetched successfully", 200);
+            }
+
+            var cars = await _carRepository.SearchCarsAsync(searchDto, cursor, cancellationToken);
+            await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
             return Result<CursorPageResult<CarResponseDto>>.Success(cars, "Cars fetched successfully", 200);
         }
 
-        public async Task<Result<CursorPageResult<CarResponseDto>>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, string? cursorString)
+        public async Task<Result<CursorPageResult<CarResponseDto>>> GetMyCarsAsync(Guid dealerId, CarValidationStatus status, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting cars of {DealerId}", dealerId);
 
@@ -320,10 +350,50 @@ namespace GearUp.Application.Services.Cars
                 }
             }
 
-            var cars = await _carRepository.GetMyCarsAsync(dealerId, status, cursor);
+            var cacheKey = await BuildCarCacheKeyAsync("my", dealerId, cursorString, status.ToString());
+            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarResponseDto>>(cacheKey);
+            if (cachedCars != null)
+            {
+                return Result<CursorPageResult<CarResponseDto>>.Success(cachedCars, $"{status} cars fetched successfully");
+            }
+
+            var cars = await _carRepository.GetMyCarsAsync(dealerId, status, cursor, cancellationToken);
+            await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
 
             return Result<CursorPageResult<CarResponseDto>>.Success(cars, $"{status} cars fetched successfully");
 
+        }
+
+        private async Task InvalidateCarListCacheAsync()
+        {
+            await _cacheService.RemoveAsync(CarListVersionKey);
+        }
+
+        private async Task<string> BuildCarCacheKeyAsync(string scope, Guid userId, string? cursorOrFilter, object? filter = null)
+        {
+            var version = await GetOrCreateVersionAsync(CarListVersionKey);
+            var serializedFilter = filter == null ? cursorOrFilter ?? "none" : JsonSerializer.Serialize(filter);
+            var hash = HashValue($"{cursorOrFilter}|{serializedFilter}");
+            return $"cars:{scope}:u:{userId}:v:{version}:h:{hash}";
+        }
+
+        private async Task<string> GetOrCreateVersionAsync(string versionKey)
+        {
+            var version = await _cacheService.GetAsync<string>(versionKey);
+            if (!string.IsNullOrWhiteSpace(version))
+            {
+                return version;
+            }
+
+            version = Guid.NewGuid().ToString("N");
+            await _cacheService.SetAsync(versionKey, version, CarCountCacheTtl);
+            return version;
+        }
+
+        private static string HashValue(string value)
+        {
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+            return Convert.ToHexString(bytes).ToLowerInvariant();
         }
     }
 }

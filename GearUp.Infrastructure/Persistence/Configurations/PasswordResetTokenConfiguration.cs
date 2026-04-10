@@ -9,7 +9,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<PasswordResetToken> builder)
         {
             builder.HasKey(prt => prt.Id);
-            builder.HasQueryFilter(prt => !prt.User.IsDeleted);
+            builder.HasQueryFilter(prt => prt.User != null && !prt.User.IsDeleted);
         }
     }
 }

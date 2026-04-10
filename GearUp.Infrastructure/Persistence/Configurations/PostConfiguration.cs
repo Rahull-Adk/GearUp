@@ -9,9 +9,6 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<Post> builder)
         {
             builder.HasKey(p => p.Id);
-
-            builder.HasQueryFilter(p => !p.IsDeleted);
-
             builder.Property(p => p.Caption).HasMaxLength(300);
             builder.Property(p => p.Content).IsRequired().HasMaxLength(2000);
             builder.Property(p => p.Visibility).IsRequired();
@@ -44,11 +41,8 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .HasForeignKey(v => v.PostId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Existing index for public feed queries (filter by visibility, order by CreatedAt, Id)
-            builder.HasIndex(p => new {p.Visibility, p.CreatedAt, p.Id}).IsUnique();
-
-            // Index for user's posts queries (GetAllUserPostByUserIdAsync)
-            builder.HasIndex(p => new { p.UserId, p.CreatedAt, p.Id });
+            builder.HasIndex(p => new { p.IsDeleted, p.Visibility, p.CreatedAt, p.Id });
+            builder.HasIndex(p => new { p.IsDeleted, p.UserId, p.CreatedAt, p.Id });
         }
     }
 }
