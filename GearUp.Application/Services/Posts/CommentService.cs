@@ -14,6 +14,8 @@ namespace GearUp.Application.Services.Posts
 {
     public class CommentService : ICommentService
     {
+        private const int MaxCommentLength = 1000;
+
         private readonly ILogger<ICommentService> _logger;
         private readonly IUserRepository _userRepository;
         private readonly ICommonRepository _commonRepository;
@@ -60,7 +62,8 @@ namespace GearUp.Application.Services.Posts
                 return Result<CommentDto>.Failure("Post not found", 404);
             }
 
-            if (string.IsNullOrWhiteSpace(comment.Content))
+            var normalizedContent = comment.Content?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedContent) || normalizedContent.Length > MaxCommentLength)
             {
                 _logger.LogWarning(
                     "Comment length is invalid. UserId: {UserId}, PostId: {PostId}",
@@ -82,7 +85,7 @@ namespace GearUp.Application.Services.Posts
                 }
             }
 
-            var postComment = PostComment.CreateComment(comment.PostId, userId, comment.Content, comment.ParentCommentId);
+            var postComment = PostComment.CreateComment(comment.PostId, userId, normalizedContent!, comment.ParentCommentId);
             await _commentRepository.AddCommentAsync(postComment);
 
             // Increment counts transactionally
@@ -101,15 +104,25 @@ namespace GearUp.Application.Services.Posts
                 ParentCommentId = comment.ParentCommentId,
                 PostId = comment.PostId,
                 CommentedUserId = userId,
-                Content = comment.Content,
+                Content = normalizedContent!,
                 CreatedAt = postComment.CreatedAt,
+                UpdatedAt = postComment.UpdatedAt,
                 Id = postComment.Id,
                 CommentedUserName = user.Username,
                 CommentedUserProfilePictureUrl = user.AvatarUrl,
                 LikeCount = 0
             };
 
-            await _realTimeNotifier.BroadCastComments(comment.PostId, commentDto);
+            try
+            {
+                await _realTimeNotifier.BroadCastComments(comment.PostId, commentDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to broadcast comment event. PostId: {PostId}, CommentId: {CommentId}",
+                    comment.PostId, postComment.Id);
+            }
 
             // Send notification (persisted + real-time)
             if (receiverUserId != userId)
@@ -123,18 +136,27 @@ namespace GearUp.Application.Services.Posts
                     : "New comment on your post";
 
                 var content = parentComment is not null
-                    ? $"{user.Name} replied to your comment: \"{comment.Content}\""
-                    : $"{user.Name} commented on your post: \"{comment.Content}\"";
+                    ? $"{user.Name} replied to your comment: \"{normalizedContent}\""
+                    : $"{user.Name} commented on your post: \"{normalizedContent}\"";
 
-                await _notificationService.CreateAndPushNotificationAsync(
-                    title,
-                    content,
-                    notificationType,
-                    actorUserId: userId,
-                    receiverUserId: receiverUserId,
-                    postId: post.Id,
-                    commentId: postComment.Id
-                );
+                try
+                {
+                    await _notificationService.CreateAndPushNotificationAsync(
+                        title,
+                        content,
+                        notificationType,
+                        actorUserId: userId,
+                        receiverUserId: receiverUserId,
+                        postId: post.Id,
+                        commentId: postComment.Id
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to create/push comment notification. PostId: {PostId}, CommentId: {CommentId}, ReceiverUserId: {ReceiverUserId}",
+                        post.Id, postComment.Id, receiverUserId);
+                }
             }
 
             _logger.LogInformation(
@@ -192,7 +214,8 @@ namespace GearUp.Application.Services.Posts
             _logger.LogInformation("User with Id: {UserId} is attempting to update comment with Id: {CommentId}",
                 userId, commentId);
 
-            if (string.IsNullOrWhiteSpace(updatedContent))
+            var normalizedContent = updatedContent?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedContent) || normalizedContent.Length > MaxCommentLength)
             {
                 _logger.LogWarning("Updated content is invalid. UserId: {UserId}, CommentId: {CommentId}", userId,
                     commentId);
@@ -213,11 +236,30 @@ namespace GearUp.Application.Services.Posts
                 return Result<CommentDto>.Failure("You are not authorized to update this comment", 403);
             }
 
-            commentEntity.UpdateContent(updatedContent);
+            commentEntity.UpdateContent(normalizedContent!);
             await _commonRepository.SaveChangesAsync();
+
+            var user = await _userRepository.GetUserByIdAsync(userId);
+
+            var commentDto = new CommentDto
+            {
+                Id = commentEntity.Id,
+                PostId = commentEntity.PostId,
+                ParentCommentId = commentEntity.ParentCommentId,
+                CommentedUserId = commentEntity.CommentedUserId,
+                CommentedUserName = user?.Username ?? string.Empty,
+                CommentedUserProfilePictureUrl = user?.AvatarUrl ?? string.Empty,
+                Content = commentEntity.Content,
+                LikeCount = commentEntity.LikeCount,
+                ChildCount = commentEntity.ReplyCount,
+                CreatedAt = commentEntity.CreatedAt,
+                UpdatedAt = commentEntity.UpdatedAt,
+                IsEdited = commentEntity.UpdatedAt > commentEntity.CreatedAt
+            };
+
             _logger.LogInformation("User with Id: {UserId} updated comment with Id: {CommentId} successfully", userId,
                 commentId);
-            return Result<CommentDto>.Success(default!, "Comment updated successfully", 200);
+            return Result<CommentDto>.Success(commentDto, "Comment updated successfully", 200);
         }
 
         public async Task<Result<IEnumerable<CommentDto>>> GetParentCommentsByPostId(Guid postId, Guid userId)

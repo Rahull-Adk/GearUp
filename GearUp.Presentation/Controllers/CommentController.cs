@@ -63,13 +63,13 @@ namespace GearUp.Presentation.Controllers
 
         [Authorize]
         [HttpPut("{commentId:guid}")]
-        public async Task<IActionResult> UpdateComment([FromRoute] Guid commentId, [FromBody] string comment)
+        public async Task<IActionResult> UpdateComment([FromRoute] Guid commentId, [FromBody] UpdateCommentDto request)
         {
             if (!TryGetCurrentUserId(out var currentUserId))
             {
                 return BadRequest(new { message = "Invalid user id claim." });
             }
-            var result = await _commentService.UpdateCommentAsync(commentId, currentUserId, comment);
+            var result = await _commentService.UpdateCommentAsync(commentId, currentUserId, request.Content);
             return StatusCode(result.Status, result);
         }
 
@@ -98,6 +98,7 @@ namespace GearUp.Presentation.Controllers
         }
 
         [Authorize]
+        [HttpGet("{parentCommentId:guid}/children")]
         [HttpGet("{parentCommentId:guid}/childrens")]
         public async Task<IActionResult> GetChildCommentsByParentId([FromRoute] Guid parentCommentId)
         {
