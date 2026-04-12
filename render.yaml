@@ -8,6 +8,8 @@ services:
     envVars:
       - key: APP_STARTUP_MODE
         value: web
+      - key: DB_SEED_SCOPE
+        value: admin
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__DefaultConnection

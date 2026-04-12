@@ -72,7 +72,7 @@ FromEmail=no-reply@example.com
 ClientUrl=http://localhost:3000
 CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
 
-# Used by admin seeding flows (when DB task flags are enabled)
+# Used by admin seeding flows (`APP_STARTUP_MODE=db-seed` or legacy `db-task`)
 ADMIN_USERNAME=admin
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=your_secure_password
@@ -80,6 +80,10 @@ ADMIN_PASSWORD=your_secure_password
 # Optional startup DB task flags
 RUN_DB_TASKS_IN_DEVELOPMENT=false
 RUN_DB_TASKS_ONCE_AND_EXIT=false
+
+# Optional when startup mode runs seed tasks
+# full (default in non-prod) or admin (default in prod)
+DB_SEED_SCOPE=full
 ```
 
 ### 3) Run with Docker Compose
@@ -147,7 +151,8 @@ Important settings:
 - Container listens on `8080` (`Dockerfile` sets `ASPNETCORE_URLS=http://+:8080`)
 - Use `render.yaml` as a deployment blueprint (`gearup-api` web service)
 - Keep `APP_STARTUP_MODE=web` on the web service
-- Optional one-off migration/seeding run: temporarily deploy with `APP_STARTUP_MODE=db-task`, then switch back to `web`
+- For one-off production migration run, use `APP_STARTUP_MODE=db-migrate`, then switch back to `web`
+- For one-off migration+seed run (non-production recommended), use `APP_STARTUP_MODE=db-seed`, then switch back to `web`
 
 ### Render env checklist
 
@@ -161,7 +166,7 @@ Set these on Render before first production deploy:
 - `Jwt__OpaqueTokenPepper` (recommended in production)
 - `BREVO_API_KEY`, `FromEmail`, `ClientUrl`, `CLOUDINARY_URL`
 - `CORS_ALLOWED_ORIGINS` (comma-separated, e.g. `https://app.example.com,https://admin.example.com`)
-- `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (required when `APP_STARTUP_MODE=db-task`)
+- `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (required only when `APP_STARTUP_MODE=db-seed` or legacy `db-task`)
 
 ## Database and Seeding Tasks
 
@@ -178,15 +183,20 @@ Database migrate/seed is controlled by startup mode in `Program.cs`:
 
 1. `APP_STARTUP_MODE=web` (default)
    - Starts the API only (no migrate/seed)
-2. `APP_STARTUP_MODE=db-task`
-   - Runs migrate + seed once, then exits without starting the web host
+2. `APP_STARTUP_MODE=db-migrate`
+   - Runs migrations only, then exits without starting the web host
+3. `APP_STARTUP_MODE=db-seed`
+   - Runs migrations + seed tasks, then exits without starting the web host
+   - Seeding honors `DB_SEED_SCOPE` (`admin` or `full`)
+4. `APP_STARTUP_MODE=db-task` (legacy alias)
+   - Backward-compatible alias for `db-seed`
 
 Legacy dev-only flags remain supported for local workflows:
 
 - `RUN_DB_TASKS_IN_DEVELOPMENT=true`
 - `RUN_DB_TASKS_ONCE_AND_EXIT=true`
 
-Outside Development, legacy flags are ignored to avoid accidental production shutdown/startup-task runs.
+Outside Development, legacy flags are ignored to avoid accidental production shutdown/startup-task runs. In production, prefer `APP_STARTUP_MODE=db-migrate` for schema updates.
 
 ### EF Core resiliency setup
 

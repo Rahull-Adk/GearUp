@@ -74,12 +74,23 @@ if (!app.Environment.IsDevelopment() && (legacyRunDbTasksOnceAndExit || builder.
     Log.Warning("Legacy DB task flags are ignored outside Development. Use APP_STARTUP_MODE=db-migrate for migrations only, or APP_STARTUP_MODE=db-seed for migration+seeding tasks.");
 }
 
-var runDbTasksOnceAndExit = shouldRunDbTasksByMode || (app.Environment.IsDevelopment() && legacyRunDbTasksOnceAndExit);
-var runDbTasksInDevelopment = shouldRunDbTasksByMode || legacyRunDbTasksInDevelopment;
+var runDbTasksInDevelopment = app.Environment.IsDevelopment() && legacyRunDbTasksInDevelopment;
 var runMigrations = shouldRunMigrationsByMode || runDbTasksInDevelopment;
 var runSeedData = shouldRunSeedingByMode || runDbTasksInDevelopment;
+var runDbTasks = runMigrations || runSeedData;
+var runDbTasksOnceAndExit = shouldRunDbTasksByMode || (runDbTasksInDevelopment && legacyRunDbTasksOnceAndExit);
 
-if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
+var configuredSeedScope = builder.Configuration["DB_SEED_SCOPE"]?.Trim().ToLowerInvariant();
+var seedScope = string.IsNullOrWhiteSpace(configuredSeedScope)
+    ? (app.Environment.IsProduction() ? "admin" : "full")
+    : configuredSeedScope;
+
+if (seedScope is not ("admin" or "full"))
+{
+    throw new InvalidOperationException("DB_SEED_SCOPE must be either 'admin' or 'full'.");
+}
+
+if (runDbTasks)
 {
     if (shouldRunDbTasksByMode)
     {
@@ -101,7 +112,7 @@ if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
         Log.Information("Running startup database tasks in development mode because RUN_DB_TASKS_IN_DEVELOPMENT=true.");
     }
 
-    if (runDbTasksOnceAndExit)
+    if (runDbTasksOnceAndExit && !shouldRunDbTasksByMode)
     {
         Log.Information("Running one-off database tasks because RUN_DB_TASKS_ONCE_AND_EXIT=true.");
     }
@@ -112,7 +123,7 @@ if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
     var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
     if (runMigrations)
     {
-        db.Database.Migrate();
+        await db.Database.MigrateAsync();
     }
 
     if (runSeedData)
@@ -131,7 +142,15 @@ if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
         var requiredAdminPassword = adminPassword;
 
         await AdminSeeder.SeedAdminAsync(db, hasher, requiredAdminUsername, requiredAdminEmail, requiredAdminPassword);
-        await seeder.SeedAsync();
+
+        if (seedScope == "full")
+        {
+            await seeder.SeedAsync();
+        }
+        else
+        {
+            Log.Information("Skipping non-admin seed data because DB_SEED_SCOPE=admin.");
+        }
     }
 
     if (runDbTasksOnceAndExit)
