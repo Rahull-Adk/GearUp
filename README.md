@@ -138,7 +138,7 @@ Important settings:
 - `Jwt__Issuer`, `Jwt__Audience`, `Jwt__AccessToken_SecretKey`, `Jwt__EmailVerificationToken_SecretKey`
 - `BREVO_API_KEY` (or `SendGridApiKey` fallback)
 - `FromEmail`, `ClientUrl`, `CLOUDINARY_URL`
-- `Redis__ConnectionString` (falls back to `localhost:6379` if missing)
+- `Redis__ConnectionString` (or `Redis:ConnectionString` / `REDIS_URL`)
 - `Cors__AllowedOrigins` (or `CORS_ALLOWED_ORIGINS`) for production frontend origins (comma-separated)
 
 ### Render notes

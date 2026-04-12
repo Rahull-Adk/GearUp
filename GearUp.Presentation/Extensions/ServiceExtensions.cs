@@ -46,6 +46,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using System.Security.Claims;
+using StackExchange.Redis;
 
 namespace GearUp.Presentation.Extensions
 {
@@ -82,6 +83,49 @@ namespace GearUp.Presentation.Extensions
             }
 
             return origins.ToArray();
+        }
+
+        private static string ResolveRedisConnectionString(IConfiguration config)
+        {
+            var configuredRedis = ReadSetting(config, "Redis:ConnectionString", "Redis__ConnectionString", "REDIS_URL");
+
+            if (string.IsNullOrWhiteSpace(configuredRedis))
+            {
+                throw new InvalidOperationException("Redis connection string is not configured. Set Redis:ConnectionString, Redis__ConnectionString, or REDIS_URL.");
+            }
+
+            var value = configuredRedis.Trim();
+            if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
+                !(uri.Scheme.Equals("redis", StringComparison.OrdinalIgnoreCase) ||
+                  uri.Scheme.Equals("rediss", StringComparison.OrdinalIgnoreCase)))
+            {
+                return value;
+            }
+
+            var options = new ConfigurationOptions
+            {
+                Ssl = uri.Scheme.Equals("rediss", StringComparison.OrdinalIgnoreCase),
+                AbortOnConnectFail = false
+            };
+
+            var port = uri.IsDefaultPort ? 6379 : uri.Port;
+            options.EndPoints.Add(uri.Host, port);
+
+            if (!string.IsNullOrWhiteSpace(uri.UserInfo))
+            {
+                var parts = uri.UserInfo.Split(':', 2, StringSplitOptions.TrimEntries);
+                if (parts.Length == 2)
+                {
+                    if (!string.IsNullOrWhiteSpace(parts[0])) options.User = Uri.UnescapeDataString(parts[0]);
+                    if (!string.IsNullOrWhiteSpace(parts[1])) options.Password = Uri.UnescapeDataString(parts[1]);
+                }
+                else if (parts.Length == 1)
+                {
+                    options.Password = Uri.UnescapeDataString(parts[0]);
+                }
+            }
+
+            return options.ToString();
         }
 
         public static void AddServices(this IServiceCollection services, IConfiguration config)
@@ -168,13 +212,17 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IMessageService, MessageService>();
             services.AddScoped<INotificationService, NotificationService>();
 
+
             // Redis Cache Injection
-            var redisConnection = ReadSetting(config, "Redis:ConnectionString", "Redis__ConnectionString") ?? "localhost:6379";
+
+            var redisConnection = ResolveRedisConnectionString(config);
+
             services.AddStackExchangeRedisCache(options =>
             {
                 options.Configuration = redisConnection;
                 options.InstanceName = "GearUpInstance";
             });
+
 
             services.AddScoped<ICacheService, CacheService>();
 
