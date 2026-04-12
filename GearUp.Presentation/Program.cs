@@ -55,10 +55,15 @@ builder.Services.AddServices(builder.Configuration);
 var app = builder.Build();
 
 var startupMode = (builder.Configuration["APP_STARTUP_MODE"] ?? "web").Trim().ToLowerInvariant();
-if (startupMode is not ("web" or "db-task"))
+if (startupMode is not ("web" or "db-migrate" or "db-seed" or "db-task"))
 {
-    throw new InvalidOperationException("APP_STARTUP_MODE must be either 'web' or 'db-task'.");
+    throw new InvalidOperationException("APP_STARTUP_MODE must be one of: 'web', 'db-migrate', 'db-seed', or 'db-task'.");
 }
+
+var isLegacyDbTaskMode = startupMode == "db-task";
+var shouldRunDbTasksByMode = startupMode is "db-migrate" or "db-seed" or "db-task";
+var shouldRunMigrationsByMode = startupMode is "db-migrate" or "db-seed" or "db-task";
+var shouldRunSeedingByMode = startupMode is "db-seed" or "db-task";
 
 var legacyRunDbTasksOnceAndExit = builder.Configuration.GetValue<bool>("RUN_DB_TASKS_ONCE_AND_EXIT");
 var legacyRunDbTasksInDevelopment = app.Environment.IsDevelopment() &&
@@ -66,17 +71,30 @@ var legacyRunDbTasksInDevelopment = app.Environment.IsDevelopment() &&
 
 if (!app.Environment.IsDevelopment() && (legacyRunDbTasksOnceAndExit || builder.Configuration.GetValue<bool>("RUN_DB_TASKS_IN_DEVELOPMENT")))
 {
-    Log.Warning("Legacy DB task flags are ignored outside Development. Use APP_STARTUP_MODE=db-task for one-off migration/seeding tasks.");
+    Log.Warning("Legacy DB task flags are ignored outside Development. Use APP_STARTUP_MODE=db-migrate for migrations only, or APP_STARTUP_MODE=db-seed for migration+seeding tasks.");
 }
 
-var runDbTasksOnceAndExit = startupMode == "db-task" || (app.Environment.IsDevelopment() && legacyRunDbTasksOnceAndExit);
-var runDbTasksInDevelopment = startupMode == "db-task" || legacyRunDbTasksInDevelopment;
+var runDbTasksOnceAndExit = shouldRunDbTasksByMode || (app.Environment.IsDevelopment() && legacyRunDbTasksOnceAndExit);
+var runDbTasksInDevelopment = shouldRunDbTasksByMode || legacyRunDbTasksInDevelopment;
+var runMigrations = shouldRunMigrationsByMode || runDbTasksInDevelopment;
+var runSeedData = shouldRunSeedingByMode || runDbTasksInDevelopment;
 
 if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
 {
-    if (startupMode == "db-task")
+    if (shouldRunDbTasksByMode)
     {
-        Log.Information("Running startup database tasks because APP_STARTUP_MODE=db-task.");
+        if (startupMode == "db-migrate")
+        {
+            Log.Information("Running startup database migration because APP_STARTUP_MODE=db-migrate.");
+        }
+        else if (startupMode == "db-seed")
+        {
+            Log.Information("Running startup database migration and seed because APP_STARTUP_MODE=db-seed.");
+        }
+        else if (isLegacyDbTaskMode)
+        {
+            Log.Information("Running startup database migration and seed because APP_STARTUP_MODE=db-task (legacy alias).");
+        }
     }
     else if (runDbTasksInDevelopment)
     {
@@ -88,26 +106,33 @@ if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
         Log.Information("Running one-off database tasks because RUN_DB_TASKS_ONCE_AND_EXIT=true.");
     }
 
-    var adminUsername = builder.Configuration["ADMIN_USERNAME"];
-    var adminEmail = builder.Configuration["ADMIN_EMAIL"];
-    var adminPassword = builder.Configuration["ADMIN_PASSWORD"];
-
-    if (string.IsNullOrWhiteSpace(adminUsername) || string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
-    {
-        throw new InvalidOperationException("ADMIN_USERNAME, ADMIN_EMAIL, and ADMIN_PASSWORD are required when running database tasks.");
-    }
-
-    var requiredAdminUsername = adminUsername!;
-    var requiredAdminEmail = adminEmail!;
-    var requiredAdminPassword = adminPassword!;
-
     using var scope = app.Services.CreateScope();
     var hasher = new PasswordHasher<User>();
     var db = scope.ServiceProvider.GetRequiredService<GearUpDbContext>();
     var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-    db.Database.Migrate();
-    await AdminSeeder.SeedAdminAsync(db, hasher, requiredAdminUsername, requiredAdminEmail, requiredAdminPassword);
-    await seeder.SeedAsync();
+    if (runMigrations)
+    {
+        db.Database.Migrate();
+    }
+
+    if (runSeedData)
+    {
+        var adminUsername = builder.Configuration["ADMIN_USERNAME"];
+        var adminEmail = builder.Configuration["ADMIN_EMAIL"];
+        var adminPassword = builder.Configuration["ADMIN_PASSWORD"];
+
+        if (string.IsNullOrWhiteSpace(adminUsername) || string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+        {
+            throw new InvalidOperationException("ADMIN_USERNAME, ADMIN_EMAIL, and ADMIN_PASSWORD are required when running seed tasks.");
+        }
+
+        var requiredAdminUsername = adminUsername;
+        var requiredAdminEmail = adminEmail;
+        var requiredAdminPassword = adminPassword;
+
+        await AdminSeeder.SeedAdminAsync(db, hasher, requiredAdminUsername, requiredAdminEmail, requiredAdminPassword);
+        await seeder.SeedAsync();
+    }
 
     if (runDbTasksOnceAndExit)
     {
@@ -118,7 +143,7 @@ if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
 }
 else
 {
-    Log.Information("Skipping startup database migration and seeding tasks. Use RUN_DB_TASKS_IN_DEVELOPMENT=true (development only) or RUN_DB_TASKS_ONCE_AND_EXIT=true (one-off).");
+    Log.Information("Skipping startup database migration and seeding tasks. Use APP_STARTUP_MODE=db-migrate for migration-only, APP_STARTUP_MODE=db-seed for migration+seeding, or RUN_DB_TASKS_IN_DEVELOPMENT=true (development only).");
 }
 
 if (app.Environment.IsDevelopment())
