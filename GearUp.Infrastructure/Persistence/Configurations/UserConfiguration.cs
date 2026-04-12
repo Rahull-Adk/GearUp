@@ -52,11 +52,6 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .HasForeignKey(k => k.ReviewerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Preferences
-            builder.HasMany(u => u.UserPreferences)
-                .WithOne(p => p.User)
-                .HasForeignKey(p => p.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
 
             // Appointments
 

@@ -9,6 +9,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<Post> builder)
         {
             builder.HasKey(p => p.Id);
+            builder.HasQueryFilter(p => !p.IsDeleted && p.User != null && !p.User.IsDeleted);
             builder.Property(p => p.Caption).HasMaxLength(300);
             builder.Property(p => p.Content).IsRequired().HasMaxLength(2000);
             builder.Property(p => p.Visibility).IsRequired();
@@ -19,6 +20,7 @@ namespace GearUp.Infrastructure.Persistence.Configurations
             builder.HasOne(p => p.User)
                 .WithMany(u => u.Posts)
                 .HasForeignKey(p => p.UserId)
+                .IsRequired()
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasOne(p => p.Car)
