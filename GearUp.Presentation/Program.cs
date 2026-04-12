@@ -7,7 +7,9 @@ using GearUp.Infrastructure.SignalR;
 using GearUp.Presentation.Extensions;
 using GearUp.Presentation.Middlewares;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -50,19 +52,33 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddOpenApi();
 builder.Services.AddServices(builder.Configuration);
 
-string adminUsername = builder.Configuration["ADMIN_USERNAME"]!;
-string adminEmail = builder.Configuration["ADMIN_EMAIL"]!;
-string adminPassword = builder.Configuration["ADMIN_PASSWORD"]!;
-
 var app = builder.Build();
 
-var runDbTasksOnceAndExit = builder.Configuration.GetValue<bool>("RUN_DB_TASKS_ONCE_AND_EXIT");
-var runDbTasksInDevelopment = app.Environment.IsDevelopment() &&
-                              builder.Configuration.GetValue<bool>("RUN_DB_TASKS_IN_DEVELOPMENT");
+var startupMode = (builder.Configuration["APP_STARTUP_MODE"] ?? "web").Trim().ToLowerInvariant();
+if (startupMode is not ("web" or "db-task"))
+{
+    throw new InvalidOperationException("APP_STARTUP_MODE must be either 'web' or 'db-task'.");
+}
+
+var legacyRunDbTasksOnceAndExit = builder.Configuration.GetValue<bool>("RUN_DB_TASKS_ONCE_AND_EXIT");
+var legacyRunDbTasksInDevelopment = app.Environment.IsDevelopment() &&
+                                    builder.Configuration.GetValue<bool>("RUN_DB_TASKS_IN_DEVELOPMENT");
+
+if (!app.Environment.IsDevelopment() && (legacyRunDbTasksOnceAndExit || builder.Configuration.GetValue<bool>("RUN_DB_TASKS_IN_DEVELOPMENT")))
+{
+    Log.Warning("Legacy DB task flags are ignored outside Development. Use APP_STARTUP_MODE=db-task for one-off migration/seeding tasks.");
+}
+
+var runDbTasksOnceAndExit = startupMode == "db-task" || (app.Environment.IsDevelopment() && legacyRunDbTasksOnceAndExit);
+var runDbTasksInDevelopment = startupMode == "db-task" || legacyRunDbTasksInDevelopment;
 
 if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
 {
-    if (runDbTasksInDevelopment)
+    if (startupMode == "db-task")
+    {
+        Log.Information("Running startup database tasks because APP_STARTUP_MODE=db-task.");
+    }
+    else if (runDbTasksInDevelopment)
     {
         Log.Information("Running startup database tasks in development mode because RUN_DB_TASKS_IN_DEVELOPMENT=true.");
     }
@@ -72,12 +88,25 @@ if (runDbTasksOnceAndExit || runDbTasksInDevelopment)
         Log.Information("Running one-off database tasks because RUN_DB_TASKS_ONCE_AND_EXIT=true.");
     }
 
+    var adminUsername = builder.Configuration["ADMIN_USERNAME"];
+    var adminEmail = builder.Configuration["ADMIN_EMAIL"];
+    var adminPassword = builder.Configuration["ADMIN_PASSWORD"];
+
+    if (string.IsNullOrWhiteSpace(adminUsername) || string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+    {
+        throw new InvalidOperationException("ADMIN_USERNAME, ADMIN_EMAIL, and ADMIN_PASSWORD are required when running database tasks.");
+    }
+
+    var requiredAdminUsername = adminUsername!;
+    var requiredAdminEmail = adminEmail!;
+    var requiredAdminPassword = adminPassword!;
+
     using var scope = app.Services.CreateScope();
     var hasher = new PasswordHasher<User>();
     var db = scope.ServiceProvider.GetRequiredService<GearUpDbContext>();
     var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
     db.Database.Migrate();
-    await AdminSeeder.SeedAdminAsync(db, hasher, adminUsername, adminEmail, adminPassword);
+    await AdminSeeder.SeedAdminAsync(db, hasher, requiredAdminUsername, requiredAdminEmail, requiredAdminPassword);
     await seeder.SeedAsync();
 
     if (runDbTasksOnceAndExit)
@@ -103,8 +132,6 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseRateLimiter();
-
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
@@ -124,12 +151,22 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 
 app.UseSerilogRequestLogging();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    // Trust proxy headers (required on hosted platforms like Render).
+    KnownNetworks = { },
+    KnownProxies = { }
+});
+
+app.UseRateLimiter();
+
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseCors("AllowFrontend");
 app.UseAuthorization();
-app.MapControllers();
+app.MapControllers().RequireRateLimiting("Fixed");
 app.MapHub<PostHub>("/hubs/post");
 app.MapHub<NotificationHub>("/hubs/notification");
 app.MapHub<ChatHub>("/hubs/chat");

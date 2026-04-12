@@ -65,6 +65,25 @@ namespace GearUp.Presentation.Extensions
             return null;
         }
 
+        private static string[] BuildAllowedOrigins(IConfiguration config, string requiredClientUrl)
+        {
+            var configuredOrigins = ReadSetting(config, "Cors:AllowedOrigins", "Cors__AllowedOrigins", "CORS_ALLOWED_ORIGINS");
+            var origins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                requiredClientUrl.TrimEnd('/')
+            };
+
+            if (!string.IsNullOrWhiteSpace(configuredOrigins))
+            {
+                foreach (var origin in configuredOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    origins.Add(origin.TrimEnd('/'));
+                }
+            }
+
+            return origins.ToArray();
+        }
+
         public static void AddServices(this IServiceCollection services, IConfiguration config)
         {
             // DbContext Injection
@@ -150,7 +169,7 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<INotificationService, NotificationService>();
 
             // Redis Cache Injection
-            var redisConnection = config["Redis:ConnectionString"] ?? "localhost:6379";
+            var redisConnection = ReadSetting(config, "Redis:ConnectionString", "Redis__ConnectionString") ?? "localhost:6379";
             services.AddStackExchangeRedisCache(options =>
             {
                 options.Configuration = redisConnection;
@@ -170,7 +189,7 @@ namespace GearUp.Presentation.Extensions
             // Health Checks
             services.AddHealthChecks()
                 .AddDbContextCheck<GearUpDbContext>("database")
-                .AddRedis(config["Redis:ConnectionString"] ?? "localhost:6379", name: "redis");
+                .AddRedis(redisConnection, name: "redis");
 
 
             // Repository Injections
@@ -246,12 +265,12 @@ namespace GearUp.Presentation.Extensions
                     .AddOtlpExporter());
 
             // CORS Policy
+            var allowedOrigins = BuildAllowedOrigins(config, requiredClientUrl);
             services.AddCors(opt =>
             {
                 opt.AddPolicy("AllowFrontend", builder =>
                 {
-                    builder.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
-                    builder.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+                    builder.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
                 });
             });
 

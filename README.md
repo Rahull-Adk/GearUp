@@ -139,6 +139,29 @@ Important settings:
 - `BREVO_API_KEY` (or `SendGridApiKey` fallback)
 - `FromEmail`, `ClientUrl`, `CLOUDINARY_URL`
 - `Redis__ConnectionString` (falls back to `localhost:6379` if missing)
+- `Cors__AllowedOrigins` (or `CORS_ALLOWED_ORIGINS`) for production frontend origins (comma-separated)
+
+### Render notes
+
+- Health check path: `/health`
+- Container listens on `8080` (`Dockerfile` sets `ASPNETCORE_URLS=http://+:8080`)
+- Use `render.yaml` as a deployment blueprint (`gearup-api` web service)
+- Keep `APP_STARTUP_MODE=web` on the web service
+- Optional one-off migration/seeding run: temporarily deploy with `APP_STARTUP_MODE=db-task`, then switch back to `web`
+
+### Render env checklist
+
+Set these on Render before first production deploy:
+
+- `APP_STARTUP_MODE=web`
+- `ASPNETCORE_ENVIRONMENT=Production`
+- `ConnectionStrings__DefaultConnection`
+- `Redis__ConnectionString`
+- `Jwt__Issuer`, `Jwt__Audience`, `Jwt__AccessToken_SecretKey`, `Jwt__EmailVerificationToken_SecretKey`
+- `Jwt__OpaqueTokenPepper` (recommended in production)
+- `BREVO_API_KEY`, `FromEmail`, `ClientUrl`, `CLOUDINARY_URL`
+- `CORS_ALLOWED_ORIGINS` (comma-separated, e.g. `https://app.example.com,https://admin.example.com`)
+- `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (required when `APP_STARTUP_MODE=db-task`)
 
 ## Database and Seeding Tasks
 
@@ -151,14 +174,19 @@ dotnet ef database update --project GearUp.Infrastructure --startup-project Gear
 
 ### Startup DB behavior
 
-Database migrate/seed is opt-in via environment flags in `Program.cs`:
+Database migrate/seed is controlled by startup mode in `Program.cs`:
 
-1. `RUN_DB_TASKS_IN_DEVELOPMENT=true`
-   - Runs migrate + seed only when `ASPNETCORE_ENVIRONMENT=Development`
-2. `RUN_DB_TASKS_ONCE_AND_EXIT=true`
-   - Runs migrate + seed once, then exits without starting the web host (useful for CI/CD deploy jobs)
+1. `APP_STARTUP_MODE=web` (default)
+   - Starts the API only (no migrate/seed)
+2. `APP_STARTUP_MODE=db-task`
+   - Runs migrate + seed once, then exits without starting the web host
 
-When both flags are `false`, app startup skips migrate/seed tasks.
+Legacy dev-only flags remain supported for local workflows:
+
+- `RUN_DB_TASKS_IN_DEVELOPMENT=true`
+- `RUN_DB_TASKS_ONCE_AND_EXIT=true`
+
+Outside Development, legacy flags are ignored to avoid accidental production shutdown/startup-task runs.
 
 ### EF Core resiliency setup
 

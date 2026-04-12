@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: gearup-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: APP_STARTUP_MODE
+        value: web
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Redis__ConnectionString
+        sync: false
+      - key: Jwt__Issuer
+        sync: false
+      - key: Jwt__Audience
+        sync: false
+      - key: Jwt__AccessToken_SecretKey
+        sync: false
+      - key: Jwt__EmailVerificationToken_SecretKey
+        sync: false
+      - key: Jwt__OpaqueTokenPepper
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: FromEmail
+        sync: false
+      - key: ClientUrl
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
