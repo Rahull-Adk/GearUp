@@ -19,7 +19,7 @@ namespace GearUp.Infrastructure.Persistence
                 throw new InvalidOperationException("Please setup your connection string.");
             }
 
-            optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+            optionsBuilder.UseNpgsql(connectionString);
 
             return new GearUpDbContext(optionsBuilder.Options);
         }

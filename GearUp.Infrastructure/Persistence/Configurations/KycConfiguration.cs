@@ -10,18 +10,12 @@ namespace GearUp.Infrastructure.Persistence.Configurations
         {
             builder.HasQueryFilter(k => k.SubmittedBy != null && !k.SubmittedBy.IsDeleted);
 
-            builder.Property(k => k.Id).HasColumnType("char(36)")
-                .UseCollation("utf8mb4_0900_ai_ci")
-                .IsRequired();
+            builder.Property(k => k.Id).IsRequired();
 
             builder.Property(k => k.UserId)
-                .HasColumnType("char(36)")
-                .UseCollation("utf8mb4_0900_ai_ci")
                 .IsRequired();
 
             builder.Property(k => k.ReviewerId)
-                .HasColumnType("char(36)")
-                .UseCollation("utf8mb4_0900_ai_ci")
                 .IsRequired(false);
 
             // Relationships

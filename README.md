@@ -26,7 +26,7 @@ What GearUp includes today:
 - Role/policy authorization (`AdminOnly`, `DealerOnly`, `CustomerOnly`)
 - REST APIs under `/api/v1/*`
 - SignalR hubs for post, notification, and chat updates
-- MySQL via EF Core (with pooled DbContext + retry policies)
+- PostgreSQL via EF Core (with pooled DbContext + retry policies)
 - Redis caching and Redis health checks
 - Swagger/OpenAPI in Development
 - Serilog + OpenTelemetry instrumentation
@@ -37,7 +37,7 @@ What GearUp includes today:
 
 - .NET SDK 9.x (see `global.json`)
 - Docker + Docker Compose (optional, for containerized run)
-- MySQL 8.x (if running locally without Docker)
+- PostgreSQL 16.x (if running locally without Docker)
 - Redis (if running locally without Docker)
 
 ### 1) Clone and enter repository
@@ -54,7 +54,7 @@ The app loads `.env` from either the current directory or one level above at sta
 ```env
 ASPNETCORE_ENVIRONMENT=Development
 
-ConnectionStrings__DefaultConnection=server=localhost;port=3306;database=gearup;user=root;password=your_password
+ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=gearup;Username=postgres;Password=your_password
 Redis__ConnectionString=localhost:6379
 
 Jwt__Issuer=your_issuer
@@ -123,9 +123,9 @@ Key folders and files:
 - `GearUp.sln` - solution file
 - `GearUp.Presentation/Program.cs` - app startup pipeline, DB task flags, middleware, hub mapping
 - `GearUp.Presentation/Extensions/ServiceExtensions.cs` - DI setup for auth, Redis, versioning, health checks, OpenTelemetry
-- `GearUp.Infrastructure/DependencyInjection.cs` - MySQL EF Core setup with context pooling/retries
+- `GearUp.Infrastructure/DependencyInjection.cs` - PostgreSQL EF Core setup with context pooling/retries
 - `GearUp.Presentation/docs/API_ENDPOINTS.md` - endpoint and SignalR contract reference
-- `docker-compose.yml` - MySQL + API + Redis + Aspire dashboard services
+- `docker-compose.yml` - PostgreSQL + API + Redis + Aspire dashboard services
 - `CONTRIBUTING.md` - contribution workflow and standards
 
 ## Configuration
@@ -253,7 +253,7 @@ dotnet test GearUp.UnitTests/GearUp.UnitTests.csproj
 
 The provided `docker-compose.yml` brings up:
 
-- `db` (MySQL 8)
+- `db` (PostgreSQL 16)
 - `redis`
 - `aspire-dashboard`
 - `api` (this application)

@@ -11,7 +11,6 @@ namespace GearUp.Infrastructure.Persistence.Configurations
 
             builder.HasKey(pc => pc.Id);
 
-            builder.UseCollation("utf8mb4_general_ci");
 
             builder.HasQueryFilter(pc => !pc.IsDeleted);
 

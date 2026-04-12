@@ -17,20 +17,17 @@ namespace GearUp.Infrastructure
 
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString, string audience, string issuer, string accessToken_SecretKey, string brevo_api_key, string fromEmail, string emailVerificationToken_SecretKey, string clientUrl, string opaqueTokenPepper, ILogger<EmailSender> logger)
         {
-            var serverVersion = ServerVersion.AutoDetect(connectionString);
-
             services.AddDbContextPool<GearUpDbContext>(
                 options =>
-                    options.UseMySql(
+                    options.UseNpgsql(
                         connectionString,
-                        serverVersion,
-                        mysqlOptions =>
+                        npgsqlOptions =>
                         {
-                            mysqlOptions.EnableRetryOnFailure(
+                            npgsqlOptions.EnableRetryOnFailure(
                                 maxRetryCount: MaxRetryCount,
                                 maxRetryDelay: MaxRetryDelay,
-                                errorNumbersToAdd: null);
-                            mysqlOptions.CommandTimeout(DbCommandTimeoutSeconds);
+                                errorCodesToAdd: null);
+                            npgsqlOptions.CommandTimeout(DbCommandTimeoutSeconds);
                         }),
                 poolSize: DbContextPoolSize);
 

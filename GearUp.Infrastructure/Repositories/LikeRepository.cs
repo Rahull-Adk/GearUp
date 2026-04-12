@@ -2,6 +2,7 @@ using GearUp.Application.Interfaces.Repositories;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace GearUp.Infrastructure.Repositories
 {
@@ -137,7 +138,7 @@ namespace GearUp.Infrastructure.Repositories
 
         private static bool IsDuplicateKey(DbUpdateException ex)
         {
-            return ex.InnerException is MySqlConnector.MySqlException { Number: 1062 };
+            return ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
         }
 
         #endregion

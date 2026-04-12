@@ -1,18 +1,19 @@
 services:
   db:
-    image: mysql:8.0
+    image: postgres:16
     container_name: gearup-db
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "3307:3306"
+      - "5432:5432"
     networks:
       - gearup_network
     volumes:
-      - gearup_data:/var/lib/mysql
+      - gearup_data:/var/lib/postgresql/data
     healthcheck:
-        test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+        test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
         timeout: 20s
         retries: 10
 
