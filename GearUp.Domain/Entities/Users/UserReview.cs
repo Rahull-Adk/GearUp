@@ -7,7 +7,7 @@ namespace GearUp.Domain.Entities.Users
         public Guid RevieweeId { get; private set; }
         public User? Reviewer { get; private set; }
         public User? Reviewee { get; private set; }
-        public string ReviewText { get; private set; }
+        public string ReviewText { get; private set; } = string.Empty;
         public double Rating { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }

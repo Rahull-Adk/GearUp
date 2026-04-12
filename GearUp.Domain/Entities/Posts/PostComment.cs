@@ -15,7 +15,7 @@ namespace GearUp.Domain.Entities.Posts
         public string Content { get; private set; }
         public Guid? ParentCommentId { get; private set; }
         [JsonIgnore]
-        public PostComment ParentComment { get; private set; }
+        public PostComment? ParentComment { get; private set; }
         public bool IsDeleted { get; private set; }
 
         // Denormalized counts for performance

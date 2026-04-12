@@ -37,7 +37,10 @@ namespace GearUp.Application.Services.Users
             if (string.IsNullOrEmpty(userId))
                 return Result<UpdateUserResponseDto>.Failure("Unauthorized", 401);
 
-            var user = await _userRepo.GetUserEntityByIdAsync(Guid.Parse(userId));
+            if (!Guid.TryParse(userId, out var parsedUserId))
+                return Result<UpdateUserResponseDto>.Failure("Invalid user ID format", 400);
+
+            var user = await _userRepo.GetUserEntityByIdAsync(parsedUserId);
             if (user == null)
                 return Result<UpdateUserResponseDto>.Failure("User not found", 404);
 

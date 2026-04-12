@@ -5,7 +5,7 @@ namespace GearUp.Domain.Entities.Tokens
     public class PasswordResetToken
     {
         public Guid Id { get; private set; }
-        public string Token { get; private set; }
+        public string Token { get; private set; } = string.Empty;
         public DateTime ExpiresAt { get; private set; }
         public bool IsUsed { get; private set; }
         public Guid UserId { get; private set; }
@@ -28,6 +28,16 @@ namespace GearUp.Domain.Entities.Tokens
                 UserId = userId,
                 CreatedAt = DateTime.UtcNow
             };
+        }
+
+        public void MarkAsUsed()
+        {
+            IsUsed = true;
+        }
+
+        public void SetTokenHash(string tokenHash)
+        {
+            Token = tokenHash;
         }
     }
 }

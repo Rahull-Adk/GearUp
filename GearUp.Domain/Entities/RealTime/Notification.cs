@@ -8,8 +8,8 @@ namespace GearUp.Domain.Entities.RealTime
     public class Notification
     {
         public Guid Id { get; private set; }
-        public string Title { get; private set; }
-        public string Content { get; private set; }
+        public string Title { get; private set; } = string.Empty;
+        public string Content { get; private set; } = string.Empty;
         public NotificationEnum NotificationType { get; private set; } = NotificationEnum.Default;
         public Guid ReceiverUserId { get; private set; }
         public Guid ActorUserId { get; private set; }

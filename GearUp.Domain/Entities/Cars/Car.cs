@@ -7,13 +7,13 @@ namespace GearUp.Domain.Entities.Cars
     public class Car
     {
         public Guid Id { get; private set; }
-        public string Title { get; private set; }
-        public string Description { get; private set; }
-        public string Model { get; private set; }
-        public string Make { get; private set; }
+        public string Title { get; private set; } = string.Empty;
+        public string Description { get; private set; } = string.Empty;
+        public string Model { get; private set; } = string.Empty;
+        public string Make { get; private set; } = string.Empty;
         public int Year { get; private set; }
         public double Price { get; private set; }
-        public string Color { get; private set; }
+        public string Color { get; private set; } = string.Empty;
         public int Mileage { get; private set; }
         public int SeatingCapacity { get; private set; }
         public int EngineCapacity { get; private set; }
@@ -22,8 +22,8 @@ namespace GearUp.Domain.Entities.Cars
         public TransmissionType Transmission { get; private set; }
         public CarStatus Status { get; private set; }
         public CarValidationStatus ValidationStatus { get; private set; }
-        public string VIN { get; private set; }
-        public string LicensePlate { get; private set; }
+        public string VIN { get; private set; } = string.Empty;
+        public string LicensePlate { get; private set; } = string.Empty;
         public Guid DealerId { get; private set; }
         [JsonIgnore]
         public User? Dealer { get; private set; }

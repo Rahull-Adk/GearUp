@@ -85,6 +85,12 @@ namespace GearUp.Application.Services.Posts
             }
 
             var counts = await _postRepository.GetCountsForPostById(postId, userId);
+            if (counts is null)
+            {
+                _logger.LogWarning("Unable to load like counts for post {PostId}", postId);
+                return Result<int>.Failure("Post not found", 404);
+            }
+
             await _realTimeNotifier.BroadCastPostLikes(postId, counts.LikeCount);
 
             return Result<int>.Success(counts.LikeCount, "Post liked successfully", 200);
@@ -119,6 +125,12 @@ namespace GearUp.Application.Services.Posts
             _logger.LogInformation("Post {PostId} unliked successfully by user {UserId}", postId, userId);
 
             var counts = await _postRepository.GetCountsForPostById(postId, userId);
+            if (counts is null)
+            {
+                _logger.LogWarning("Unable to load like counts for post {PostId}", postId);
+                return Result<int>.Failure("Post not found", 404);
+            }
+
             await _realTimeNotifier.BroadCastPostLikes(postId, counts.LikeCount);
 
             return Result<int>.Success(counts.LikeCount, "Post unliked successfully", 200);

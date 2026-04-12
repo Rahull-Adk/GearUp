@@ -53,6 +53,17 @@ namespace GearUp.UnitTests.Application.Users
         }
 
         [Fact]
+        public async Task GetCurrentUserProfile_ShouldReturn400_WhenUserIdIsMalformed()
+        {
+            var svc = CreateService();
+
+            var res = await svc.GetCurrentUserProfileService("not-a-guid");
+
+            Assert.False(res.IsSuccess);
+            Assert.Equal(400, res.Status);
+        }
+
+        [Fact]
         public async Task GetCurrentUserProfile_ShouldReturnSuccess_WhenUserExists()
         {
             var id = Guid.NewGuid();

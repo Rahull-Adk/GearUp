@@ -29,7 +29,10 @@ namespace GearUp.Application.Services.Users
             if (string.IsNullOrEmpty(userId))
                 return Result<KycUserResponseDto>.Failure("Unauthorized", 401);
 
-            var user = await _userRepo.GetUserEntityByIdAsync(Guid.Parse(userId), cancellationToken);
+            if (!Guid.TryParse(userId, out var parsedUserId))
+                return Result<KycUserResponseDto>.Failure("Invalid user ID format", 400);
+
+            var user = await _userRepo.GetUserEntityByIdAsync(parsedUserId, cancellationToken);
             if (user == null)
                 return Result<KycUserResponseDto>.Failure("User not found", 404);
 
@@ -62,11 +65,11 @@ namespace GearUp.Application.Services.Users
 
             if (documentUrls.Count == 0)
             {
-                _logger.LogError("No pdfs were uploaded for user ID: {UserId}", userId);   
+                _logger.LogError("No pdfs were uploaded for user ID: {UserId}", userId);
                 return Result<KycUserResponseDto>.Failure("Failed to upload KYC documents.", 500);
             }
 
-           
+
 
             var selfiePath = $"gearup/users/{user.Id}/kyc/selfie";
             var processedSelfie = await _documentProcessor.ProcessImage(req.SelfieImage, 800, 800, true);

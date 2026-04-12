@@ -6,8 +6,8 @@ namespace GearUp.Domain.Entities.Posts
     public class Post
     {
         public Guid Id { get; private set; }
-        public string Caption { get; private set; }
-        public string Content { get; private set; }
+        public string Caption { get; private set; } = string.Empty;
+        public string Content { get; private set; } = string.Empty;
         public PostVisibility Visibility { get; private set; }
         public Guid UserId { get; private set; }
         public Guid? CarId { get; private set; }

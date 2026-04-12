@@ -4,7 +4,7 @@ namespace GearUp.Domain.Entities.Tokens
     public class RefreshToken
     {
         public Guid Id { get; private set; }
-        public string Token { get; private set; }
+        public string Token { get; private set; } = string.Empty;
         public DateTime ExpiresAt { get; private set; }
         public bool IsRevoked { get; private set; }
         public Guid UserId { get; private set; }
@@ -13,7 +13,7 @@ namespace GearUp.Domain.Entities.Tokens
 
         public RefreshToken()
         {
-            
+
         }
 
         public static RefreshToken CreateRefreshToken(string token, DateTime expiresAt, Guid userId)
@@ -32,6 +32,11 @@ namespace GearUp.Domain.Entities.Tokens
         public void Revoke()
         {
             this.IsRevoked = true;
+        }
+
+        public void SetTokenHash(string tokenHash)
+        {
+            Token = tokenHash;
         }
     }
 }

@@ -45,38 +45,77 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using System.Security.Claims;
 
 namespace GearUp.Presentation.Extensions
 {
     public static class ServiceExtensions
     {
+        private static string? ReadSetting(IConfiguration config, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                var value = config[key];
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            return null;
+        }
+
         public static void AddServices(this IServiceCollection services, IConfiguration config)
         {
             // DbContext Injection
-            var connectionString = config.GetConnectionString("DefaultConnection");
-            var audience = config["Jwt:Audience"];
-            var issuer = config["Jwt:Issuer"];
-            var accessTokenSecretKey = config["Jwt:AccessToken_SecretKey"];
-            var emailVerificationTokenSecretKey = config["Jwt:EmailVerificationToken_SecretKey"];
-            var brevoApiKey = config["BREVO_API_KEY"];
-            var fromEmail = config["FromEmail"];
-            var clientUrl = config["ClientUrl"];
-            var cloudinarySecret = config["CLOUDINARY_URL"];
+            var connectionString = ReadSetting(config, "ConnectionStrings:DefaultConnection", "ConnectionStrings__DefaultConnection");
+            var audience = ReadSetting(config, "Jwt:Audience", "Jwt__Audience");
+            var issuer = ReadSetting(config, "Jwt:Issuer", "Jwt__Issuer");
+            var accessTokenSecretKey = ReadSetting(config, "Jwt:AccessToken_SecretKey", "Jwt__AccessToken_SecretKey");
+            var emailVerificationTokenSecretKey = ReadSetting(config, "Jwt:EmailVerificationToken_SecretKey", "Jwt__EmailVerificationToken_SecretKey");
+            var opaqueTokenPepper = ReadSetting(config, "Jwt:OpaqueTokenPepper", "Jwt__OpaqueTokenPepper", "OpaqueTokenPepper", "OPAQUE_TOKEN_PEPPER");
+            var brevoApiKey = ReadSetting(config, "BREVO_API_KEY", "SendGridApiKey");
+            var fromEmail = ReadSetting(config, "FromEmail");
+            var clientUrl = ReadSetting(config, "ClientUrl");
+            var cloudinarySecret = ReadSetting(config, "CLOUDINARY_URL");
 
+            // Backward-compatible fallback for environments that predate explicit pepper configuration.
+            opaqueTokenPepper ??= accessTokenSecretKey;
 
-            if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(audience) ||
-                string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(accessTokenSecretKey) ||
-                string.IsNullOrEmpty(brevoApiKey) || string.IsNullOrEmpty(fromEmail) ||
-                string.IsNullOrEmpty(emailVerificationTokenSecretKey) || string.IsNullOrEmpty(clientUrl))
+            var missingSettings = new List<string>();
+            if (string.IsNullOrWhiteSpace(connectionString)) missingSettings.Add("ConnectionStrings:DefaultConnection");
+            if (string.IsNullOrWhiteSpace(audience)) missingSettings.Add("Jwt:Audience");
+            if (string.IsNullOrWhiteSpace(issuer)) missingSettings.Add("Jwt:Issuer");
+            if (string.IsNullOrWhiteSpace(accessTokenSecretKey)) missingSettings.Add("Jwt:AccessToken_SecretKey");
+            if (string.IsNullOrWhiteSpace(emailVerificationTokenSecretKey)) missingSettings.Add("Jwt:EmailVerificationToken_SecretKey");
+            if (string.IsNullOrWhiteSpace(opaqueTokenPepper)) missingSettings.Add("Jwt:OpaqueTokenPepper");
+            if (string.IsNullOrWhiteSpace(brevoApiKey)) missingSettings.Add("BREVO_API_KEY|SendGridApiKey");
+            if (string.IsNullOrWhiteSpace(fromEmail)) missingSettings.Add("FromEmail");
+            if (string.IsNullOrWhiteSpace(clientUrl)) missingSettings.Add("ClientUrl");
+            if (string.IsNullOrWhiteSpace(cloudinarySecret)) missingSettings.Add("CLOUDINARY_URL");
+
+            if (missingSettings.Count > 0)
             {
-                throw new InvalidOperationException("Secret keys not found");
+                throw new InvalidOperationException($"Missing required configuration values: {string.Join(", ", missingSettings)}");
             }
+
+            var requiredConnectionString = connectionString!;
+            var requiredAudience = audience!;
+            var requiredIssuer = issuer!;
+            var requiredAccessTokenSecretKey = accessTokenSecretKey!;
+            var requiredEmailVerificationTokenSecretKey = emailVerificationTokenSecretKey!;
+            var requiredOpaqueTokenPepper = opaqueTokenPepper!;
+            var requiredBrevoApiKey = brevoApiKey!;
+            var requiredFromEmail = fromEmail!;
+            var requiredClientUrl = clientUrl!;
+            var requiredCloudinarySecret = cloudinarySecret!;
 
             ILogger<EmailSender> logger = LoggerFactory.Create(builder => builder.AddConsole())
                 .CreateLogger<EmailSender>();
 
-            services.AddInfrastructure(connectionString, audience, issuer, accessTokenSecretKey, brevoApiKey, fromEmail,
-                emailVerificationTokenSecretKey, clientUrl, logger);
+            services.AddInfrastructure(requiredConnectionString, requiredAudience, requiredIssuer,
+                requiredAccessTokenSecretKey, requiredBrevoApiKey, requiredFromEmail,
+                requiredEmailVerificationTokenSecretKey, requiredClientUrl, requiredOpaqueTokenPepper, logger);
 
 
             // Swagger Injection
@@ -162,11 +201,11 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
             services.Configure<Settings>(option =>
             {
-                option.EmailVerificationToken_SecretKey = emailVerificationTokenSecretKey;
+                option.EmailVerificationToken_SecretKey = requiredEmailVerificationTokenSecretKey;
             });
 
             // Cloudinary Injection
-            Cloudinary cloudinary = new(cloudinarySecret) { Api = { Secure = true } };
+            Cloudinary cloudinary = new(requiredCloudinarySecret) { Api = { Secure = true } };
             services.AddSingleton(cloudinary);
 
             //Rate Limiting
@@ -240,11 +279,11 @@ namespace GearUp.Presentation.Extensions
                     ValidateAudience = true,
                     ValidateIssuer = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = issuer,
-                    ValidAudience = audience,
-                    RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
+                    ValidIssuer = requiredIssuer,
+                    ValidAudience = requiredAudience,
+                    RoleClaimType = ClaimTypes.Role,
                     NameClaimType = "id",
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(accessTokenSecretKey))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(requiredAccessTokenSecretKey))
                 };
             });
         }

@@ -17,7 +17,8 @@ namespace GearUp.UnitTests.Infrastructure.Helpers
                 _key,
                 "Audience",
                 "Issuer",
-                _key
+                _key,
+                "pepper"
             );
         }
         [Theory]

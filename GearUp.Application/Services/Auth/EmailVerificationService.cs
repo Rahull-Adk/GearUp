@@ -49,7 +49,7 @@ namespace GearUp.Application.Services.Auth
             var token = _tokenGenerator.GenerateEmailVerificationToken(claims);
             await _emailSender.SendVerificationEmail(email, token);
             _logger.LogInformation("Verification email sent to {Email}", email);
-            return Result<string>.Success(null, "Email sent successfully", 200);
+            return Result<string>.Success(default!, "Email sent successfully", 200);
         }
 
         public async Task<Result<string>> VerifyEmail(string token)
@@ -67,7 +67,10 @@ namespace GearUp.Application.Services.Auth
             if (string.IsNullOrEmpty(userId))
                 return Result<string>.Failure("User ID not found in token", 404);
 
-            var user = await _userRepository.GetUserEntityByIdAsync(Guid.Parse(userId));
+            if (!Guid.TryParse(userId, out var parsedUserId))
+                return Result<string>.Failure("Invalid user ID format in token", 400);
+
+            var user = await _userRepository.GetUserEntityByIdAsync(parsedUserId);
             if (user == null)
                 return Result<string>.Failure("User not found", 404);
 
@@ -98,7 +101,7 @@ namespace GearUp.Application.Services.Auth
 
             await _userRepository.SaveChangesAsync();
             _logger.LogInformation("Email verified successfully for user ID: {UserId}", userId);
-            return Result<string>.Success(null, "Email verified successfully", 200);
+            return Result<string>.Success(default!, "Email verified successfully", 200);
         }
 
     }

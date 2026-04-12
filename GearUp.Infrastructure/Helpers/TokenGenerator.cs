@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace GearUp.Infrastructure.Helpers
 {
@@ -12,12 +13,14 @@ namespace GearUp.Infrastructure.Helpers
         private readonly string _audience;
         private readonly string _issuer;
         private readonly string _emailVerificationToken_SecretKey;
-        public TokenGenerator(string accessToken_SecretKey, string audience, string issuer, string emailVerificationToken_SecretKey)
+        private readonly string _opaqueTokenPepper;
+        public TokenGenerator(string accessToken_SecretKey, string audience, string issuer, string emailVerificationToken_SecretKey, string opaqueTokenPepper)
         {
             _accessToken_SecretKey = accessToken_SecretKey;
             _audience = audience;
             _issuer = issuer;
             _emailVerificationToken_SecretKey = emailVerificationToken_SecretKey;
+            _opaqueTokenPepper = opaqueTokenPepper;
         }
 
         public string GenerateAccessToken(IEnumerable<Claim> claims)
@@ -29,7 +32,7 @@ namespace GearUp.Infrastructure.Helpers
 
         public string GenerateRefreshToken()
         {
-            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));  
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
         }
 
         public string GenerateEmailVerificationToken(IEnumerable<Claim> claims)
@@ -40,7 +43,13 @@ namespace GearUp.Infrastructure.Helpers
 
         public string GeneratePasswordResetToken()
         {
-            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));  
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        }
+
+        public string HashOpaqueToken(string token)
+        {
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{_opaqueTokenPepper}:{token}"));
+            return Convert.ToHexString(bytes).ToLowerInvariant();
         }
 
         private string GenerateToken(IEnumerable<Claim> claims, int timeInMin, string secretKey)
@@ -56,6 +65,6 @@ namespace GearUp.Infrastructure.Helpers
            );
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-       
+
     }
 }

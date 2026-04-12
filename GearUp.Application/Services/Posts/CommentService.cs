@@ -217,7 +217,7 @@ namespace GearUp.Application.Services.Posts
             await _commonRepository.SaveChangesAsync();
             _logger.LogInformation("User with Id: {UserId} updated comment with Id: {CommentId} successfully", userId,
                 commentId);
-            return Result<CommentDto>.Success(null, "Comment updated successfully", 200);
+            return Result<CommentDto>.Success(default!, "Comment updated successfully", 200);
         }
 
         public async Task<Result<IEnumerable<CommentDto>>> GetParentCommentsByPostId(Guid postId, Guid userId)

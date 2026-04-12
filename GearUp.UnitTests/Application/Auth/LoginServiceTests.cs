@@ -26,6 +26,12 @@ namespace GearUp.UnitTests.Application.Auth
         private readonly Mock<IValidator<PasswordResetReqDto>> _resetValidator = new();
         private readonly Mock<ILogger<LoginService>> _logger = new();
 
+        public LoginServiceTests()
+        {
+            _tokenGenerator.Setup(t => t.HashOpaqueToken(It.IsAny<string>()))
+                .Returns((string token) => $"hash-{token}");
+        }
+
         private LoginService CreateService() => new(
             _userRepo.Object,
             _tokenRepo.Object,
@@ -174,8 +180,8 @@ namespace GearUp.UnitTests.Application.Auth
             // Arrange
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
             user.VerifyEmail();
-            var stored = RefreshToken.CreateRefreshToken("old", DateTime.UtcNow.AddMinutes(10), user.Id);
-            _tokenRepo.Setup(r => r.GetRefreshTokenAsync("old")).ReturnsAsync(stored);
+            var stored = RefreshToken.CreateRefreshToken("hash-old", DateTime.UtcNow.AddMinutes(10), user.Id);
+            _tokenRepo.Setup(r => r.GetRefreshTokenAsync("hash-old")).ReturnsAsync(stored);
             _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
             _tokenGenerator.Setup(t => t.GenerateAccessToken(It.IsAny<IEnumerable<Claim>>())).Returns("new-access");
             _tokenGenerator.Setup(t => t.GenerateRefreshToken()).Returns("new-refresh");
@@ -195,9 +201,9 @@ namespace GearUp.UnitTests.Application.Auth
         public async Task ResetPassword_Success_ChangesPassword()
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
-            var token = PasswordResetToken.CreatePasswordResetToken("t", DateTime.UtcNow.AddMinutes(30), user.Id);
+            var token = PasswordResetToken.CreatePasswordResetToken("hash-t", DateTime.UtcNow.AddMinutes(30), user.Id);
             _resetValidator.Setup(v => v.ValidateAsync(It.IsAny<PasswordResetReqDto>(), default)).ReturnsAsync(Valid());
-            _tokenRepo.Setup(r => r.GetPasswordResetTokenAsync("t")).ReturnsAsync(token);
+            _tokenRepo.Setup(r => r.GetPasswordResetTokenAsync("hash-t")).ReturnsAsync(token);
             _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, It.IsAny<string>()))
             .Returns(PasswordVerificationResult.Failed);

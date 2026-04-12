@@ -31,11 +31,11 @@ namespace GearUp.Application.Common.Pagination
                 result = JsonSerializer.Deserialize<Cursor>(json);
                 return result != null;
             }
-            catch (FormatException ex)
+            catch (FormatException)
             {
                 return false;
             }
-            catch (JsonException ex)
+            catch (JsonException)
             {
                 return false;
             }

@@ -14,8 +14,18 @@ using Serilog;
 
 try
 {
-    var root = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName;
-    Env.Load(Path.Combine(root!, ".env"));
+    var currentDirectory = Directory.GetCurrentDirectory();
+    var candidatePaths = new[]
+    {
+        Path.Combine(currentDirectory, ".env"),
+        Path.Combine(Directory.GetParent(currentDirectory)?.FullName ?? currentDirectory, ".env")
+    };
+
+    var envFilePath = candidatePaths.FirstOrDefault(File.Exists);
+    if (!string.IsNullOrWhiteSpace(envFilePath))
+    {
+        Env.Load(envFilePath);
+    }
 }
 catch (Exception ex)
 {
@@ -92,10 +102,8 @@ if (app.Environment.IsDevelopment())
         options.RoutePrefix = string.Empty;
     });
 }
-else
-{
-    app.UseRateLimiter();
-}
+
+app.UseRateLimiter();
 
 app.MapHealthChecks("/health", new HealthCheckOptions
 {

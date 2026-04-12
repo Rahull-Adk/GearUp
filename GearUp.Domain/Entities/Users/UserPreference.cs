@@ -12,7 +12,7 @@ namespace GearUp.Domain.Entities.Users
         public string CarModel { get; private set; } = string.Empty;
         public string CarColor { get; private set; } = string.Empty;
         public double Price { get; private set; }
-        [JsonIgnore] public User User { get; private set; }
+        [JsonIgnore] public User? User { get; private set; }
         public DateTime CreatedAt { get; private set; }
 
         private UserPreference()

@@ -114,7 +114,7 @@ namespace GearUp.Application.Services.Auth
                 var accessClaims = new[]
                 {
                     new Claim("id", user.Id.ToString()), new Claim("email", user.Email),
-                    new Claim("role", user.Role.ToString()), new Claim("purpose", "access_token")
+                    new Claim(ClaimTypes.Role, user.Role.ToString()), new Claim("purpose", "access_token")
                 };
 
                 accessToken = _tokenGenerator.GenerateAccessToken(accessClaims);
@@ -122,7 +122,8 @@ namespace GearUp.Application.Services.Auth
             }
 
             var expiresAt = DateTime.UtcNow.AddDays(7);
-            var refreshTokenEntity = RefreshToken.CreateRefreshToken(refreshToken, expiresAt, user.Id);
+            var refreshTokenHash = _tokenGenerator.HashOpaqueToken(refreshToken);
+            var refreshTokenEntity = RefreshToken.CreateRefreshToken(refreshTokenHash, expiresAt, user.Id);
             await _tokenRepository.AddRefreshTokenAsync(refreshTokenEntity);
             await _userRepository.SaveChangesAsync();
             _logger.LogInformation("User {UserId} logged in successfully.", user.Id);
@@ -144,7 +145,17 @@ namespace GearUp.Application.Services.Auth
                 return Result<LoginResponseDto>.Failure("Refresh token is missing", 401);
             }
 
-            var storedToken = await _tokenRepository.GetRefreshTokenAsync(refreshToken);
+            var refreshTokenHash = _tokenGenerator.HashOpaqueToken(refreshToken);
+            var storedToken = await _tokenRepository.GetRefreshTokenAsync(refreshTokenHash);
+            if (storedToken is null)
+            {
+                // Transitional fallback: if legacy plaintext rows exist, upgrade them to hash on successful use.
+                storedToken = await _tokenRepository.GetRefreshTokenAsync(refreshToken);
+                if (storedToken is not null)
+                {
+                    storedToken.SetTokenHash(refreshTokenHash);
+                }
+            }
             if (storedToken == null || storedToken.IsRevoked || storedToken.ExpiresAt < DateTime.UtcNow)
             {
                 return Result<LoginResponseDto>.Failure("Invalid or expired refresh token", 401);
@@ -164,8 +175,9 @@ namespace GearUp.Application.Services.Auth
             };
             var newAccessToken = _tokenGenerator.GenerateAccessToken(accessClaims);
             var newRefreshToken = _tokenGenerator.GenerateRefreshToken();
+            var newRefreshTokenHash = _tokenGenerator.HashOpaqueToken(newRefreshToken);
             var refreshTokenEntity =
-                RefreshToken.CreateRefreshToken(newRefreshToken, DateTime.UtcNow.AddDays(7), user.Id);
+                RefreshToken.CreateRefreshToken(newRefreshTokenHash, DateTime.UtcNow.AddDays(7), user.Id);
             await _tokenRepository.AddRefreshTokenAsync(refreshTokenEntity);
             storedToken.Revoke();
             await _userRepository.SaveChangesAsync();
@@ -191,15 +203,16 @@ namespace GearUp.Application.Services.Auth
             }
 
             var token = _tokenGenerator.GeneratePasswordResetToken();
+            var tokenHash = _tokenGenerator.HashOpaqueToken(token);
 
             var passwordRefreshTokenEntity =
-                PasswordResetToken.CreatePasswordResetToken(token, DateTime.UtcNow.AddHours(1), user.Id);
+                PasswordResetToken.CreatePasswordResetToken(tokenHash, DateTime.UtcNow.AddHours(1), user.Id);
             await _tokenRepository.AddPasswordResetTokenAsync(passwordRefreshTokenEntity);
             await _userRepository.SaveChangesAsync();
 
             await _emailSender.SendPasswordResetEmail(email, token);
             _logger.LogInformation("Password reset token sent successfully to email: {Email}", email);
-            return Result<string>.Success(token, "Email sent successfully", 200);
+            return Result<string>.Success(default!, "If the account exists, a password reset email has been sent.", 200);
         }
 
         public async Task<Result<string>> ResetPassword(string token, PasswordResetReqDto req)
@@ -214,7 +227,17 @@ namespace GearUp.Application.Services.Auth
             }
 
             var decodedToken = token.Replace(" ", "+");
-            var storedToken = await _tokenRepository.GetPasswordResetTokenAsync(decodedToken);
+            var decodedTokenHash = _tokenGenerator.HashOpaqueToken(decodedToken);
+            var storedToken = await _tokenRepository.GetPasswordResetTokenAsync(decodedTokenHash);
+            if (storedToken is null)
+            {
+                // Transitional fallback: upgrade legacy plaintext token rows once they are consumed.
+                storedToken = await _tokenRepository.GetPasswordResetTokenAsync(decodedToken);
+                if (storedToken is not null)
+                {
+                    storedToken.SetTokenHash(decodedTokenHash);
+                }
+            }
             if (storedToken == null || storedToken.IsUsed || storedToken.ExpiresAt < DateTime.UtcNow)
             {
                 _logger.LogWarning("Invalid or expired password reset token.");
@@ -236,9 +259,10 @@ namespace GearUp.Application.Services.Auth
 
             var hashedPassword = _passwordHasher.HashPassword(user, req.NewPassword);
             user.SetPassword(hashedPassword);
+            storedToken.MarkAsUsed();
             await _userRepository.SaveChangesAsync();
             _logger.LogInformation("Password reset successfully for user {UserId}.", user.Id);
-            return Result<string>.Success(null, "Password reset successfully", 200);
+            return Result<string>.Success(default!, "Password reset successfully", 200);
         }
 
         [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")]

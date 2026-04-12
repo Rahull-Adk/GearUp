@@ -16,81 +16,82 @@ namespace GearUp.Presentation.Controllers
             _notificationService = notificationService;
         }
 
+        private bool TryGetCurrentUserId(out Guid userId)
+        {
+            userId = Guid.Empty;
+            var rawId = User.FindFirst(u => u.Type == "id")?.Value;
+            return !string.IsNullOrWhiteSpace(rawId) && Guid.TryParse(rawId, out userId);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetNotifications([FromQuery] string? cursor, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
         {
-            var userId = User.FindFirst(u => u.Type == "id")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            if (!TryGetCurrentUserId(out var userId))
             {
                 return Unauthorized();
             }
 
-            var result = await _notificationService.GetNotificationsAsync(Guid.Parse(userId), cursor, pageSize, cancellationToken);
+            var result = await _notificationService.GetNotificationsAsync(userId, cursor, pageSize, cancellationToken);
             return StatusCode(result.Status, result);
         }
 
         [HttpGet("unread-count")]
         public async Task<IActionResult> GetUnreadCount(CancellationToken cancellationToken = default)
         {
-            var userId = User.FindFirst(u => u.Type == "id")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            if (!TryGetCurrentUserId(out var userId))
             {
                 return Unauthorized();
             }
 
-            var result = await _notificationService.GetUnreadCountAsync(Guid.Parse(userId), cancellationToken);
+            var result = await _notificationService.GetUnreadCountAsync(userId, cancellationToken);
             return StatusCode(result.Status, result);
         }
 
         [HttpPatch("{notificationId:guid}/read")]
         public async Task<IActionResult> MarkAsRead([FromRoute] Guid notificationId)
         {
-            var userId = User.FindFirst(u => u.Type == "id")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            if (!TryGetCurrentUserId(out var userId))
             {
                 return Unauthorized();
             }
 
-            var result = await _notificationService.MarkAsReadAsync(notificationId, Guid.Parse(userId));
+            var result = await _notificationService.MarkAsReadAsync(notificationId, userId);
             return StatusCode(result.Status, result);
         }
 
         [HttpPatch("read-all")]
         public async Task<IActionResult> MarkAllAsRead()
         {
-            var userId = User.FindFirst(u => u.Type == "id")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            if (!TryGetCurrentUserId(out var userId))
             {
                 return Unauthorized();
             }
 
-            var result = await _notificationService.MarkAllAsReadAsync(Guid.Parse(userId));
+            var result = await _notificationService.MarkAllAsReadAsync(userId);
             return StatusCode(result.Status, result);
         }
 
         [HttpDelete("{notificationId:guid}")]
         public async Task<IActionResult> DeleteNotification([FromRoute] Guid notificationId)
         {
-            var userId = User.FindFirst(u => u.Type == "id")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            if (!TryGetCurrentUserId(out var userId))
             {
                 return Unauthorized();
             }
 
-            var result = await _notificationService.DeleteNotificationAsync(notificationId, Guid.Parse(userId));
+            var result = await _notificationService.DeleteNotificationAsync(notificationId, userId);
             return StatusCode(result.Status, result);
         }
 
         [HttpDelete]
         public async Task<IActionResult> DeleteAllNotifications()
         {
-            var userId = User.FindFirst(u => u.Type == "id")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            if (!TryGetCurrentUserId(out var userId))
             {
                 return Unauthorized();
             }
 
-            var result = await _notificationService.DeleteAllNotificationsAsync(Guid.Parse(userId));
+            var result = await _notificationService.DeleteAllNotificationsAsync(userId);
             return StatusCode(result.Status, result);
         }
     }

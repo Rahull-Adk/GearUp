@@ -8,5 +8,6 @@ namespace GearUp.Application.Interfaces.Services.JwtServiceInterface
         string GenerateRefreshToken();
         string GenerateEmailVerificationToken(IEnumerable<Claim> claims);
         string GeneratePasswordResetToken();
+        string HashOpaqueToken(string token);
     }
 }

@@ -21,6 +21,29 @@ namespace GearUp.Presentation.Controllers
             _loginService = loginService;
             _generalAdminService = generalAdminService;
         }
+
+        private static CookieOptions BuildAccessTokenCookieOptions() => new()
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddMinutes(15)
+        };
+
+        private static CookieOptions BuildRefreshTokenCookieOptions() => new()
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddDays(7)
+        };
+
+        private bool TryGetCurrentUserId(out Guid userId)
+        {
+            userId = Guid.Empty;
+            var rawId = User.FindFirst(c => c.Type == "id")?.Value;
+            return !string.IsNullOrWhiteSpace(rawId) && Guid.TryParse(rawId, out userId);
+        }
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] AdminLoginRequestDto request)
         {
@@ -29,21 +52,8 @@ namespace GearUp.Presentation.Controllers
             {
                 return StatusCode(result.Status, result.ToApiResponse());
             }
-            Response.Cookies.Append("access_token", result.Data?.AccessToken!, new CookieOptions
-            {
-                HttpOnly = false,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddMinutes(15)
-            });
-
-            Response.Cookies.Append("refresh_token", result.Data?.RefreshToken!, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddDays(7)
-            });
+            Response.Cookies.Append("access_token", result.Data?.AccessToken!, BuildAccessTokenCookieOptions());
+            Response.Cookies.Append("refresh_token", result.Data?.RefreshToken!, BuildRefreshTokenCookieOptions());
 
             return StatusCode(result.Status, result.ToApiResponse());
         }
@@ -54,7 +64,10 @@ namespace GearUp.Presentation.Controllers
         [HttpGet("kyc")]
         public async Task<IActionResult> GetKycRequests([FromQuery] string? cursor)
         {
-            var adminUserId = Guid.Parse(User.FindFirst(c => c.Type == "id")!.Value);
+            if (!TryGetCurrentUserId(out var adminUserId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
             var result = await _generalAdminService.GetAllKycs(adminUserId, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
@@ -71,8 +84,11 @@ namespace GearUp.Presentation.Controllers
         [HttpPut("kyc/{kycId:guid}")]
         public async Task<IActionResult> ReviewKyc([FromRoute] Guid kycId, [FromBody] kycRequestDto req)
         {
-            var reviewerId = User.FindFirst(c => c.Type == "id")?.Value;
-            var result = await _generalAdminService.UpdateKycStatus(kycId, req.Status, Guid.Parse(reviewerId!), req.RejectionReason);
+            if (!TryGetCurrentUserId(out var reviewerId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
+            var result = await _generalAdminService.UpdateKycStatus(kycId, req.Status, reviewerId, req.RejectionReason);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 
@@ -80,7 +96,10 @@ namespace GearUp.Presentation.Controllers
         [HttpGet("kyc/status/{status}")]
         public async Task<IActionResult> GetKycRequestsByStatus([FromRoute] KycStatus status, [FromQuery] string? cursor)
         {
-            var adminUserId = Guid.Parse(User.FindFirst(c => c.Type == "id")!.Value);
+            if (!TryGetCurrentUserId(out var adminUserId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
             var result = await _generalAdminService.GetKycsByStatus(adminUserId, status, cursor);
             return StatusCode(result.Status, result.ToApiResponse());
         }
@@ -125,8 +144,11 @@ namespace GearUp.Presentation.Controllers
         [HttpPut("cars/{carId:guid}")]
         public async Task<IActionResult> ReviewCar([FromRoute] Guid carId, [FromBody] CarValidationRequestDto req)
         {
-            var reviewerId = User.FindFirst(c => c.Type == "id")?.Value;
-            var result = await _generalAdminService.UpdateCarValidationStatus(carId, req.Status, Guid.Parse(reviewerId!), req.RejectionReason);
+            if (!TryGetCurrentUserId(out var reviewerId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
+            var result = await _generalAdminService.UpdateCarValidationStatus(carId, req.Status, reviewerId, req.RejectionReason);
             return StatusCode(result.Status, result.ToApiResponse());
         }
 

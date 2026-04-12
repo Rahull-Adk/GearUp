@@ -18,7 +18,8 @@ namespace GearUp.UnitTests.Infrastructure.Helpers
             key,
             "Audience",
             "Issuer",
-            key
+            key,
+            "pepper"
             );
         }
 
@@ -100,6 +101,14 @@ namespace GearUp.UnitTests.Infrastructure.Helpers
             }
             Assert.False(string.IsNullOrEmpty(token));
             Assert.True(Convert.FromBase64String(token).Length == 32);
+        }
+
+        [Fact]
+        public void HashOpaqueToken_ShouldReturnStableSha256Hex()
+        {
+            var hash = _tokenGenerator.HashOpaqueToken("sample-token");
+            Assert.Equal(64, hash.Length);
+            Assert.Equal(hash, hash.ToLowerInvariant());
         }
 
     }

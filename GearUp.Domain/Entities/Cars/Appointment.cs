@@ -10,9 +10,9 @@ namespace GearUp.Domain.Entities.Cars
         public Guid RequesterId { get; private set; }
         public Guid? CarId { get; private set; }
         public DateTime Schedule { get; private set; }
-        public string Location { get; private set; }
+        public string Location { get; private set; } = string.Empty;
         public AppointmentStatus Status { get; private set; }
-        public string Notes { get; private set; }
+        public string Notes { get; private set; } = string.Empty;
         public string? RejectionReason { get; private set; }
         public User? Agent { get; private set; }
         public User? Requester { get; private set; }

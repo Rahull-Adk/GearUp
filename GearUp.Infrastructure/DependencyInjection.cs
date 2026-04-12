@@ -15,7 +15,7 @@ namespace GearUp.Infrastructure
         private const int MaxRetryCount = 5;
         private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(10);
 
-        public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString, string audience, string issuer, string accessToken_SecretKey, string brevo_api_key, string fromEmail, string emailVerificationToken_SecretKey, string clientUrl, ILogger<EmailSender> logger)
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString, string audience, string issuer, string accessToken_SecretKey, string brevo_api_key, string fromEmail, string emailVerificationToken_SecretKey, string clientUrl, string opaqueTokenPepper, ILogger<EmailSender> logger)
         {
             var serverVersion = ServerVersion.AutoDetect(connectionString);
 
@@ -34,7 +34,7 @@ namespace GearUp.Infrastructure
                         }),
                 poolSize: DbContextPoolSize);
 
-            services.AddSingleton<ITokenGenerator>(new TokenGenerator(accessToken_SecretKey, audience, issuer, emailVerificationToken_SecretKey));
+            services.AddSingleton<ITokenGenerator>(new TokenGenerator(accessToken_SecretKey, audience, issuer, emailVerificationToken_SecretKey, opaqueTokenPepper));
 
             services.AddSingleton<ITokenValidator>(new TokenValidator(audience, issuer));
 

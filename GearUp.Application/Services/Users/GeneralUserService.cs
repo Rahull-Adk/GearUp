@@ -28,7 +28,10 @@ namespace GearUp.Application.Services.Users
             {
                 return Result<RegisterResponseDto>.Failure("User ID cannot be empty", 400);
             }
-            var guidId = Guid.Parse(userId);
+            if (!Guid.TryParse(userId, out var guidId))
+            {
+                return Result<RegisterResponseDto>.Failure("Invalid user ID format", 400);
+            }
 
             var user = await _userRepo.GetUserByIdAsync(guidId);
             if (user == null)

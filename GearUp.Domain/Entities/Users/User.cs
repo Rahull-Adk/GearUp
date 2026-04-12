@@ -61,6 +61,7 @@ namespace GearUp.Domain.Entities.Users
             _kycSubmitted = [];
             _kycSubmissionsReviewed = [];
             _preferences = [];
+            _notificationsTriggered = [];
             CreatedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
         }

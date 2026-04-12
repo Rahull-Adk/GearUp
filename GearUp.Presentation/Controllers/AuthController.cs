@@ -24,6 +24,22 @@ namespace GearUp.Presentation.Controllers
             _logoutService = logoutService;
             _emailVerificationService = emailVerificationService;
         }
+
+        private static CookieOptions BuildAccessTokenCookieOptions() => new()
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddMinutes(15)
+        };
+
+        private static CookieOptions BuildRefreshTokenCookieOptions() => new()
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddDays(7)
+        };
         [HttpPost("register")]
         public async Task<IActionResult> RegisterUser(RegisterRequestDto registerRequestDto)
         {
@@ -39,20 +55,8 @@ namespace GearUp.Presentation.Controllers
             {
                 return StatusCode(result.Status, result.ToApiResponse());
             }
-            Response.Cookies.Append("access_token", result.Data.AccessToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddMinutes(15)
-            });
-            Response.Cookies.Append("refresh_token", result.Data.RefreshToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(7)
-            });
+            Response.Cookies.Append("access_token", result.Data.AccessToken, BuildAccessTokenCookieOptions());
+            Response.Cookies.Append("refresh_token", result.Data.RefreshToken, BuildRefreshTokenCookieOptions());
 
             return StatusCode(result.Status, result.ToApiResponse());
         }
@@ -85,26 +89,14 @@ namespace GearUp.Presentation.Controllers
         [HttpPost("refresh")]
         public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
         {
-            
+
             var result = await _loginService.RotateRefreshToken(refreshToken!);
             if (!result.IsSuccess || result.Data.AccessToken == null || result.Data.RefreshToken == null)
             {
                 return StatusCode(result.Status, result.ToApiResponse());
             }
-            Response.Cookies.Append("access_token", result.Data.AccessToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddMinutes(15)
-            });
-            Response.Cookies.Append("refresh_token", result.Data.RefreshToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(7)
-            });
+            Response.Cookies.Append("access_token", result.Data.AccessToken, BuildAccessTokenCookieOptions());
+            Response.Cookies.Append("refresh_token", result.Data.RefreshToken, BuildRefreshTokenCookieOptions());
 
 
             return StatusCode(result.Status, result.ToApiResponse());

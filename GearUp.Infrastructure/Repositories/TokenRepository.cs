@@ -24,14 +24,14 @@ namespace GearUp.Infrastructure.Repositories
             await _db.RefreshTokens.AddAsync(refreshToken);
         }
 
-        public async Task<PasswordResetToken?> GetPasswordResetTokenAsync(string token)
+        public async Task<PasswordResetToken?> GetPasswordResetTokenAsync(string tokenHash)
         {
-            return await _db.PasswordResetTokens.FirstOrDefaultAsync(pt => pt.Token == token);
+            return await _db.PasswordResetTokens.FirstOrDefaultAsync(pt => pt.Token == tokenHash);
         }
 
-        public async Task<RefreshToken?> GetRefreshTokenAsync(string token)
+        public async Task<RefreshToken?> GetRefreshTokenAsync(string tokenHash)
         {
-            return await _db.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == token);
+            return await _db.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == tokenHash);
         }
 
     }

@@ -18,12 +18,22 @@ namespace GearUp.Presentation.Controllers
             _likeService = likeService;
         }
 
+        private bool TryGetCurrentUserId(out Guid userId)
+        {
+            userId = Guid.Empty;
+            var rawId = User.FindFirst(u => u.Type == "id")?.Value;
+            return !string.IsNullOrWhiteSpace(rawId) && Guid.TryParse(rawId, out userId);
+        }
+
         [Authorize]
         [HttpPost("{commentId:guid}/like")]
         public async Task<IActionResult> LikeComment([FromRoute] Guid commentId)
         {
-            var currentUser = User.FindFirst(u => u.Type == "id")?.Value;
-            var result = await _likeService.LikeCommentAsync(commentId, Guid.Parse(currentUser!));
+            if (!TryGetCurrentUserId(out var currentUserId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
+            var result = await _likeService.LikeCommentAsync(commentId, currentUserId);
             return StatusCode(result.Status, result);
         }
 
@@ -31,8 +41,11 @@ namespace GearUp.Presentation.Controllers
         [HttpDelete("{commentId:guid}/like")]
         public async Task<IActionResult> UnlikeComment([FromRoute] Guid commentId)
         {
-            var currentUser = User.FindFirst(u => u.Type == "id")?.Value;
-            var result = await _likeService.UnlikeCommentAsync(commentId, Guid.Parse(currentUser!));
+            if (!TryGetCurrentUserId(out var currentUserId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
+            var result = await _likeService.UnlikeCommentAsync(commentId, currentUserId);
             return StatusCode(result.Status, result);
         }
 
@@ -40,8 +53,11 @@ namespace GearUp.Presentation.Controllers
         [HttpPost]
         public async Task<IActionResult> CommentOnPost([FromBody] CreateCommentDto comment)
         {
-            var currentUser = User.FindFirst(u => u.Type == "id")?.Value;
-            var result = await _commentService.PostCommentAsync(comment, Guid.Parse(currentUser!));
+            if (!TryGetCurrentUserId(out var currentUserId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
+            var result = await _commentService.PostCommentAsync(comment, currentUserId);
             return StatusCode(result.Status, result);
         }
 
@@ -49,8 +65,11 @@ namespace GearUp.Presentation.Controllers
         [HttpPut("{commentId:guid}")]
         public async Task<IActionResult> UpdateComment([FromRoute] Guid commentId, [FromBody] string comment)
         {
-            var currentUser = User.FindFirst(u => u.Type == "id")?.Value;
-            var result = await _commentService.UpdateCommentAsync(commentId, Guid.Parse(currentUser!), comment);
+            if (!TryGetCurrentUserId(out var currentUserId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
+            var result = await _commentService.UpdateCommentAsync(commentId, currentUserId, comment);
             return StatusCode(result.Status, result);
         }
 
@@ -58,8 +77,11 @@ namespace GearUp.Presentation.Controllers
         [HttpDelete("{commentId:guid}")]
         public async Task<IActionResult> DeleteComment([FromRoute] Guid commentId)
         {
-            var currentUser = User.FindFirst(u => u.Type == "id")?.Value;
-            var result = await _commentService.DeleteCommentAsync(commentId, Guid.Parse(currentUser!));
+            if (!TryGetCurrentUserId(out var currentUserId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
+            var result = await _commentService.DeleteCommentAsync(commentId, currentUserId);
             return StatusCode(result.Status, result);
         }
 
@@ -67,8 +89,11 @@ namespace GearUp.Presentation.Controllers
         [HttpGet("{postId:guid}/top")]
         public async Task<IActionResult> GetTopLevelCommentsByPostId([FromRoute] Guid postId)
         {
-            var currentUser = User.FindFirst(u => u.Type == "id")?.Value;
-            var result = await _commentService.GetParentCommentsByPostId(postId, Guid.Parse(currentUser!));
+            if (!TryGetCurrentUserId(out var currentUserId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
+            var result = await _commentService.GetParentCommentsByPostId(postId, currentUserId);
             return StatusCode(result.Status, result);
         }
 
@@ -76,8 +101,11 @@ namespace GearUp.Presentation.Controllers
         [HttpGet("{parentCommentId:guid}/childrens")]
         public async Task<IActionResult> GetChildCommentsByParentId([FromRoute] Guid parentCommentId)
         {
-            var currentUser = User.FindFirst(u => u.Type == "id")?.Value;
-            var result = await _commentService.GetChildCommentsByParentId(parentCommentId, Guid.Parse(currentUser!));
+            if (!TryGetCurrentUserId(out var currentUserId))
+            {
+                return BadRequest(new { message = "Invalid user id claim." });
+            }
+            var result = await _commentService.GetChildCommentsByParentId(parentCommentId, currentUserId);
             return StatusCode(result.Status, result);
         }
 
