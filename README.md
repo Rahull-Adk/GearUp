@@ -1,467 +1,251 @@
-# GearUp 🚀
+# GearUp
 
-**GearUp** is a modern, modular, and production-ready web application built with **ASP.NET Core**. It provides a robust foundation for scalable systems with authentication, authorization, cloud integrations, Domain Driven Design(DDD) and Clean Architecture.
+GearUp is a modular backend built on ASP.NET Core with Clean Architecture principles. It focuses on scalable API design, role-based access control, operational safety for database tasks, and production-friendly infrastructure (Docker, Redis, health checks, structured logging, and OpenTelemetry).
 
----
+## Table of Contents
 
-## 🧩 Table of Contents
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Repository Structure](#repository-structure)
+- [Configuration](#configuration)
+- [Database and Seeding Tasks](#database-and-seeding-tasks)
+- [API and Realtime](#api-and-realtime)
+- [Observability and Runtime Features](#observability-and-runtime-features)
+- [Testing](#testing)
+- [Deployment (Docker Compose)](#deployment-docker-compose)
+- [Contributing](#contributing)
+- [License](#license)
 
-* [Overview](#overview)
-* [Architecture](#architecture)
-* [Tech Stack](#tech-stack)
-* [Project Structure](#project-structure)
-* [Key Features](#key-features)
-* [Setup Guide](#setup-guide)
-* [Environment Configuration](#environment-configuration)
-* [Database and Migrations](#database-and-migrations)
-* [Authentication & Authorization](#authentication--authorization)
-* [Image & File Uploads](#image--file-uploads)
-* [Validation & Error Handling](#validation--error-handling)
-* [Best Practices](#best-practices)
-* [Development Standards](#development-standards)
-* [API Documentation](#api-documentation)
-* [Testing](#testing)
-* [Deployment](#deployment)
-* [Contributing](#contributing)
-* [License](#license)
+## Overview
 
----
+What GearUp includes today:
 
-## 🧠 Overview
+- Clean Architecture split across `Presentation`, `Application`, `Domain`, and `Infrastructure` projects
+- JWT authentication with access/refresh token flows
+- Role/policy authorization (`AdminOnly`, `DealerOnly`, `CustomerOnly`)
+- REST APIs under `/api/v1/*`
+- SignalR hubs for post, notification, and chat updates
+- MySQL via EF Core (with pooled DbContext + retry policies)
+- Redis caching and Redis health checks
+- Swagger/OpenAPI in Development
+- Serilog + OpenTelemetry instrumentation
 
-GearUp is designed as a **multi-module backend service** built with clean architecture principles. It emphasizes **separation of concerns**, **testability**, and **scalability**, ideal for SaaS platforms, dashboards, or developer APIs.
+## Quick Start
 
----
+### Prerequisites
 
-## 🏗️ Architecture
+- .NET SDK 9.x (see `global.json`)
+- Docker + Docker Compose (optional, for containerized run)
+- MySQL 8.x (if running locally without Docker)
+- Redis (if running locally without Docker)
 
-GearUp follows **Clean Architecture (DDD)** principles:
-
-```
-GearUp
-├── GearUp.Presentation       → Presentation layer (controllers, filters, middleware)
-├── GearUp.Application        → Application logic, CQRS handlers, services
-├── GearUp.Domain             → Entities, value objects, enums, domain events
-├── GearUp.Infrastructure     → Data access, persistence, external integrations
-└── GearUp.Tests              → Unit and integration tests
-```
-
-**Core Concepts:**
-
-* **Domain-Driven Design (DDD)**
-* **Repository + Unit of Work Pattern**
-* **CQRS (Command Query Responsibility Segregation)**
-* **FluentValidation** for request validation
-* **AutoMapper** for DTO mapping
-
----
-
-## ⚙️ Tech Stack
-
-| Category             | Technology                            |
-| -------------------- | ------------------------------------- |
-| **Backend**          | ASP.NET Core 9, C# 12                 |
-| **ORM**              | Entity Framework Core                 |
-| **Database**         | MySql                                 |
-| **Authentication**   | JWT+Refresh Tokens (NextAuth | Social)|
-| **Validation**       | FluentValidation                      |
-| **Object Mapping**   | AutoMapper                            |
-| **Cloud Storage**    | Cloudinary (for images)               |
-| **Containerization** | Docker + Docker Compose               |
-| **Logging**          | Serilog                               |
-| **API Docs**         | Swagger / Swashbuckle                 |
-| **Unit Testing**     | XUnit.Net                             |
-
----
-
-## 🧱 Project Structure
-
-```
-GearUp
-│
-├── GearUp.API
-│   ├── Controllers
-│   ├── Middlewares
-│   ├── Extensions
-│   ├── appsettings.json
-│   └── Program.cs / Startup.cs
-│
-├── GearUp.Domain
-│   ├── Entities
-│   ├── Enums
-│   └── ValueObjects
-│
-├── GearUp.Application
-│   ├── Interfaces
-│   ├── Services
-│   ├── DTOs
-│   ├── Handlers
-│   └── Validators
-│
-├── GearUp.Infrastructure
-    ├── Data
-    ├── Configurations (Fluent API)
-    ├── Repositories
-    ├── Cloud (Cloudinary, etc.)
-    └── DependencyInjection.cs
-```
-
----
-
-## 🌟 Key Features
-
-✅ Modular Domain Architecture
-✅ Clean CQRS with MediatR
-✅ JWT Authentication & Refresh Tokens
-✅ Cloudinary integration for image storage
-✅ Role-based, Claim-based, and Policy-based Authorization
-✅ FluentValidation for DTOs
-✅ Dockerized for container deployment
-✅ AutoMapper for data transformation
-✅ Comprehensive error handling middleware
-✅ Swagger API Documentation
-✅ MySql with EF Core migrations
-✅ Health checks for database and Redis
-✅ API versioning support
-✅ Redis caching for improved performance
-✅ Rate limiting for API protection
-✅ Structured logging with Serilog
-
----
-
-## ⚙️ Setup Guide
-
-### 1️⃣ Prerequisites
-
-Ensure you have installed:
-
-* [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-* [Docker](https://www.docker.com/)
-* [PostgreSQL](https://www.mysql.com/)
-* [Cloudinary Account](https://cloudinary.com/)
-
-### 2️⃣ Clone Repository
+### 1) Clone and enter repository
 
 ```bash
 git clone https://github.com/yourusername/GearUp.git
 cd GearUp
 ```
 
-### 3️⃣ Configure Environment
+### 2) Create `.env`
 
-Create a `.env` file or use `appsettings.Development.json` with:
+The app loads `.env` from either the current directory or one level above at startup.
 
 ```env
-ConnectionStrings__DefaultConnection=your_connection_string
-Redis__ConnectionString=localhost:6379
-Jwt__Issuer=your_issuer_url
-Jwt__Audience=your_audience_url
-Jwt__AccessToken_SecretKey=super_strong_secret_key
-Jwt__EmailVerificationToken_SecretKey=super_strong_secret_key
-FromEmail=your_email
-ClientUrl=frontend_url
-SendGridApiKey=your_api_key
-GOOGLE_CLIENT_ID=your_client_id
 ASPNETCORE_ENVIRONMENT=Development
-MYSQL_ROOT_PASSWORD=root_password
-MYSQL_DATABASE=database_name
-CLOUDINARY_URL=cloudinary_url
+
+ConnectionStrings__DefaultConnection=server=localhost;port=3306;database=gearup;user=root;password=your_password
+Redis__ConnectionString=localhost:6379
+
+Jwt__Issuer=your_issuer
+Jwt__Audience=your_audience
+Jwt__AccessToken_SecretKey=your_access_secret
+Jwt__EmailVerificationToken_SecretKey=your_email_verification_secret
+# Optional but recommended:
+# Jwt__OpaqueTokenPepper=your_separate_pepper
+
+BREVO_API_KEY=your_brevo_key
+# Alternative legacy key supported by config lookup:
+# SendGridApiKey=your_brevo_key
+
+FromEmail=no-reply@example.com
+ClientUrl=http://localhost:3000
+CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
+
+# Used by admin seeding flows (when DB task flags are enabled)
 ADMIN_USERNAME=admin
 ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=your_secure_admin_password
+ADMIN_PASSWORD=your_secure_password
+
+# Optional startup DB task flags
 RUN_DB_TASKS_IN_DEVELOPMENT=false
+RUN_DB_TASKS_ONCE_AND_EXIT=false
 ```
 
-### 4️⃣ Run the Application
-
-**With Docker Compose:**
+### 3) Run with Docker Compose
 
 ```bash
 docker compose up --build
 ```
 
-**Without Docker:**
+Default mapped ports from `docker-compose.yml`:
+
+- API: `http://localhost:5255`
+- Swagger UI (Development): `http://localhost:5255`
+- Redis: `localhost:6379`
+- Aspire dashboard: `http://localhost:18888`
+
+### 4) Run locally (without Docker)
 
 ```bash
+dotnet restore
 dotnet ef database update --project GearUp.Infrastructure --startup-project GearUp.Presentation
-cd GearUp.Presentation
-dotnet run
+dotnet run --project GearUp.Presentation
 ```
 
-API available at: [http://localhost:5255/swagger](http://localhost:5255/swagger)
+## Architecture
 
----
+GearUp follows a layered architecture:
 
-## 🗄️ Database and Migrations
+```text
+GearUp
+├── GearUp.Presentation    # API controllers, middleware, DI, host startup
+├── GearUp.Application     # Use-cases, service contracts, DTOs, validators
+├── GearUp.Domain          # Entities, enums, domain-level rules
+├── GearUp.Infrastructure  # EF Core, repositories, external providers
+└── GearUp.UnitTests       # Unit test project
+```
+
+## Repository Structure
+
+Key folders and files:
+
+- `GearUp.sln` - solution file
+- `GearUp.Presentation/Program.cs` - app startup pipeline, DB task flags, middleware, hub mapping
+- `GearUp.Presentation/Extensions/ServiceExtensions.cs` - DI setup for auth, Redis, versioning, health checks, OpenTelemetry
+- `GearUp.Infrastructure/DependencyInjection.cs` - MySQL EF Core setup with context pooling/retries
+- `GearUp.Presentation/docs/API_ENDPOINTS.md` - endpoint and SignalR contract reference
+- `docker-compose.yml` - MySQL + API + Redis + Aspire dashboard services
+- `CONTRIBUTING.md` - contribution workflow and standards
+
+## Configuration
+
+`ServiceExtensions.AddServices(...)` validates required runtime settings and throws early if critical values are missing.
+
+Important settings:
+
+- `ConnectionStrings__DefaultConnection`
+- `Jwt__Issuer`, `Jwt__Audience`, `Jwt__AccessToken_SecretKey`, `Jwt__EmailVerificationToken_SecretKey`
+- `BREVO_API_KEY` (or `SendGridApiKey` fallback)
+- `FromEmail`, `ClientUrl`, `CLOUDINARY_URL`
+- `Redis__ConnectionString` (falls back to `localhost:6379` if missing)
+
+## Database and Seeding Tasks
+
+### Migrations
 
 ```bash
-# Add migration
-dotnet ef migrations add Init --project GearUp.Infrastructure --startup-project GearUp.Presentation
-
-# Apply migration
+dotnet ef migrations add <MigrationName> --project GearUp.Infrastructure --startup-project GearUp.Presentation
 dotnet ef database update --project GearUp.Infrastructure --startup-project GearUp.Presentation
 ```
 
-### Startup behavior (important)
+### Startup DB behavior
 
-`Program.cs` no longer runs migrations/seeding unconditionally on app boot.
+Database migrate/seed is opt-in via environment flags in `Program.cs`:
 
-Use one of these explicit paths instead:
+1. `RUN_DB_TASKS_IN_DEVELOPMENT=true`
+   - Runs migrate + seed only when `ASPNETCORE_ENVIRONMENT=Development`
+2. `RUN_DB_TASKS_ONCE_AND_EXIT=true`
+   - Runs migrate + seed once, then exits without starting the web host (useful for CI/CD deploy jobs)
 
-1. **Development-only startup tasks**
+When both flags are `false`, app startup skips migrate/seed tasks.
 
-   Set `RUN_DB_TASKS_IN_DEVELOPMENT=true` and run with `ASPNETCORE_ENVIRONMENT=Development`.
+### EF Core resiliency setup
 
-2. **One-off deploy task (recommended for CI/CD)**
+`GearUp.Infrastructure/DependencyInjection.cs` configures:
 
-   Set `RUN_DB_TASKS_ONCE_AND_EXIT=true` and run the app once. It will:
-   - run `Database.Migrate()`
-   - run `AdminSeeder` + `DbSeeder`
-   - exit without starting the web host
+- `AddDbContextPool<GearUpDbContext>(poolSize: 128)`
+- `EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: 10s)`
+- `CommandTimeout(60)`
 
-The GitHub Actions workflow `.github/workflows/dotnet-ci.yml` now includes a `workflow_dispatch` input (`run_deploy_db_tasks`) for this one-off deploy sequence.
+## API and Realtime
 
----
+### REST API
 
+- Base versioned route style: `/api/v1/...`
+- API versioning is enabled and reports supported versions in headers
 
-## 🧰 DbContext Pooling & Resiliency Startup Notes
+### Swagger / OpenAPI
 
-`GearUp.Infrastructure/DependencyInjection.cs` configures EF Core MySQL with pooled contexts for throughput and resilience:
+- Swagger is enabled in Development
+- UI route is configured at app root (`/`) via `RoutePrefix = string.Empty`
+- Raw doc endpoint remains `/swagger/v1/swagger.json`
 
-* `AddDbContextPool<GearUpDbContext>(poolSize: 128)` to reduce DbContext allocation overhead.
-* `EnableRetryOnFailure(...)` for transient MySQL/network fault handling (`maxRetryCount: 5`, `maxRetryDelay: 10s`).
-* `CommandTimeout(60)` to allow heavier read/query workloads without premature command cancellation.
-
-### Pooled-context safety assumptions
-
-Because pooled contexts are reused, do **not** store per-request mutable state on `GearUpDbContext` instances. The current `GearUpDbContext` implementation is compatible with pooling because it only exposes `DbSet<>` properties and model configuration, with no request/user-specific fields.
-
-When adding new behavior, keep these rules:
-
-1. Keep request-specific state in scoped services, not on `GearUpDbContext` fields/properties.
-2. Avoid changing context-level settings dynamically per request (for example mutable tracking defaults on a shared instance).
-3. Continue injecting repositories/services as scoped dependencies so each request gets a leased context instance from the pool.
-
-## 🔐 Authentication & Authorization
-
-GearUp uses **JWT Bearer Tokens** for secure authentication.
-
-### Token Flow:
-
-1. User logs in → receives access + refresh token.
-2. Access token expires → refresh token renews session.
-3. Claims & Roles stored in JWT payload.
-
-Supported Authorization Types:
-
-* **Role-Based:** via `[Authorize(Roles = "Admin")]`
-* **Claim-Based:** via `[Authorize(Policy = "CanViewDashboard")]`
-
----
-
-## 🖼️ Image & File Uploads
-
-All user images (avatars, KYC, etc.) are stored in **Cloudinary**.
-
-**Folder Structure Example:**
-
-```
-gearup/users/{userId}/avatar
-gearup/users/{userId}/kyc
-```
-
-**Generated URL Example:**
-
-```
-https://res.cloudinary.com/<cloud_name>/image/upload/v128724/gearup/users/{userId}/avatar/avatar.jpg
-```
-
----
-
-## ✅ Validation & Error Handling
-
-* **FluentValidation** for DTOs (e.g., `UserRegistrationValidator`)
-* **Global Error Middleware** catches and formats exceptions
-* Sensitive error details are only exposed in Development environment
-* Production errors return generic messages to protect system information
-
-Example Error Response:
-
-```json
-{
-  "status": 400,
-  "message": "The ConfirmedNewPassword field is required.",
-  "traceId": "00-6e112a590a..."
-}
-```
-
----
-
-## 🏥 Health Checks
-
-GearUp includes built-in health checks to monitor the application and its dependencies:
-
-**Health Check Endpoint:**
-```
-GET /health
-```
-
-**Monitored Components:**
-* Database connectivity (MySQL)
-* Redis cache availability
-
-Example Health Check Response:
-```json
-{
-  "status": "Healthy",
-  "totalDuration": "00:00:00.0123456",
-  "entries": {
-    "database": {
-      "status": "Healthy"
-    },
-    "redis": {
-      "status": "Healthy"
-    }
-  }
-}
-```
-
----
-
-## 🔄 API Versioning
-
-API versioning is supported through URL versioning:
-* Default version: v1.0
-* Versions are reported in response headers
-* Example: `/api/v1/users`
-
----
-
-## 🧭 Best Practices
-
-* Keep domain logic **pure** (no EF Core logic in Domain).
-* Use **Dependency Injection** for all services.
-* Store secrets in **Environment Variables**, not code.
-* Use **async/await** for all I/O operations.
-* Prefer **DTOs** over entities in API responses.
-
----
-
-## 💡 Development Standards
-
-| Area               | Standard                                                        |
-| ------------------ | --------------------------------------------------------------- |
-| Naming             | `PascalCase` for classes, `camelCase` for variables             |
-| Folders            | Group by feature/domain, not layer                              |
-| Validation         | FluentValidation per DTO                                        |
-| Exception Handling | Use custom exceptions + middleware                              |
-| Logging            | Structured with Serilog                                         |
-| Commits            | Conventional commit format                                      |
-
----
-
-## 📘 API Documentation
-
-Auto-generated via **Swagger** at:
-
-```
-http://localhost:5255/swagger
-```
-
-Export OpenAPI specs using:
+Export OpenAPI (example):
 
 ```bash
-dotnet swagger tofile --output swagger.json bin/Debug/net8.0/GearUp.API.dll v1
+dotnet build GearUp.Presentation -c Debug
+dotnet swagger tofile --output swagger.json GearUp.Presentation/bin/Debug/net9.0/GearUp.Presentation.dll v1
 ```
 
----
+### SignalR hubs
 
-## 🧪 Testing
+Mapped in `Program.cs`:
 
-```
+- `/hubs/post`
+- `/hubs/notification`
+- `/hubs/chat`
+
+For endpoint-level reference, see `GearUp.Presentation/docs/API_ENDPOINTS.md`.
+
+## Observability and Runtime Features
+
+- Health endpoint: `GET /health`
+  - Includes DB (`AddDbContextCheck`) and Redis checks
+- Global exception middleware: `GearUp.Presentation/Middlewares/ExceptionMiddleware.cs`
+- Serilog request logging: `app.UseSerilogRequestLogging()`
+- OpenTelemetry tracing + metrics configured in `ServiceExtensions.cs`
+- Fixed-window rate limiter policy (`"Fixed"`) enabled via `app.UseRateLimiter()`
+
+## Testing
+
+Run all tests:
+
+```bash
 dotnet test
 ```
 
-Includes:
+Run only the unit test project:
 
-* Unit tests for domain logic
-* Integration tests for API endpoints
-
----
-
-## 🚀 Deployment
-
-### Docker Compose Example
-
-```yaml
-services:
-  db:
-    image: mysql:8.0
-    container_name: gearup-db
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-    ports:
-      - "3307:3306"
-    networks:
-      - gearup_network
-    volumes:
-      - gearup_data:/var/lib/mysql
-    healthcheck:
-        test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-        timeout: 20s
-        retries: 10
-
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "5255:8080"
-    environment:
-      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection}
-      Jwt__Issuer: ${Jwt__Issuer}
-      Jwt__Audience: ${Jwt__Audience}
-      Jwt__AccessToken_SecretKey: ${Jwt__AccessToken_SecretKey}
-      Jwt__EmailVerificationToken_SecretKey: ${Jwt__EmailVerificationToken_SecretKey}
-      SendGridApiKey: ${SendGridApiKey}
-      FromEmail: ${FromEmail}
-      ClientUrl: ${ClientUrl}
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
-      CLOUDINARY_URL: ${CLOUDINARY_URL}
-    depends_on:
-      - db
-    networks:
-      - gearup_network
-    restart: on-failure
-
-volumes:
-  gearup_data:
-
-networks:
-    gearup_network:
+```bash
+dotnet test GearUp.UnitTests/GearUp.UnitTests.csproj
 ```
 
----
+## Deployment (Docker Compose)
 
-## 🤝 Contributing
+The provided `docker-compose.yml` brings up:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/my-feature`)
-3. Commit changes (`git commit -m 'feat: add new endpoint'`)
-4. Push to branch (`git push origin feature/my-feature`)
-5. Create a Pull Request
+- `db` (MySQL 8)
+- `redis`
+- `aspire-dashboard`
+- `api` (this application)
 
----
+Start services:
 
-## 📄 License
+```bash
+docker compose up -d --build
+```
 
-MIT License © 2025 GearUp Team
+Stop services:
 
----
+```bash
+docker compose down
+```
 
-### 🔗 Author & Maintainer
+## Contributing
 
-**Shane Htet Aung**
-📧 Contact: [shanehtetaung.conceptx.mm@gmail.com](mailto:shanehtetaung.conceptx.mm@gmail.com)
-🐙 GitHub: [@Rahull-Adk](https://github.com/Rahull-Adk)
+See `CONTRIBUTING.md` for coding standards, commit conventions, and PR checklist.
+
+## License
+
+MIT License.
