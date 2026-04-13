@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Serilog;
 
 
@@ -140,10 +142,50 @@ if (runDbTasks)
 
         if (runMigrations)
         {
-            dbTaskStage = "apply-migrations";
+            dbTaskStage = "migration-connectivity-check";
             Log.Information("DB task stage: {DbTaskStage}", dbTaskStage);
-            await db.Database.MigrateAsync();
+            var canConnect = await db.Database.CanConnectAsync();
+            if (!canConnect)
+            {
+                throw new InvalidOperationException("Database connectivity check failed before migrations. Verify ConnectionStrings__DefaultConnection and database availability.");
+            }
             Log.Information("DB task stage completed: {DbTaskStage}", dbTaskStage);
+
+            dbTaskStage = "migration-discover-pending";
+            Log.Information("DB task stage: {DbTaskStage}", dbTaskStage);
+            var pendingMigrations = (await db.Database.GetPendingMigrationsAsync()).ToArray();
+            Log.Information(
+                "Pending migrations discovered: count={PendingCount}, migrations={PendingMigrations}",
+                pendingMigrations.Length,
+                pendingMigrations.Length == 0 ? "<none>" : string.Join(",", pendingMigrations));
+            Log.Information("DB task stage completed: {DbTaskStage}", dbTaskStage);
+
+            if (pendingMigrations.Length > 0)
+            {
+                var migrator = db.Database.GetService<IMigrator>();
+                for (var i = 0; i < pendingMigrations.Length; i++)
+                {
+                    var targetMigration = pendingMigrations[i];
+                    dbTaskStage = $"migration-apply:{targetMigration}";
+                    Log.Information(
+                        "DB task stage: {DbTaskStage} ({CurrentIndex}/{TotalCount})",
+                        dbTaskStage,
+                        i + 1,
+                        pendingMigrations.Length);
+
+                    await migrator.MigrateAsync(targetMigration);
+
+                    Log.Information(
+                        "DB task stage completed: {DbTaskStage} ({CurrentIndex}/{TotalCount})",
+                        dbTaskStage,
+                        i + 1,
+                        pendingMigrations.Length);
+                }
+            }
+            else
+            {
+                Log.Information("No pending migrations detected. Database is up to date.");
+            }
         }
 
         if (runSeedData)

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GearUp.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialPostgres : Migration
+    public partial class db_init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -264,9 +264,9 @@ namespace GearUp.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CarMake = table.Column<string>(type: "text", nullable: false),
-                    CarModel = table.Column<string>(type: "text", nullable: false),
-                    CarColor = table.Column<string>(type: "text", nullable: false),
+                    CarMake = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    CarModel = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    CarColor = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Price = table.Column<double>(type: "double precision", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
