@@ -92,72 +92,116 @@ if (seedScope is not ("admin" or "full"))
 
 if (runDbTasks)
 {
-    if (shouldRunDbTasksByMode)
+    var dbTaskStage = "initialization";
+    try
     {
-        if (startupMode == "db-migrate")
+        Log.Information(
+            "Startup DB task config: mode={StartupMode}, runMigrations={RunMigrations}, runSeedData={RunSeedData}, runOnceAndExit={RunOnceAndExit}, seedScope={SeedScope}",
+            startupMode,
+            runMigrations,
+            runSeedData,
+            runDbTasksOnceAndExit,
+            seedScope);
+
+        if (shouldRunDbTasksByMode)
         {
-            Log.Information("Running startup database migration because APP_STARTUP_MODE=db-migrate.");
+            if (startupMode == "db-migrate")
+            {
+                Log.Information("Running startup database migration because APP_STARTUP_MODE=db-migrate.");
+            }
+            else if (startupMode == "db-seed")
+            {
+                Log.Information("Running startup database migration and seed because APP_STARTUP_MODE=db-seed.");
+            }
+            else if (isLegacyDbTaskMode)
+            {
+                Log.Information("Running startup database migration and seed because APP_STARTUP_MODE=db-task (legacy alias).");
+            }
         }
-        else if (startupMode == "db-seed")
+        else if (runDbTasksInDevelopment)
         {
-            Log.Information("Running startup database migration and seed because APP_STARTUP_MODE=db-seed.");
+            Log.Information("Running startup database tasks in development mode because RUN_DB_TASKS_IN_DEVELOPMENT=true.");
         }
-        else if (isLegacyDbTaskMode)
+
+        if (runDbTasksOnceAndExit && !shouldRunDbTasksByMode)
         {
-            Log.Information("Running startup database migration and seed because APP_STARTUP_MODE=db-task (legacy alias).");
+            Log.Information("Running one-off database tasks because RUN_DB_TASKS_ONCE_AND_EXIT=true.");
+        }
+
+        dbTaskStage = "create-scope";
+        Log.Information("DB task stage: {DbTaskStage}", dbTaskStage);
+        using var scope = app.Services.CreateScope();
+
+        dbTaskStage = "resolve-db-context";
+        Log.Information("DB task stage: {DbTaskStage}", dbTaskStage);
+        var db = scope.ServiceProvider.GetRequiredService<GearUpDbContext>();
+        var hasher = new PasswordHasher<User>();
+        DbSeeder? seeder = null;
+
+        if (runMigrations)
+        {
+            dbTaskStage = "apply-migrations";
+            Log.Information("DB task stage: {DbTaskStage}", dbTaskStage);
+            await db.Database.MigrateAsync();
+            Log.Information("DB task stage completed: {DbTaskStage}", dbTaskStage);
+        }
+
+        if (runSeedData)
+        {
+            dbTaskStage = "validate-seed-admin-settings";
+            Log.Information("DB task stage: {DbTaskStage}", dbTaskStage);
+
+            var adminUsername = builder.Configuration["ADMIN_USERNAME"];
+            var adminEmail = builder.Configuration["ADMIN_EMAIL"];
+            var adminPassword = builder.Configuration["ADMIN_PASSWORD"];
+
+            if (string.IsNullOrWhiteSpace(adminUsername) || string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+            {
+                throw new InvalidOperationException("ADMIN_USERNAME, ADMIN_EMAIL, and ADMIN_PASSWORD are required when running seed tasks.");
+            }
+
+            dbTaskStage = "seed-admin";
+            Log.Information("DB task stage: {DbTaskStage}", dbTaskStage);
+            await AdminSeeder.SeedAdminAsync(db, hasher, adminUsername, adminEmail, adminPassword);
+
+            if (seedScope == "full")
+            {
+                dbTaskStage = "resolve-full-seeder";
+                Log.Information("DB task stage: {DbTaskStage}", dbTaskStage);
+                seeder ??= scope.ServiceProvider.GetRequiredService<DbSeeder>();
+
+                dbTaskStage = "seed-full-dataset";
+                Log.Information("DB task stage: {DbTaskStage}", dbTaskStage);
+                await seeder.SeedAsync();
+                Log.Information("DB task stage completed: {DbTaskStage}", dbTaskStage);
+            }
+            else
+            {
+                Log.Information("Skipping non-admin seed data because DB_SEED_SCOPE=admin.");
+            }
+        }
+
+        if (runDbTasksOnceAndExit)
+        {
+            Log.Information("Completed one-off database tasks. Exiting without starting web host.");
+            Log.CloseAndFlush();
+            return;
         }
     }
-    else if (runDbTasksInDevelopment)
+    catch (Exception ex)
     {
-        Log.Information("Running startup database tasks in development mode because RUN_DB_TASKS_IN_DEVELOPMENT=true.");
-    }
-
-    if (runDbTasksOnceAndExit && !shouldRunDbTasksByMode)
-    {
-        Log.Information("Running one-off database tasks because RUN_DB_TASKS_ONCE_AND_EXIT=true.");
-    }
-
-    using var scope = app.Services.CreateScope();
-    var hasher = new PasswordHasher<User>();
-    var db = scope.ServiceProvider.GetRequiredService<GearUpDbContext>();
-    var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-    if (runMigrations)
-    {
-        await db.Database.MigrateAsync();
-    }
-
-    if (runSeedData)
-    {
-        var adminUsername = builder.Configuration["ADMIN_USERNAME"];
-        var adminEmail = builder.Configuration["ADMIN_EMAIL"];
-        var adminPassword = builder.Configuration["ADMIN_PASSWORD"];
-
-        if (string.IsNullOrWhiteSpace(adminUsername) || string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
-        {
-            throw new InvalidOperationException("ADMIN_USERNAME, ADMIN_EMAIL, and ADMIN_PASSWORD are required when running seed tasks.");
-        }
-
-        var requiredAdminUsername = adminUsername;
-        var requiredAdminEmail = adminEmail;
-        var requiredAdminPassword = adminPassword;
-
-        await AdminSeeder.SeedAdminAsync(db, hasher, requiredAdminUsername, requiredAdminEmail, requiredAdminPassword);
-
-        if (seedScope == "full")
-        {
-            await seeder.SeedAsync();
-        }
-        else
-        {
-            Log.Information("Skipping non-admin seed data because DB_SEED_SCOPE=admin.");
-        }
-    }
-
-    if (runDbTasksOnceAndExit)
-    {
-        Log.Information("Completed one-off database tasks. Exiting without starting web host.");
+        Log.Fatal(
+            ex,
+            "Startup DB tasks failed at stage '{DbTaskStage}'. mode={StartupMode}, runMigrations={RunMigrations}, runSeedData={RunSeedData}, seedScope={SeedScope}. Review DB connectivity, migration compatibility, and required startup environment variables.",
+            dbTaskStage,
+            startupMode,
+            runMigrations,
+            runSeedData,
+            seedScope);
         Log.CloseAndFlush();
-        return;
+        throw new InvalidOperationException(
+            $"Startup database task failed at stage '{dbTaskStage}' (APP_STARTUP_MODE={startupMode}). See logs for details.",
+            ex);
     }
 }
 else
