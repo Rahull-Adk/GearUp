@@ -96,6 +96,7 @@ namespace GearUp.Infrastructure.Repositories
                     Make = car.Make,
                     Model = car.Model,
                     TransmissionType = car.Transmission,
+                    CarValidationStatus = car.ValidationStatus,
                     Mileage = car.Mileage,
                     SeatingCapacity = car.SeatingCapacity,
                     Price = car.Price,
