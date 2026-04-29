@@ -295,6 +295,11 @@ namespace GearUp.Application.Services.Admin
         {
             _logger.LogInformation("Updating car validation status for ID: {CarId}", carId);
 
+            if (status == CarValidationStatus.Default)
+            {
+                return Result<string>.Failure("Invalid car validation status", 400);
+            }
+
             if (reviewerId == Guid.Empty)
             {
                 return Result<string>.Failure("ReviewerId cannot be empty", 400);

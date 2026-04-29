@@ -1,5 +1,6 @@
 using FluentValidation;
 using GearUp.Application.ServiceDtos.Car;
+using GearUp.Domain.Enums;
 
 namespace GearUp.Application.Validators
 {
@@ -52,16 +53,20 @@ namespace GearUp.Application.Validators
                 .NotEmpty().WithMessage("License plate is required.");
 
             RuleFor(x => x.FuelType)
-                .IsInEnum().WithMessage("Invalid fuel type.");
+                .IsInEnum().WithMessage("Invalid fuel type.")
+                .NotEqual(default(FuelType)).WithMessage("Fuel type is required.");
 
             RuleFor(x => x.CarCondition)
-                .IsInEnum().WithMessage("Invalid car condition.");
+                .IsInEnum().WithMessage("Invalid car condition.")
+                .NotEqual(default(CarCondition)).WithMessage("Car condition is required.");
 
             RuleFor(x => x.TransmissionType)
-                .IsInEnum().WithMessage("Invalid transmission type.");
+                .IsInEnum().WithMessage("Invalid transmission type.")
+                .NotEqual(default(TransmissionType)).WithMessage("Transmission type is required.");
 
             RuleFor(x => x.CarStatus)
-                .IsInEnum().WithMessage("Invalid car status.");
+                .IsInEnum().WithMessage("Invalid car status.")
+                .NotEqual(default(CarStatus)).WithMessage("Car status is required.");
         }
     }
 }

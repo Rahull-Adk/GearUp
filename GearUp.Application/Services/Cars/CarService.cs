@@ -107,7 +107,9 @@ namespace GearUp.Application.Services.Cars
                 request.TransmissionType,
                 dealerId,
                 request.VIN,
-                request.LicensePlate
+                request.LicensePlate,
+                validationStatus: CarValidationStatus.Pending,
+                status: CarStatus.Available
             );
 
             await _carRepository.AddCarAsync(newCar);
