@@ -488,6 +488,7 @@ namespace GearUp.Infrastructure.Repositories
                     SeatingCapacity = c.SeatingCapacity,
                     Price = c.Price,
                     Color = c.Color,
+                    CarValidationStatus = c.ValidationStatus,
                     CreatedAt = c.CreatedAt
                 })
                 .ToListAsync(cancellationToken);
