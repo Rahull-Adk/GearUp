@@ -17,11 +17,11 @@ public class DbSeeder
     private const int CarSeedBatchSize = 2000;
     private const int PostSeedBatchSize = 5000;
     private const int DefaultUserSeedCount = 200;
-    private const int DefaultCarSeedCount = 600000;
-    private const int DefaultPostSeedCount = 1000000;
-    private const int DefaultCommentSeedCount = 1800;
-    private const int DefaultNestedCommentSeedCount = 5000;
-    private const int DefaultPostLikeSeedCount = 2000;
+    private const int DefaultCarSeedCount = 50;
+    private const int DefaultPostSeedCount = 200;
+    private const int DefaultCommentSeedCount = 200;
+    private const int DefaultNestedCommentSeedCount = 300;
+    private const int DefaultPostLikeSeedCount = 300;
     private const int DefaultKycSeedCount = 30;
     private const int DefaultAppointmentSeedCount = 40;
     private const int DefaultReviewSeedCount = 20;
