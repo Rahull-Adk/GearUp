@@ -289,7 +289,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     KnownProxies = { }
 });
 
-//app.UseRateLimiter();
+app.UseRateLimiter();
 
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
