@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using DotNetEnv;
 using GearUp.Domain.Entities.Users;
 using GearUp.Infrastructure.Persistence;
@@ -39,6 +40,19 @@ catch (Exception ex)
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Bind a port for hosting (Render sets PORT). Fallback to 5000 when not provided.
+var portEnv = Environment.GetEnvironmentVariable("PORT") ?? builder.Configuration["PORT"] ?? builder.Configuration["ASPNETCORE_URLS"];
+if (!string.IsNullOrWhiteSpace(portEnv))
+{
+    // If PORT contains a URL-like value, pass it through; otherwise treat as port number.
+    var url = portEnv.Contains("://") ? portEnv : $"http://*:{portEnv}";
+    builder.WebHost.UseUrls(url);
+}
+else
+{
+    builder.WebHost.UseUrls("http://*:5000");
+}
+
 builder.Host.UseSerilog((context, configuration) =>
 {
     configuration.ReadFrom.Configuration(context.Configuration);
@@ -55,6 +69,28 @@ builder.Services.AddOpenApi();
 builder.Services.AddServices(builder.Configuration);
 
 var app = builder.Build();
+
+// Log resolved seeder counts and masked connection string so we can verify Render env values at startup.
+static string MaskConnectionString(string? cs)
+{
+    if (string.IsNullOrWhiteSpace(cs)) return "<missing>";
+    var masked = Regex.Replace(cs, "(?i)(Username|User Id|User)=([^;]+)", "$1=***");
+    masked = Regex.Replace(masked, "(?i)(Password)=([^;]+)", "$1=***");
+    return masked;
+}
+
+var resolvedUsers = builder.Configuration.GetValue<int?>("DbSeeder__Users");
+var resolvedCars = builder.Configuration.GetValue<int?>("DbSeeder__Cars");
+var resolvedPosts = builder.Configuration.GetValue<int?>("DbSeeder__Posts");
+var resolvedComments = builder.Configuration.GetValue<int?>("DbSeeder__Comments");
+var resolvedNested = builder.Configuration.GetValue<int?>("DbSeeder__NestedComments");
+var resolvedLikes = builder.Configuration.GetValue<int?>("DbSeeder__PostLikes");
+var resolvedKyc = builder.Configuration.GetValue<int?>("DbSeeder__Kyc");
+var resolvedAppointments = builder.Configuration.GetValue<int?>("DbSeeder__Appointments");
+var resolvedReviews = builder.Configuration.GetValue<int?>("DbSeeder__Reviews");
+var conn = builder.Configuration["ConnectionStrings__DefaultConnection"];
+Log.Information("Resolved DbSeeder targets - Users={Users}, Cars={Cars}, Posts={Posts}, Comments={Comments}, NestedComments={Nested}, PostLikes={Likes}, Kyc={Kyc}, Appointments={Appointments}, Reviews={Reviews}", resolvedUsers, resolvedCars, resolvedPosts, resolvedComments, resolvedNested, resolvedLikes, resolvedKyc, resolvedAppointments, resolvedReviews);
+Log.Information("ConnectionStrings__DefaultConnection (masked)={Conn}", MaskConnectionString(conn));
 
 var startupMode = (builder.Configuration["APP_STARTUP_MODE"] ?? "web").Trim().ToLowerInvariant();
 if (startupMode is not ("web" or "db-migrate" or "db-seed" or "db-task"))
