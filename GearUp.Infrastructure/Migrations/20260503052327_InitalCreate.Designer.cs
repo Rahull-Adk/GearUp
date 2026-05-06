@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GearUp.Infrastructure.Migrations
 {
     [DbContext(typeof(GearUpDbContext))]
-    [Migration("20260413082005_db_init")]
-    partial class db_init
+    [Migration("20260503052327_InitalCreate")]
+    partial class InitalCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -11,9 +11,34 @@ export const options = {
     ],
 };
 
-const BASE_URL = 'http://localhost:5255';
-const TEST_USER = 'kevon25';
-const TEST_PASSWORD = 'Password123!';
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:5255';
+const TEST_USER = __ENV.TEST_USER || 'ruby38';
+const TEST_PASSWORD = __ENV.TEST_PASSWORD || 'Password123!';
+
+function parseJsonSafe(rawBody) {
+    if (!rawBody) return null;
+
+    try {
+        return JSON.parse(rawBody);
+    } catch {
+        return null;
+    }
+}
+
+function extractAccessToken(body) {
+    if (!body || typeof body !== 'object') {
+        return null;
+    }
+
+    const data = body.data || body.Data || null;
+    return (
+        data?.accessToken ||
+        data?.AccessToken ||
+        body.accessToken ||
+        body.AccessToken ||
+        null
+    );
+}
 
 export function setup() {
     const loginRes = http.post(
@@ -27,12 +52,22 @@ export function setup() {
         }
     );
 
+    const body = parseJsonSafe(loginRes.body);
+    const token = extractAccessToken(body);
+
     check(loginRes, {
         'setup login status 200': (r) => r.status === 200,
+        'setup login has access token': () => !!token,
     });
 
+    if (loginRes.status !== 200 || !token) {
+        const message = body?.message || body?.Message || 'Unknown login error';
+        const bodySnippet = String(loginRes.body || '').slice(0, 400);
+        throw new Error(`Login setup failed (status=${loginRes.status}, message=${message}). Response: ${bodySnippet}`);
+    }
+
     return {
-        token: JSON.parse(loginRes.body).data.accessToken,
+        token,
     };
 }
 
@@ -46,7 +81,7 @@ export default function (data) {
         let url = `${BASE_URL}/api/v1/posts`;
 
         if (cursor) {
-            url += `?cursor=${cursor}`;
+            url += `?cursor=${encodeURIComponent(cursor)}`;
         }
 
         const res = http.get(url, {
@@ -69,7 +104,7 @@ export default function (data) {
 
         try {
             const body = JSON.parse(res.body);
-            cursor = body?.data?.nextCursor || null;
+            cursor = body?.data?.nextCursor || body?.Data?.NextCursor || null;
 
             if (!cursor) {
                 break;

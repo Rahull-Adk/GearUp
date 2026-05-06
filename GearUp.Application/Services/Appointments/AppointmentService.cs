@@ -13,6 +13,21 @@ namespace GearUp.Application.Services.Appointments
 {
     public class AppointmentService : IAppointmentService
     {
+        private static DateTime NormalizeToUtc(DateTime value)
+        {
+            if (value.Kind == DateTimeKind.Utc)
+            {
+                return value;
+            }
+
+            if (value.Kind == DateTimeKind.Local)
+            {
+                return value.ToUniversalTime();
+            }
+
+            return DateTime.SpecifyKind(value, DateTimeKind.Utc);
+        }
+
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly IUserRepository _userRepository;
         private readonly ICarRepository _carRepository;
@@ -69,8 +84,10 @@ namespace GearUp.Application.Services.Appointments
                 carTitle = car.Title;
             }
 
+            var scheduleUtc = NormalizeToUtc(dto.Schedule);
+
             // Validate schedule is in the future
-            if (dto.Schedule <= DateTime.UtcNow)
+            if (scheduleUtc <= DateTime.UtcNow)
             {
                 return Result<AppointmentResponseDto>.Failure("Appointment schedule must be in the future.", 400);
             }
@@ -78,7 +95,7 @@ namespace GearUp.Application.Services.Appointments
             var appointment = Appointment.CreateAppointment(
                 dto.AgentId,
                 requesterId,
-                dto.Schedule,
+                scheduleUtc,
                 dto.Location,
                 dto.Notes,
                 status: AppointmentStatus.Pending,

@@ -26,7 +26,7 @@ export const options = {
 };
 
 const BASE_URL = 'http://localhost:5255';
-const TEST_USER = 'kevon25';
+const TEST_USER = 'ruby38';
 const TEST_PASSWORD = 'Password123!';
 
 const queries = ['toyota', 'bmw', 'honda', 'suv', ''];
