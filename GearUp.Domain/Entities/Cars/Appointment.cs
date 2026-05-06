@@ -5,6 +5,21 @@ namespace GearUp.Domain.Entities.Cars
 {
     public class Appointment
     {
+        private static DateTime NormalizeToUtc(DateTime value)
+        {
+            if (value.Kind == DateTimeKind.Utc)
+            {
+                return value;
+            }
+
+            if (value.Kind == DateTimeKind.Local)
+            {
+                return value.ToUniversalTime();
+            }
+
+            return DateTime.SpecifyKind(value, DateTimeKind.Utc);
+        }
+
         public Guid Id { get; private set; }
         public Guid AgentId { get; private set; }
         public Guid RequesterId { get; private set; }
@@ -40,7 +55,7 @@ namespace GearUp.Domain.Entities.Cars
             {
                 AgentId = agentId,
                 RequesterId = requesterId,
-                Schedule = schedule,
+                Schedule = NormalizeToUtc(schedule),
                 Location = location,
                 Notes = notes,
                 CarId = carId,

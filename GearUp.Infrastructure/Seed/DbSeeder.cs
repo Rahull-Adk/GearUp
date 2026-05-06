@@ -8,6 +8,7 @@ using GearUp.Domain.Enums;
 using GearUp.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace GearUp.Infrastructure.Seed;
 
@@ -15,14 +16,46 @@ public class DbSeeder
 {
     private const int CarSeedBatchSize = 2000;
     private const int PostSeedBatchSize = 5000;
+    private const int DefaultUserSeedCount = 200;
+    private const int DefaultCarSeedCount = 600000;
+    private const int DefaultPostSeedCount = 1000000;
+    private const int DefaultCommentSeedCount = 1800;
+    private const int DefaultNestedCommentSeedCount = 5000;
+    private const int DefaultPostLikeSeedCount = 2000;
+    private const int DefaultKycSeedCount = 30;
+    private const int DefaultAppointmentSeedCount = 40;
+    private const int DefaultReviewSeedCount = 20;
 
     private readonly GearUpDbContext _context;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IConfiguration _configuration;
 
-    public DbSeeder(GearUpDbContext context, IPasswordHasher<User> passwordHasher)
+    private static DateTime NormalizeToUtc(DateTime value)
+    {
+        if (value.Kind == DateTimeKind.Utc)
+        {
+            return value;
+        }
+
+        if (value.Kind == DateTimeKind.Local)
+        {
+            return value.ToUniversalTime();
+        }
+
+        return DateTime.SpecifyKind(value, DateTimeKind.Utc);
+    }
+
+    public DbSeeder(GearUpDbContext context, IPasswordHasher<User> passwordHasher, IConfiguration configuration)
     {
         _context = context;
         _passwordHasher = passwordHasher;
+        _configuration = configuration;
+    }
+
+    private int GetSeedCount(string key, int defaultValue)
+    {
+        var configuredValue = _configuration.GetValue<int?>(key);
+        return configuredValue is > 0 ? configuredValue.Value : defaultValue;
     }
 
     public async Task SeedAsync()
@@ -32,15 +65,15 @@ public class DbSeeder
 
         try
         {
-            await SeedFakeUsersAsync(200);
-            await SeedFakeCarsAsync(600000);
-            await SeedFakePostsAsync(1000000);
-            await SeedFakeCommentsAsync(1800);
-            await SeedFakeNestedCommentAsync(5000);
-            await SeedFakePostLikeAsync(2000);
-            await SeedFakeKycAsync(30);
-            await SeedFakeAppointmentAsync(40);
-            await SeedFakeReviewAsync(20);
+            await SeedFakeUsersAsync(GetSeedCount("DbSeeder__Users", DefaultUserSeedCount));
+            await SeedFakeCarsAsync(GetSeedCount("DbSeeder__Cars", DefaultCarSeedCount));
+            await SeedFakePostsAsync(GetSeedCount("DbSeeder__Posts", DefaultPostSeedCount));
+            await SeedFakeCommentsAsync(GetSeedCount("DbSeeder__Comments", DefaultCommentSeedCount));
+            await SeedFakeNestedCommentAsync(GetSeedCount("DbSeeder__NestedComments", DefaultNestedCommentSeedCount));
+            await SeedFakePostLikeAsync(GetSeedCount("DbSeeder__PostLikes", DefaultPostLikeSeedCount));
+            await SeedFakeKycAsync(GetSeedCount("DbSeeder__Kyc", DefaultKycSeedCount));
+            await SeedFakeAppointmentAsync(GetSeedCount("DbSeeder__Appointments", DefaultAppointmentSeedCount));
+            await SeedFakeReviewAsync(GetSeedCount("DbSeeder__Reviews", DefaultReviewSeedCount));
         }
         finally
         {
@@ -187,7 +220,7 @@ public class DbSeeder
                 );
 
                 batchCars.Add(car);
-                int imgCount = faker.Random.Int(3, 6);
+                int imgCount = faker.Random.Int(2,3);
                 for (int j = 0; j < imgCount; j++)
                 {
                     batchCarImages.Add(CarImage.CreateCarImage(
@@ -435,7 +468,8 @@ public class DbSeeder
         var requesterIds = await _context.Users.Where(u => u.Email.EndsWith("@example.com") && u.Role == UserRole.Customer).Select(u => u.Id).ToListAsync();
         for (int i = 0; i < toCreate; i++)
         {
-            var appointment = Appointment.CreateAppointment(faker.PickRandom(agentIds), faker.PickRandom(requesterIds), faker.Date.Soon(), faker.Lorem.Slug(6), faker.Lorem.Sentence(), faker.Random.WeightedRandom([AppointmentStatus.Completed, AppointmentStatus.Cancelled,  AppointmentStatus.Pending, AppointmentStatus.Rejected, AppointmentStatus.Scheduled], [0.2f, 0.2f,0.2f,0.2f,0.2f]), null);
+            var seededSchedule = NormalizeToUtc(faker.Date.Soon(refDate: DateTime.UtcNow));
+            var appointment = Appointment.CreateAppointment(faker.PickRandom(agentIds), faker.PickRandom(requesterIds), seededSchedule, faker.Lorem.Slug(6), faker.Lorem.Sentence(), faker.Random.WeightedRandom([AppointmentStatus.Completed, AppointmentStatus.Cancelled,  AppointmentStatus.Pending, AppointmentStatus.Rejected, AppointmentStatus.Scheduled], [0.2f, 0.2f,0.2f,0.2f,0.2f]), null);
 
             appointments.Add(appointment);
         }
