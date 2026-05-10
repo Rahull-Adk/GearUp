@@ -186,6 +186,8 @@ namespace GearUp.Presentation.Extensions
             // RabbitMq + Background worker registration
             services.AddHostedService<EmailConsumerWorker>();
             services.AddHostedService<NotificationConsumerWorker>();
+            services.AddHostedService<ImageProcessingWorker>();
+            services.AddHostedService<ImageUploadWorker>();
 
 
             // Swagger Injection
@@ -213,7 +215,7 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IKycService, KycService>();
             services.AddScoped<IProfileUpdateService, ProfileUpdateService>();
             services.AddScoped<IDocumentProcessor, DocumentProcessor>();
-            services.AddScoped<IRealTimeNotifier, SignalRRealTimeNotifier>();
+            services.AddSingleton<IRealTimeNotifier, SignalRRealTimeNotifier>();
             services.AddScoped<IAppointmentService, AppointmentService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<IMessageService, MessageService>();

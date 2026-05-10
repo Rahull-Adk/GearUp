@@ -8,5 +8,6 @@ namespace GearUp.Application.Interfaces.Services.CarServiceInterface
     {
         Task<Result<List<CarImage>>> ProcessForCreateAsync(ICollection<IFormFile> files, Guid dealerId, Guid carId);
         Task<Result<List<CarImage>>> ProcessForUpdateAsync(Car existingCar, ICollection<IFormFile>? files, Guid dealerId);
+        Task PublishImageProcessingMessagesAsync(List<CarImage> images, Guid dealerId, Guid carId);
     }
 }

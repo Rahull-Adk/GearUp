@@ -76,6 +76,25 @@ namespace GearUp.Infrastructure
                 channel.QueueDeclareAsync(queue: rabbitMqOptions.NotificationQueue, durable: true, exclusive: false, autoDelete: false).GetAwaiter().GetResult();
                 channel.QueueBindAsync(queue: rabbitMqOptions.NotificationQueue, exchange: rabbitMqOptions.Exchange, routingKey: rabbitMqOptions.NotificationQueue).GetAwaiter().GetResult();
 
+                // DLQ Setup
+                var dlqExchange = "gearup.dlx";
+                channel.ExchangeDeclareAsync(dlqExchange, ExchangeType.Direct, durable: true).GetAwaiter().GetResult();
+                channel.QueueDeclareAsync(queue: rabbitMqOptions.DeadLetterQueue, durable: true, exclusive: false, autoDelete: false).GetAwaiter().GetResult();
+                channel.QueueBindAsync(queue: rabbitMqOptions.DeadLetterQueue, exchange: dlqExchange, routingKey: "dead-letter").GetAwaiter().GetResult();
+
+                // Image Processing Queue
+                channel.QueueDeclareAsync(queue: rabbitMqOptions.ImageProcessingQueue, durable: true, exclusive: false, autoDelete: false).GetAwaiter().GetResult();
+                channel.QueueBindAsync(queue: rabbitMqOptions.ImageProcessingQueue, exchange: rabbitMqOptions.Exchange, routingKey: rabbitMqOptions.ImageProcessingQueue).GetAwaiter().GetResult();
+
+                // Image Upload Queue with DLQ arguments
+                var uploadArgs = new Dictionary<string, object?>
+                {
+                    { "x-dead-letter-exchange", dlqExchange },
+                    { "x-dead-letter-routing-key", "dead-letter" }
+                };
+                channel.QueueDeclareAsync(queue: rabbitMqOptions.ImageUploadQueue, durable: true, exclusive: false, autoDelete: false, arguments: uploadArgs).GetAwaiter().GetResult();
+                channel.QueueBindAsync(queue: rabbitMqOptions.ImageUploadQueue, exchange: rabbitMqOptions.Exchange, routingKey: rabbitMqOptions.ImageUploadQueue).GetAwaiter().GetResult();
+
                 return channel;
             });
 

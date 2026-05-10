@@ -312,7 +312,9 @@ namespace GearUp.Infrastructure.Repositories
             {
                 Id = ci.Id,
                 CarId = ci.CarId,
-                Url = ci.Url
+                Url = ci.Url,
+                Status = ci.Status,
+                ErrorMessage = ci.ErrorMessage
             }).ToListAsync(cancellationToken);
         }
 
@@ -352,7 +354,9 @@ namespace GearUp.Infrastructure.Repositories
                     {
                         Id = img.Id,
                         CarId = img.CarId,
-                        Url = img.Url
+                        Url = img.Url,
+                        Status = img.Status,
+                        ErrorMessage = img.ErrorMessage
                     }).ToList()
                 })
                 .FirstOrDefaultAsync(cancellationToken);
