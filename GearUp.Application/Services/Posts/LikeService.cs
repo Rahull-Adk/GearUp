@@ -1,8 +1,9 @@
 using GearUp.Application.Common;
-using GearUp.Application.Interfaces;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
+using GearUp.Application.Messaging.Contracts;
 using GearUp.Domain.Entities.Posts;
 using GearUp.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ namespace GearUp.Application.Services.Posts
         private readonly ILikeRepository _likeRepository;
         private readonly ICommentRepository _commentRepository;
         private readonly IPostRepository _postRepository;
-        private readonly IRealTimeNotifier _realTimeNotifier;
+        private readonly IMessagePublisher _messagePublisher;
         private readonly INotificationService _notificationService;
 
         public LikeService(
@@ -25,11 +26,11 @@ namespace GearUp.Application.Services.Posts
             IUserRepository userRepository,
             ILikeRepository likeRepository,
             ICommentRepository commentRepository,
-            IRealTimeNotifier realTimeNotifier,
+            IMessagePublisher messagePublisher,
             INotificationService notificationService)
         {
             _logger = logger;
-            _realTimeNotifier = realTimeNotifier;
+            _messagePublisher = messagePublisher;
             _postRepository = postRepository;
             _userRepository = userRepository;
             _likeRepository = likeRepository;
@@ -91,7 +92,16 @@ namespace GearUp.Application.Services.Posts
                 return Result<int>.Failure("Post not found", 404);
             }
 
-            await _realTimeNotifier.BroadCastPostLikes(postId, counts.LikeCount);
+            await _messagePublisher.PublishAsync(new NotificationRequestMessage
+            {
+                MethodName = "BroadCastPostLikes",
+                CorrelationId = postId.ToString(),
+                Payload = new Dictionary<string, object>
+                {
+                    ["postId"] = postId,
+                    ["likeCount"] = counts.LikeCount
+                }
+            }, "gearup.notification.queue");
 
             return Result<int>.Success(counts.LikeCount, "Post liked successfully", 200);
         }
@@ -131,7 +141,16 @@ namespace GearUp.Application.Services.Posts
                 return Result<int>.Failure("Post not found", 404);
             }
 
-            await _realTimeNotifier.BroadCastPostLikes(postId, counts.LikeCount);
+            await _messagePublisher.PublishAsync(new NotificationRequestMessage
+            {
+                MethodName = "BroadCastPostLikes",
+                CorrelationId = postId.ToString(),
+                Payload = new Dictionary<string, object>
+                {
+                    ["postId"] = postId,
+                    ["likeCount"] = counts.LikeCount
+                }
+            }, "gearup.notification.queue");
 
             return Result<int>.Success(counts.LikeCount, "Post unliked successfully", 200);
         }
@@ -185,7 +204,17 @@ namespace GearUp.Application.Services.Posts
             var updatedComment = await _commentRepository.GetCommentByIdAsync(commentId);
             var likeCount = updatedComment?.LikeCount ?? 0;
 
-            await _realTimeNotifier.BroadCastCommentLikes(comment.PostId, commentId, likeCount);
+            await _messagePublisher.PublishAsync(new NotificationRequestMessage
+            {
+                MethodName = "BroadCastCommentLikes",
+                CorrelationId = commentId.ToString(),
+                Payload = new Dictionary<string, object>
+                {
+                    ["postId"] = comment.PostId,
+                    ["commentId"] = commentId,
+                    ["likeCount"] = likeCount
+                }
+            }, "gearup.notification.queue");
 
             return Result<int>.Success(likeCount, "Comment liked successfully", 200);
         }
@@ -222,7 +251,17 @@ namespace GearUp.Application.Services.Posts
             var updatedComment = await _commentRepository.GetCommentByIdAsync(commentId);
             var likeCount = updatedComment?.LikeCount ?? 0;
 
-            await _realTimeNotifier.BroadCastCommentLikes(comment.PostId, commentId, likeCount);
+            await _messagePublisher.PublishAsync(new NotificationRequestMessage
+            {
+                MethodName = "BroadCastCommentLikes",
+                CorrelationId = commentId.ToString(),
+                Payload = new Dictionary<string, object>
+                {
+                    ["postId"] = comment.PostId,
+                    ["commentId"] = commentId,
+                    ["likeCount"] = likeCount
+                }
+            }, "gearup.notification.queue");
 
             return Result<int>.Success(likeCount, "Comment unliked successfully", 200);
         }

@@ -1,7 +1,8 @@
-using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
+using GearUp.Application.Messaging.Contracts;
 using GearUp.Application.ServiceDtos;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.ServiceDtos.Post;
@@ -20,7 +21,7 @@ namespace GearUp.UnitTests.Application.Posts
         private readonly Mock<ICommonRepository> _commonRepository = new();
         private readonly Mock<IPostRepository> _postRepository = new();
         private readonly Mock<ICommentRepository> _commentRepository = new();
-        private readonly Mock<IRealTimeNotifier> _realTimeNotifier = new();
+        private readonly Mock<IMessagePublisher> _messagePublisher = new();
         private readonly Mock<INotificationService> _notificationService = new();
 
         private CommentService CreateService() => new(
@@ -29,7 +30,7 @@ namespace GearUp.UnitTests.Application.Posts
             _postRepository.Object,
             _userRepository.Object,
             _commentRepository.Object,
-            _realTimeNotifier.Object,
+            _messagePublisher.Object,
             _notificationService.Object);
 
         private static RegisterResponseDto BuildUserDto(Guid id, string username = "tester")
@@ -52,7 +53,7 @@ namespace GearUp.UnitTests.Application.Posts
                 .ReturnsAsync(BuildUserDto(actorUserId));
             _postRepository.Setup(r => r.GetPostEntityByIdAsync(post.Id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(post);
-            _realTimeNotifier.Setup(r => r.BroadCastComments(post.Id, It.IsAny<CommentDto>()))
+            _messagePublisher.Setup(p => p.PublishAsync(It.IsAny<NotificationRequestMessage>(), "gearup.notification.queue", It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException("hub down"));
             _notificationService
                 .Setup(s => s.CreateAndPushNotificationAsync(
@@ -75,7 +76,12 @@ namespace GearUp.UnitTests.Application.Posts
             Assert.NotNull(result.Data);
             Assert.Equal("hello world", result.Data.Content);
             _commonRepository.Verify(r => r.SaveChangesAsync(), Times.Once);
-            _realTimeNotifier.Verify(r => r.BroadCastComments(post.Id, It.IsAny<CommentDto>()), Times.Once);
+            _messagePublisher.Verify(p => p.PublishAsync(
+                It.Is<NotificationRequestMessage>(m =>
+                    m.MethodName == "BroadCastComments" &&
+                    m.CorrelationId == post.Id.ToString()),
+                "gearup.notification.queue",
+                It.IsAny<CancellationToken>()), Times.Once);
             _notificationService.Verify(s => s.CreateAndPushNotificationAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),

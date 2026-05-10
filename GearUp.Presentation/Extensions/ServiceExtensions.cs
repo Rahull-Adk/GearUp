@@ -40,12 +40,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
-using OpenTelemetry.Exporter;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using System.Security.Claims;
+using GearUp.Application.Interfaces.Services.EmailServiceInterface;
+using GearUp.Infrastructure.Messaging;
 using StackExchange.Redis;
 
 namespace GearUp.Presentation.Extensions
@@ -141,6 +141,7 @@ namespace GearUp.Presentation.Extensions
             var fromEmail = ReadSetting(config, "FromEmail");
             var clientUrl = ReadSetting(config, "ClientUrl");
             var cloudinarySecret = ReadSetting(config, "CLOUDINARY_URL");
+            var rabbitMqOptions = config.GetSection("RabbitMQ").Get<RabbitMqOptions>() ?? new RabbitMqOptions();
 
             // Backward-compatible fallback for environments that predate explicit pepper configuration.
             opaqueTokenPepper ??= accessTokenSecretKey;
@@ -178,7 +179,13 @@ namespace GearUp.Presentation.Extensions
 
             services.AddInfrastructure(requiredConnectionString, requiredAudience, requiredIssuer,
                 requiredAccessTokenSecretKey, requiredBrevoApiKey, requiredFromEmail,
-                requiredEmailVerificationTokenSecretKey, requiredClientUrl, requiredOpaqueTokenPepper, logger);
+                requiredEmailVerificationTokenSecretKey, requiredClientUrl, requiredOpaqueTokenPepper, logger, rabbitMqOptions);
+
+
+
+            // RabbitMq + Background worker registration
+            services.AddHostedService<EmailConsumerWorker>();
+            services.AddHostedService<NotificationConsumerWorker>();
 
 
             // Swagger Injection
@@ -282,7 +289,7 @@ namespace GearUp.Presentation.Extensions
                 options.AddPolicy("Fixed", httpContext =>
                     RateLimitPartition.GetFixedWindowLimiter(
                         partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                        factory: key => new FixedWindowRateLimiterOptions
+                        factory: _ => new FixedWindowRateLimiterOptions
                         {
                             PermitLimit = 100,
                             Window = TimeSpan.FromMinutes(1),

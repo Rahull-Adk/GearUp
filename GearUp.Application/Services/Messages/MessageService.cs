@@ -1,8 +1,9 @@
 using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;
-using GearUp.Application.Interfaces;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.MessageServiceInterface;
+using GearUp.Application.Messaging.Contracts;
 using GearUp.Application.ServiceDtos.Message;
 using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
@@ -15,20 +16,20 @@ namespace GearUp.Application.Services.Messages
         private readonly IMessageRepository _messageRepository;
         private readonly IUserRepository _userRepository;
         private readonly ICommonRepository _commonRepository;
-        private readonly IRealTimeNotifier _realTimeNotifier;
+        private readonly IMessagePublisher _messagePublisher;
         private readonly ILogger<MessageService> _logger;
 
         public MessageService(
             IMessageRepository messageRepository,
             IUserRepository userRepository,
             ICommonRepository commonRepository,
-            IRealTimeNotifier realTimeNotifier,
+            IMessagePublisher messagePublisher,
             ILogger<MessageService> logger)
         {
             _messageRepository = messageRepository;
             _userRepository = userRepository;
             _commonRepository = commonRepository;
-            _realTimeNotifier = realTimeNotifier;
+            _messagePublisher = messagePublisher;
             _logger = logger;
         }
 
@@ -116,11 +117,32 @@ namespace GearUp.Application.Services.Messages
             };
 
 
-            await _realTimeNotifier.SendMessageToUser(dto.ReceiverId, receiverDto);
+            var userMessage = new NotificationRequestMessage
+            {
+                MethodName = "SendMessageToUser",
+                CorrelationId = dto.ReceiverId.ToString(),
+                Payload = new Dictionary<string, object>
+                {
+                    ["receiverId"] = dto.ReceiverId,
+                    ["message"] = receiverDto
+                }
+            };
+            await _messagePublisher.PublishAsync(userMessage, "gearup.notification.queue");
 
-            await _realTimeNotifier.SendMessageToConversation(conversation.Id, senderId, receiverDto);
+            var conversationMessage = new NotificationRequestMessage
+            {
+                MethodName = "SendMessageToConversation",
+                CorrelationId = conversation.Id.ToString(),
+                Payload = new Dictionary<string, object>
+                {
+                    ["conversationId"] = conversation.Id,
+                    ["excludeUserId"] = senderId,
+                    ["message"] = receiverDto
+                }
+            };
+            await _messagePublisher.PublishAsync(conversationMessage, "gearup.notification.queue");
 
-            _logger.LogInformation("Message {MessageId} sent successfully from {SenderId} to {ReceiverId}",
+            _logger.LogInformation("Message {MessageId} sent successfully from {SenderId} to {ReceiverId} and queued for real-time delivery",
                 message.Id, senderId, dto.ReceiverId);
 
             return Result<MessageResponseDto>.Success(responseDto, "Message sent successfully.", 201);
