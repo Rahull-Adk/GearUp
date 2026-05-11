@@ -44,9 +44,7 @@ namespace GearUp.Infrastructure.Messaging
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Image upload failed {CarImageId}", message?.CarImageId);
-                    // Requeue once or twice if needed, but for simplicity sending to DLQ
-                    await _channel.BasicNackAsync(ea.DeliveryTag, false, requeue: false, cancellationToken: stoppingToken);
+                    await RabbitMqRetryHelper.HandleMessageFailureAsync(_channel, ea, _rabbitMqOptions, _logger, e, stoppingToken);
                 }
             };
 

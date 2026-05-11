@@ -41,10 +41,7 @@ namespace GearUp.Infrastructure.Messaging
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Email failed {CorrelationId}", message?.CorrelationId);
-
-                    await _channel.BasicNackAsync(ea.DeliveryTag, false, requeue: false,
-                        cancellationToken: stoppingToken);
+                    await RabbitMqRetryHelper.HandleMessageFailureAsync(_channel, ea, _rabbitMqOptions, _logger, e, stoppingToken);
                 }
             };
             await _channel.BasicConsumeAsync(_rabbitMqOptions.EmailQueue, false, consumer, cancellationToken: stoppingToken);

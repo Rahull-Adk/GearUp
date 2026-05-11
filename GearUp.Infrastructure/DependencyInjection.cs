@@ -68,31 +68,42 @@ namespace GearUp.Infrastructure
 
                 channel.ExchangeDeclareAsync(rabbitMqOptions.Exchange, ExchangeType.Topic, durable: true).GetAwaiter().GetResult();
                 
-                // Email Queue
-                channel.QueueDeclareAsync(queue: rabbitMqOptions.EmailQueue, durable: true, exclusive: false, autoDelete: false).GetAwaiter().GetResult();
-                channel.QueueBindAsync(queue: rabbitMqOptions.EmailQueue, exchange: rabbitMqOptions.Exchange, routingKey: rabbitMqOptions.EmailQueue).GetAwaiter().GetResult();
-
-                // Notification Queue
-                channel.QueueDeclareAsync(queue: rabbitMqOptions.NotificationQueue, durable: true, exclusive: false, autoDelete: false).GetAwaiter().GetResult();
-                channel.QueueBindAsync(queue: rabbitMqOptions.NotificationQueue, exchange: rabbitMqOptions.Exchange, routingKey: rabbitMqOptions.NotificationQueue).GetAwaiter().GetResult();
-
                 // DLQ Setup
                 var dlqExchange = "gearup.dlx";
                 channel.ExchangeDeclareAsync(dlqExchange, ExchangeType.Direct, durable: true).GetAwaiter().GetResult();
                 channel.QueueDeclareAsync(queue: rabbitMqOptions.DeadLetterQueue, durable: true, exclusive: false, autoDelete: false).GetAwaiter().GetResult();
                 channel.QueueBindAsync(queue: rabbitMqOptions.DeadLetterQueue, exchange: dlqExchange, routingKey: "dead-letter").GetAwaiter().GetResult();
 
-                // Image Processing Queue
-                channel.QueueDeclareAsync(queue: rabbitMqOptions.ImageProcessingQueue, durable: true, exclusive: false, autoDelete: false).GetAwaiter().GetResult();
-                channel.QueueBindAsync(queue: rabbitMqOptions.ImageProcessingQueue, exchange: rabbitMqOptions.Exchange, routingKey: rabbitMqOptions.ImageProcessingQueue).GetAwaiter().GetResult();
+                // Retry Setup
+                channel.ExchangeDeclareAsync(rabbitMqOptions.RetryExchange, ExchangeType.Fanout, durable: true).GetAwaiter().GetResult();
+                var retryArgs = new Dictionary<string, object?>
+                {
+                    { "x-message-ttl", rabbitMqOptions.RetryDelayMs },
+                    { "x-dead-letter-exchange", rabbitMqOptions.Exchange }
+                };
+                channel.QueueDeclareAsync(queue: rabbitMqOptions.RetryQueue, durable: true, exclusive: false, autoDelete: false, arguments: retryArgs).GetAwaiter().GetResult();
+                channel.QueueBindAsync(queue: rabbitMqOptions.RetryQueue, exchange: rabbitMqOptions.RetryExchange, routingKey: "").GetAwaiter().GetResult();
 
-                // Image Upload Queue with DLQ arguments
-                var uploadArgs = new Dictionary<string, object?>
+                var mainQueueArgs = new Dictionary<string, object?>
                 {
                     { "x-dead-letter-exchange", dlqExchange },
                     { "x-dead-letter-routing-key", "dead-letter" }
                 };
-                channel.QueueDeclareAsync(queue: rabbitMqOptions.ImageUploadQueue, durable: true, exclusive: false, autoDelete: false, arguments: uploadArgs).GetAwaiter().GetResult();
+
+                // Email Queue
+                channel.QueueDeclareAsync(queue: rabbitMqOptions.EmailQueue, durable: true, exclusive: false, autoDelete: false, arguments: mainQueueArgs).GetAwaiter().GetResult();
+                channel.QueueBindAsync(queue: rabbitMqOptions.EmailQueue, exchange: rabbitMqOptions.Exchange, routingKey: rabbitMqOptions.EmailQueue).GetAwaiter().GetResult();
+
+                // Notification Queue
+                channel.QueueDeclareAsync(queue: rabbitMqOptions.NotificationQueue, durable: true, exclusive: false, autoDelete: false, arguments: mainQueueArgs).GetAwaiter().GetResult();
+                channel.QueueBindAsync(queue: rabbitMqOptions.NotificationQueue, exchange: rabbitMqOptions.Exchange, routingKey: rabbitMqOptions.NotificationQueue).GetAwaiter().GetResult();
+
+                // Image Processing Queue
+                channel.QueueDeclareAsync(queue: rabbitMqOptions.ImageProcessingQueue, durable: true, exclusive: false, autoDelete: false, arguments: mainQueueArgs).GetAwaiter().GetResult();
+                channel.QueueBindAsync(queue: rabbitMqOptions.ImageProcessingQueue, exchange: rabbitMqOptions.Exchange, routingKey: rabbitMqOptions.ImageProcessingQueue).GetAwaiter().GetResult();
+
+                // Image Upload Queue
+                channel.QueueDeclareAsync(queue: rabbitMqOptions.ImageUploadQueue, durable: true, exclusive: false, autoDelete: false, arguments: mainQueueArgs).GetAwaiter().GetResult();
                 channel.QueueBindAsync(queue: rabbitMqOptions.ImageUploadQueue, exchange: rabbitMqOptions.Exchange, routingKey: rabbitMqOptions.ImageUploadQueue).GetAwaiter().GetResult();
 
                 return channel;

@@ -46,8 +46,7 @@ namespace GearUp.Infrastructure.Messaging
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Image processing failed {CarImageId}", message?.CarImageId);
-                    await _channel.BasicNackAsync(ea.DeliveryTag, false, requeue: false, cancellationToken: stoppingToken);
+                    await RabbitMqRetryHelper.HandleMessageFailureAsync(_channel, ea, _rabbitMqOptions, _logger, e, stoppingToken);
                 }
             };
 

@@ -44,10 +44,7 @@ namespace GearUp.Infrastructure.Messaging
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Notification failed {MethodName} - {CorrelationId}", message?.MethodName, message?.CorrelationId);
-
-                    await _channel.BasicNackAsync(ea.DeliveryTag, false, requeue: false,
-                        cancellationToken: stoppingToken);
+                    await RabbitMqRetryHelper.HandleMessageFailureAsync(_channel, ea, _rabbitMqOptions, _logger, e, stoppingToken);
                 }
             };
 
