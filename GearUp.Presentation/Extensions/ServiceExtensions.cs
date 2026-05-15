@@ -184,10 +184,13 @@ namespace GearUp.Presentation.Extensions
 
 
             // RabbitMq + Background worker registration
-            services.AddHostedService<EmailConsumerWorker>();
-            services.AddHostedService<NotificationConsumerWorker>();
-            services.AddHostedService<ImageProcessingWorker>();
-            services.AddHostedService<ImageUploadWorker>();
+            if (rabbitMqOptions.UseRabbitMQ)
+            {
+                services.AddHostedService<EmailConsumerWorker>();
+                services.AddHostedService<NotificationConsumerWorker>();
+                services.AddHostedService<ImageProcessingWorker>();
+                services.AddHostedService<ImageUploadWorker>();
+            }
 
 
             // Swagger Injection

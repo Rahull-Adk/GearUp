@@ -2,6 +2,7 @@ namespace GearUp.Infrastructure.Messaging
 {
     public sealed class RabbitMqOptions
     {
+        public bool UseRabbitMQ { get; set; } = false;
         public string Host { get; set; } = "localhost";
         public int Port { get; set; } = 5672;
         public string Username { get; set; } = "guest";

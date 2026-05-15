@@ -50,6 +50,12 @@ namespace GearUp.Infrastructure
 
             services.AddSingleton(rabbitMqOptions);
 
+            if (!rabbitMqOptions.UseRabbitMQ)
+            {
+                services.AddSingleton<IMessagePublisher, InMemoryPublisher>();
+                return services;
+            }
+
             services.AddSingleton<IConnection>(_ =>
             {
                 var factory = new ConnectionFactory
