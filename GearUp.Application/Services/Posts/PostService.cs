@@ -43,7 +43,7 @@ namespace GearUp.Application.Services.Posts
             _cacheService = cacheService;
         }
 
-        public async Task<Result<CursorPageResult<PostResponseDto>>> GetLatestFeedAsync(Guid userId, string? cursor, CancellationToken cancellationToken = default)
+        public async Task<Result<CursorPageResult<PostListResponseDto>>> GetLatestFeedAsync(Guid userId, string? cursor, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching page posts for user: {UserId}", userId);
             Cursor? c = null;
@@ -53,11 +53,11 @@ namespace GearUp.Application.Services.Posts
             }
 
             var cacheKey = await BuildFeedCacheKeyAsync("latest", userId, cursor);
-            var cachedFeed = await _cacheService.GetAsync<CursorPageResult<PostResponseDto>>(cacheKey);
+            var cachedFeed = await _cacheService.GetAsync<CursorPageResult<PostListResponseDto>>(cacheKey);
             if (cachedFeed != null)
             {
                 _logger.LogInformation("Returning cached latest posts feed for user: {UserId}", userId);
-                return Result<CursorPageResult<PostResponseDto>>.Success(cachedFeed, "Post fecthed successfully.");
+                return Result<CursorPageResult<PostListResponseDto>>.Success(cachedFeed, "Post fecthed successfully.");
             }
 
             var postsPaged = await _postRepository.GetLatestFeedAsync(c, userId, cancellationToken);
@@ -65,10 +65,10 @@ namespace GearUp.Application.Services.Posts
 
             _logger.LogInformation("Posts fetched successfully from database");
 
-            return Result<CursorPageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
+            return Result<CursorPageResult<PostListResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
         }
 
-        public async Task<Result<CursorPageResult<PostResponseDto?>>> GetMyPosts(Guid userId, string? cursorString, CancellationToken cancellationToken = default)
+        public async Task<Result<CursorPageResult<PostListResponseDto?>>> GetMyPosts(Guid userId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching posts for user: {UserId}", userId);
 
@@ -82,11 +82,11 @@ namespace GearUp.Application.Services.Posts
             }
 
             var cacheKey = await BuildFeedCacheKeyAsync("mine", userId, cursorString);
-            var cachedPosts = await _cacheService.GetAsync<CursorPageResult<PostResponseDto?>>(cacheKey);
+            var cachedPosts = await _cacheService.GetAsync<CursorPageResult<PostListResponseDto?>>(cacheKey);
             if (cachedPosts != null)
             {
                 _logger.LogInformation("Returning cached posts for user: {UserId}", userId);
-                return Result<CursorPageResult<PostResponseDto?>>.Success(cachedPosts, "Post fetched successfully.");
+                return Result<CursorPageResult<PostListResponseDto?>>.Success(cachedPosts, "Post fetched successfully.");
             }
 
             var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(cursor, userId, cancellationToken);
@@ -94,7 +94,7 @@ namespace GearUp.Application.Services.Posts
 
             _logger.LogInformation("Posts fetched successfully from database");
 
-            return Result<CursorPageResult<PostResponseDto?>>.Success(postsPaged, "Post fetched successfully.");
+            return Result<CursorPageResult<PostListResponseDto?>>.Success(postsPaged, "Post fetched successfully.");
         }
 
 

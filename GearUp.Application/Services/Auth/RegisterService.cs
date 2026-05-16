@@ -1,9 +1,10 @@
 using FluentValidation;
 using GearUp.Application.Common;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
-using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
+using GearUp.Application.Messaging.Contracts;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Exceptions;
@@ -16,18 +17,16 @@ namespace GearUp.Application.Services.Auth
 {
     public sealed class RegisterService : IRegisterService
     {
-        private readonly IValidator<RegisterRequestDto> _validator;
         private readonly IUserRepository _userRepo;
         private readonly IPasswordHasher<User> _passwordHasher;
-        private readonly IEmailSender _emailSender;
+        private readonly IMessagePublisher _messagePublisher;
         private readonly ITokenGenerator _tokenGenerator;
         private readonly ILogger<RegisterService> _logger;
-        public RegisterService(IValidator<RegisterRequestDto> validator, IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, ILogger<RegisterService> logger)
+        public RegisterService(IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IMessagePublisher messagePublisher, ITokenGenerator tokenGenerator, ILogger<RegisterService> logger)
         {
-            _validator = validator;
             _userRepo = userRepo;
             _passwordHasher = passwordHasher;
-            _emailSender = emailSender;
+            _messagePublisher = messagePublisher;
             _tokenGenerator = tokenGenerator;
             _logger = logger;
         }
@@ -65,7 +64,18 @@ namespace GearUp.Application.Services.Auth
 
             var emailVerificationToken = _tokenGenerator.GenerateEmailVerificationToken(claims);
 
-            await _emailSender.SendVerificationEmail(newUser.Email, emailVerificationToken);
+            var emailMessage = new EmailRequestMessage
+            {
+                CorrelationId = newUser.Id.ToString(),
+                ToEmail = newUser.Email,
+                TemplateName = "VerifyEmail",
+                Payload = new Dictionary<string, string>
+                {
+                    ["token"] = emailVerificationToken
+                }
+            };
+
+            await _messagePublisher.PublishAsync(emailMessage, "gearup.email.queue");
             _logger.LogInformation("User registration successful for email: {Email}", data.Email);
             return Result<RegisterResponseDto>.Success(null!, "User created Successfully!", 201);
         }

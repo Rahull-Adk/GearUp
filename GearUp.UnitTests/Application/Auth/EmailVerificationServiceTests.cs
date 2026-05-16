@@ -1,9 +1,10 @@
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
-using GearUp.Application.Interfaces.Services.EmailServiceInterface;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Application.Services.Auth;
 using GearUp.Domain.Entities.Users;
+using GearUp.Application.Messaging.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -17,7 +18,7 @@ namespace GearUp.UnitTests.Application.Auth
         private readonly Mock<ITokenValidator> _tokenValidator = new();
         private readonly Mock<ITokenGenerator> _tokenGenerator = new();
         private readonly Mock<IUserRepository> _userRepo = new();
-        private readonly Mock<IEmailSender> _emailSender = new();
+        private readonly Mock<IMessagePublisher> _messagePublisher = new();
         private readonly Mock<ILogger<EmailVerificationService>> _logger = new();
         private readonly IOptions<Settings> _options = Options.Create(new Settings { EmailVerificationToken_SecretKey = "secret" });
 
@@ -25,7 +26,7 @@ namespace GearUp.UnitTests.Application.Auth
         _tokenValidator.Object,
         _tokenGenerator.Object,
         _userRepo.Object,
-        _emailSender.Object,
+        _messagePublisher.Object,
         _options,
         _logger.Object);
 
@@ -39,7 +40,10 @@ namespace GearUp.UnitTests.Application.Auth
             var result = await svc.ResendVerificationEmail(user.Email);
             Assert.True(result.IsSuccess);
             Assert.Equal(200, result.Status);
-            _emailSender.Verify(e => e.SendVerificationEmail(user.Email, "token"), Times.Once);
+            _messagePublisher.Verify(m => m.PublishAsync(
+                It.Is<EmailRequestMessage>(e => e.ToEmail == user.Email && e.TemplateName == "VerifyEmail" && e.Payload["token"] == "token"),
+                "gearup.email.queue",
+                It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]

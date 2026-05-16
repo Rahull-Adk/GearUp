@@ -1,0 +1,24 @@
+using GearUp.Application.ServiceDtos.Car;
+using GearUp.Domain.Entities.Posts;
+
+namespace GearUp.Application.ServiceDtos.Post
+{
+    public class PostListResponseDto
+    {
+        public Guid Id { get; set; }
+        public string Caption { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+        public string AuthorUsername { get; set; } = string.Empty;
+        public string AuthorAvatarUrl { get; set; } = string.Empty;
+        public PostVisibility Visibility { get; set; }
+        public Guid? CarId { get; set; }
+        public List<CarImageDto> CarImages { get; set; } = new();
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+
+        public int LikeCount { get; set; }
+        public bool IsLikedByCurrentUser { get; set; }
+        public int CommentCount { get; set; }
+        public int ViewCount { get; set; }
+    }
+}

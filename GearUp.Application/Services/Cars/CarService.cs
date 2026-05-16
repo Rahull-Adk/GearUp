@@ -17,8 +17,6 @@ namespace GearUp.Application.Services.Cars
 {
     public class CarService : ICarService
     {
-        private readonly IValidator<CreateCarRequestDto> _createCarValidator;
-        private readonly IValidator<UpdateCarDto> _updateCarValidator;
         private readonly ILogger<CarService> _logger;
         private readonly ICarRepository _carRepository;
         private readonly ICommonRepository _commonRepository;
@@ -31,21 +29,17 @@ namespace GearUp.Application.Services.Cars
         private static readonly TimeSpan CarCountCacheTtl = TimeSpan.FromMinutes(10);
 
         public CarService(
-            IValidator<CreateCarRequestDto> createCarValidator,
             ILogger<CarService> logger,
             ICarRepository carRepository,
             ICommonRepository commonRepository,
             ICarImageService carImageService,
-            IValidator<UpdateCarDto> updateCarDtoValiator,
             IUserRepository userRepository,
             ICacheService cacheService)
         {
-            _createCarValidator = createCarValidator;
             _logger = logger;
             _carRepository = carRepository;
             _commonRepository = commonRepository;
             _carImageService = carImageService;
-            _updateCarValidator = updateCarDtoValiator;
             _userRepository = userRepository;
             _cacheService = cacheService;
         }
@@ -103,6 +97,9 @@ namespace GearUp.Application.Services.Cars
 
             await _carRepository.AddCarAsync(newCar);
             await _commonRepository.SaveChangesAsync();
+
+            await _carImageService.PublishImageProcessingMessagesAsync(imagesResult.Data, dealerId, carId);
+
             await InvalidateCarListCacheAsync();
             _logger.LogInformation("Car created successfully for dealer ID: {DealerId}", dealerId);
 
@@ -175,6 +172,12 @@ namespace GearUp.Application.Services.Cars
             );
 
             await _commonRepository.SaveChangesAsync();
+
+            if (imagesResult.Data.Count > 0)
+            {
+                await _carImageService.PublishImageProcessingMessagesAsync(imagesResult.Data, dealerId, carId);
+            }
+
             await InvalidateCarListCacheAsync();
             _logger.LogInformation("Car updated successfully for car ID: {CarId}", carId);
 
