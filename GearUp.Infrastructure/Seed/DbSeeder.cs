@@ -191,7 +191,7 @@ public class DbSeeder
             for (int i = 0; i < batchCount; i++)
             {
                 var car = Car.CreateForSale(
-                    Id: Guid.NewGuid(),
+                    id: Guid.NewGuid(),
                     title: faker.Vehicle.Model(),
                     description: faker.Lorem.Paragraph(),
                     model: faker.Vehicle.Model(),

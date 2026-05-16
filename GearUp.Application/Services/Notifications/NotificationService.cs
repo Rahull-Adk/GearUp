@@ -1,8 +1,9 @@
 using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;
-using GearUp.Application.Interfaces;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
+using GearUp.Application.Messaging.Contracts;
 using GearUp.Application.ServiceDtos;
 using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
@@ -14,7 +15,7 @@ namespace GearUp.Application.Services.Notifications
     {
         private readonly INotificationRepository _notificationRepository;
         private readonly ICommonRepository _commonRepository;
-        private readonly IRealTimeNotifier _realTimeNotifier;
+        private readonly IMessagePublisher _messagePublisher;
         private readonly ILogger<NotificationService> _logger;
         private readonly ICacheService _cacheService;
         private static readonly TimeSpan CountTtl = TimeSpan.FromSeconds(30);
@@ -22,13 +23,13 @@ namespace GearUp.Application.Services.Notifications
         public NotificationService(
             INotificationRepository notificationRepository,
             ICommonRepository commonRepository,
-            IRealTimeNotifier realTimeNotifier,
+            IMessagePublisher messagePublisher,
             ILogger<NotificationService> logger,
             ICacheService cacheService)
         {
             _notificationRepository = notificationRepository;
             _commonRepository = commonRepository;
-            _realTimeNotifier = realTimeNotifier;
+            _messagePublisher = messagePublisher;
             _logger = logger;
             _cacheService = cacheService;
         }
@@ -87,10 +88,20 @@ namespace GearUp.Application.Services.Notifications
             };
 
             // Push real-time notification
-            await _realTimeNotifier.PushNotification(receiverUserId, notificationDto);
+            var message = new NotificationRequestMessage
+            {
+                MethodName = "PushNotification",
+                CorrelationId = receiverUserId.ToString(),
+                Payload = new Dictionary<string, object>
+                {
+                    ["receiverId"] = receiverUserId,
+                    ["notification"] = notificationDto
+                }
+            };
+            await _messagePublisher.PublishAsync(message, "gearup.notification.queue");
 
             _logger.LogInformation(
-                "Notification {NotificationId} created and pushed to user {ReceiverId}",
+                "Notification {NotificationId} created and queued for user {ReceiverId}",
                 notification.Id, receiverUserId);
 
             return notificationDto;

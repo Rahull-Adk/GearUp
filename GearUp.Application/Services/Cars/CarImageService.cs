@@ -1,8 +1,11 @@
 using GearUp.Application.Common;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
+using GearUp.Application.Messaging.Contracts;
 using GearUp.Domain.Entities.Cars;
+using GearUp.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -10,18 +13,12 @@ namespace GearUp.Application.Services.Cars
 {
     public sealed class CarImageService : ICarImageService
     {
-        private readonly ICloudinaryImageUploader _uploader;
-        private readonly IDocumentProcessor _docProcessor;
-        private readonly ICommonRepository _commonRepo;
-        private readonly ICarRepository _carRepo;
+        private readonly IMessagePublisher _publisher;
         private readonly ILogger<CarImageService> _logger;
 
-        public CarImageService(ICloudinaryImageUploader uploader, IDocumentProcessor docProcessor, ICommonRepository commonRepo, ICarRepository carRepo, ILogger<CarImageService> logger)
+        public CarImageService(IMessagePublisher publisher, ILogger<CarImageService> logger)
         {
-            _uploader = uploader;
-            _docProcessor = docProcessor;
-            _commonRepo = commonRepo;
-            _carRepo = carRepo;
+            _publisher = publisher;
             _logger = logger;
         }
 
@@ -29,68 +26,78 @@ namespace GearUp.Application.Services.Cars
         {
             try
             {
-                var streams = await ConvertToStreamsAsync(files);
-                var uploadPath = $"gearup/dealers/{dealerId}/cars";
-                var uris = await _uploader.UploadImageListAsync(streams, uploadPath);
-                var images = uris.Select(u => CarImage.CreateCarImage(carId, u.ToString())).ToList();
-                return Result<List<CarImage>>.Success(images, "Images processed", 200);
+                var images = new List<CarImage>();
+                var tempDir = Path.Combine(Path.GetTempPath(), "gearup", "raw");
+                if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
+
+                foreach (var file in files)
+                {
+                    var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+                    var localPath = Path.Combine(tempDir, fileName);
+
+                    using (var stream = new FileStream(localPath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+
+                    var carImage = CarImage.CreateCarImage(carId, string.Empty, ImageProcessingStatus.Pending, localPath);
+                    images.Add(carImage);
+                }
+
+                return Result<List<CarImage>>.Success(images, "Images prepared for processing", 202);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to process car images");
-                return Result<List<CarImage>>.Failure("Failed to upload car images. Please try again.", 500);
+                _logger.LogError(ex, "Failed to prepare car images for car {CarId}", carId);
+                return Result<List<CarImage>>.Failure("Failed to initiate image processing. Please try again.", 500);
             }
         }
 
         public async Task<Result<List<CarImage>>> ProcessForUpdateAsync(Car existingCar, ICollection<IFormFile>? files, Guid dealerId)
         {
             if (files == null || files.Count == 0)
-                return Result<List<CarImage>>.Success(existingCar.Images.ToList(), "No new images", 200);
-
+                return Result<List<CarImage>>.Success(new List<CarImage>(), "No new images", 200);
 
             try
             {
-                foreach (var f in files)
-                {
-                    var ext = Path.GetExtension(f.FileName)?.ToLowerInvariant() ?? string.Empty;
-                    var res = _docProcessor.ValidateFileType(f, ext);
-                    if (!res.IsSuccess)
-                        return Result<List<CarImage>>.Failure(res.ErrorMessage, res.Status);
-                }
-                foreach (var img in existingCar.Images)
-                {
-                    var publicId = _uploader.ExtractPublicId(img.Url);
-                    if (!string.IsNullOrEmpty(publicId))
-                        await _uploader.DeleteImageAsync(publicId);
-                }
-                _carRepo.RemoveCarImageByCarId(existingCar);
-                await _commonRepo.SaveChangesAsync();
+                var images = new List<CarImage>();
+                var tempDir = Path.Combine(Path.GetTempPath(), "gearup", "raw");
+                if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
 
-                var streams = await ConvertToStreamsAsync(files);
-                var uploadPath = $"gearup/dealers/{dealerId}/cars";
-                var uris = await _uploader.UploadImageListAsync(streams, uploadPath);
-                var images = uris.Select(u => CarImage.CreateCarImage(existingCar.Id, u.ToString())).ToList();
-                await _carRepo.AddCarImagesAsync(images);
-                return Result<List<CarImage>>.Success(null!, "Images processed", 200);
+                foreach (var file in files)
+                {
+                    var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+                    var localPath = Path.Combine(tempDir, fileName);
+
+                    using (var stream = new FileStream(localPath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+
+                    var carImage = CarImage.CreateCarImage(existingCar.Id, string.Empty, ImageProcessingStatus.Pending, localPath);
+                    images.Add(carImage);
+                }
+
+                return Result<List<CarImage>>.Success(images, "New images prepared for processing", 202);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to update car images");
-                return Result<List<CarImage>>.Failure("Failed to update car images. Please try again.", 500);
+                _logger.LogError(ex, "Failed to prepare car images for update for car {CarId}", existingCar.Id);
+                return Result<List<CarImage>>.Failure("Failed to initiate image update. Please try again.", 500);
             }
         }
 
-        private static async Task<List<MemoryStream>> ConvertToStreamsAsync(ICollection<IFormFile> files)
+        public async Task PublishImageProcessingMessagesAsync(List<CarImage> images, Guid dealerId, Guid carId)
         {
-            var result = new List<MemoryStream>();
-            foreach (var file in files)
+            foreach (var img in images)
             {
-                var ms = new MemoryStream();
-                await file.CopyToAsync(ms);
-                ms.Position = 0;
-                result.Add(ms);
+                await _publisher.PublishAsync(new ImageProcessingMessage
+                {
+                    CarImageId = img.Id,
+                    CarId = carId,
+                    DealerId = dealerId
+                }, "gearup.image.processing.queue");
             }
-            return result;
         }
     }
 }

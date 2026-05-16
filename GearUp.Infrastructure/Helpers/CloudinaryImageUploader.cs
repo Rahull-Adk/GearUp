@@ -54,29 +54,40 @@ namespace GearUp.Infrastructure.Helpers
             return pdfUrl;
         }
 
-        public async Task DeleteImageAsync(string publicId)
+        public async Task DeleteImageAsync(string? publicId)
         {
+            if (string.IsNullOrWhiteSpace(publicId)) return;
+
             var deletionParams = new DeletionParams(publicId);
             await _cloudinary.DestroyAsync(deletionParams);
         }
 
-        public string ExtractPublicId(string cloudinaryUrl)
+        public string? ExtractPublicId(string cloudinaryUrl)
         {
             if (string.IsNullOrWhiteSpace(cloudinaryUrl))
-                throw new ArgumentException("Invalid Cloudinary URL");
+                return null;
 
-            var uri = new Uri(cloudinaryUrl);
-            var path = uri.AbsolutePath;
+            if (!cloudinaryUrl.Contains("res.cloudinary.com"))
+                return null;
 
-            var match = System.Text.RegularExpressions.Regex.Match(path, @"/v\d+/(.+)");
-            if (!match.Success)
-                throw new InvalidOperationException("Could not extract public ID");
+            try
+            {
+                var uri = new Uri(cloudinaryUrl);
+                var path = uri.AbsolutePath;
 
-            var publicIdWithExt = match.Groups[1].Value;
+                var match = System.Text.RegularExpressions.Regex.Match(path, @"/v\d+/(.+)");
+                if (!match.Success)
+                    return null;
 
-            var publicId = System.IO.Path.ChangeExtension(publicIdWithExt, null);
+                var publicIdWithExt = match.Groups[1].Value;
+                var publicId = System.IO.Path.ChangeExtension(publicIdWithExt, null);
 
-            return publicId;
+                return publicId;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

@@ -2,7 +2,7 @@ using FluentValidation;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
-using GearUp.Application.Interfaces.Services.EmailServiceInterface;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Domain.Entities.Tokens;
@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using GearUp.Application.Messaging.Contracts;
 
 namespace GearUp.Application.Services.Auth
 {
@@ -22,14 +23,14 @@ namespace GearUp.Application.Services.Auth
         private readonly ITokenRepository _tokenRepository;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly ITokenGenerator _tokenGenerator;
-        private readonly IEmailSender _emailSender;
+        private readonly IMessagePublisher _messagePublisher;
         private readonly IValidator<LoginRequestDto> _loginValidator;
         private readonly IValidator<AdminLoginRequestDto> _adminLoginValidator;
         private readonly IValidator<PasswordResetReqDto> _passwordResetValidator;
         private readonly ILogger<LoginService> _logger;
 
         public LoginService(IUserRepository userRepository, ITokenRepository tokenRepository,
-            IPasswordHasher<User> passwordHasher, ITokenGenerator tokenGenerator, IEmailSender emailSender,
+            IPasswordHasher<User> passwordHasher, ITokenGenerator tokenGenerator, IMessagePublisher messagePublisher,
             IValidator<LoginRequestDto> loginValidator, IValidator<AdminLoginRequestDto> adminLoginValidator,
             IValidator<PasswordResetReqDto> passwordResetValidator, ILogger<LoginService> logger)
         {
@@ -37,7 +38,7 @@ namespace GearUp.Application.Services.Auth
             _tokenRepository = tokenRepository;
             _passwordHasher = passwordHasher;
             _tokenGenerator = tokenGenerator;
-            _emailSender = emailSender;
+            _messagePublisher = messagePublisher;
             _loginValidator = loginValidator;
             _adminLoginValidator = adminLoginValidator;
             _passwordResetValidator = passwordResetValidator;
@@ -210,8 +211,20 @@ namespace GearUp.Application.Services.Auth
             await _tokenRepository.AddPasswordResetTokenAsync(passwordRefreshTokenEntity);
             await _userRepository.SaveChangesAsync();
 
-            await _emailSender.SendPasswordResetEmail(email, token);
-            _logger.LogInformation("Password reset token sent successfully to email: {Email}", email);
+            var emailMessage = new EmailRequestMessage
+            {
+                CorrelationId = user.Id.ToString(),
+                ToEmail = user.Email,
+                TemplateName = "ResetPassword",
+                Payload = new Dictionary<string, string>
+                {
+                    ["token"] = token
+                }
+            };
+
+            await _messagePublisher.PublishAsync(emailMessage, "gearup.email.queue");
+
+            _logger.LogInformation("Password reset token queued successfully for email: {Email}", email);
             return Result<string>.Success(default!, "If the account exists, a password reset email has been sent.", 200);
         }
 

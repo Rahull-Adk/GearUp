@@ -1,7 +1,7 @@
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
-using GearUp.Application.Interfaces.Services.EmailServiceInterface;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Application.Interfaces.Services.UserServiceInterface;
 using GearUp.Application.ServiceDtos.User;
@@ -9,6 +9,7 @@ using GearUp.Domain.Entities.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
+using GearUp.Application.Messaging.Contracts;
 
 namespace GearUp.Application.Services.Users
 {
@@ -16,16 +17,16 @@ namespace GearUp.Application.Services.Users
     {
         private readonly IUserRepository _userRepo;
         private readonly IPasswordHasher<User> _passwordHasher;
-        private readonly IEmailSender _emailSender;
+        private readonly IMessagePublisher _messagePublisher;
         private readonly ITokenGenerator _tokenGenerator;
         private readonly IDocumentProcessor _documentProcessor;
         private readonly ICloudinaryImageUploader _cloudinaryImageUploader;
         private readonly ILogger<ProfileUpdateService> _logger;
-        public ProfileUpdateService(IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader, ILogger<ProfileUpdateService> logger)
+        public ProfileUpdateService(IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IMessagePublisher messagePublisher, ITokenGenerator tokenGenerator, IDocumentProcessor documentProcessor, ICloudinaryImageUploader cloudinaryImageUploader, ILogger<ProfileUpdateService> logger)
         {
             _userRepo = userRepo;
             _passwordHasher = passwordHasher;
-            _emailSender = emailSender;
+            _messagePublisher = messagePublisher;
             _documentProcessor = documentProcessor;
             _tokenGenerator = tokenGenerator;
             _cloudinaryImageUploader = cloudinaryImageUploader;
@@ -173,7 +174,19 @@ namespace GearUp.Application.Services.Users
             await _userRepo.SaveChangesAsync();
 
             var token = _tokenGenerator.GenerateEmailVerificationToken(claims);
-            await _emailSender.SendEmailReset(reqDto.NewEmail, token);
+            
+            var emailMessage = new EmailRequestMessage
+            {
+                CorrelationId = user.Id.ToString(),
+                ToEmail = reqDto.NewEmail,
+                TemplateName = "ResetEmail",
+                Payload = new Dictionary<string, string>
+                {
+                    ["token"] = token
+                }
+            };
+
+            await _messagePublisher.PublishAsync(emailMessage, "gearup.email.queue");
 
             return Result<UpdateUserResponseDto>.Success(null!, "Please verify your new email first.", 200);
         }

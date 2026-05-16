@@ -3,7 +3,7 @@ using GearUp.Domain.Entities.Posts;
 
 namespace GearUp.Application.ServiceDtos.Post
 {
-    public class PostResponseDto
+    public class PostListResponseDto
     {
         public Guid Id { get; set; }
         public string Caption { get; set; } = string.Empty;

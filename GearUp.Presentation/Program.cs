@@ -40,18 +40,15 @@ catch (Exception ex)
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Bind a port for hosting (Render sets PORT). Fallback to 5000 when not provided.
-var portEnv = Environment.GetEnvironmentVariable("PORT") ?? builder.Configuration["PORT"] ?? builder.Configuration["ASPNETCORE_URLS"];
+// Bind a port for hosting (Render sets PORT).
+var portEnv = Environment.GetEnvironmentVariable("PORT") ?? builder.Configuration["PORT"];
 if (!string.IsNullOrWhiteSpace(portEnv))
 {
     // If PORT contains a URL-like value, pass it through; otherwise treat as port number.
     var url = portEnv.Contains("://") ? portEnv : $"http://*:{portEnv}";
     builder.WebHost.UseUrls(url);
 }
-else
-{
-    builder.WebHost.UseUrls("http://*:5000");
-}
+// If PORT is not provided, the host will fall back to default configuration (e.g. ASPNETCORE_URLS).
 
 builder.Host.UseSerilog((context, configuration) =>
 {
@@ -287,6 +284,8 @@ else
     Log.Information("Skipping startup database migration and seeding tasks. Use APP_STARTUP_MODE=db-migrate for migration-only, APP_STARTUP_MODE=db-seed for migration+seeding, or RUN_DB_TASKS_IN_DEVELOPMENT=true (development only).");
 }
 
+Log.Information("Starting application in {Environment} mode", app.Environment.EnvironmentName);
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -296,6 +295,11 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
         options.RoutePrefix = string.Empty;
     });
+}
+else
+{
+    // Only use HTTPS redirection in non-development environments.
+    app.UseHttpsRedirection();
 }
 
 app.MapHealthChecks("/health", new HealthCheckOptions
@@ -328,7 +332,6 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 app.UseRateLimiter();
 
 app.UseMiddleware<ExceptionMiddleware>();
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseCors("AllowFrontend");
 app.UseAuthorization();

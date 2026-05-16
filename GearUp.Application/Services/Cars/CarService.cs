@@ -114,6 +114,9 @@ namespace GearUp.Application.Services.Cars
 
             await _carRepository.AddCarAsync(newCar);
             await _commonRepository.SaveChangesAsync();
+
+            await _carImageService.PublishImageProcessingMessagesAsync(imagesResult.Data, dealerId, carId);
+
             await InvalidateCarListCacheAsync();
             _logger.LogInformation("Car created successfully for dealer ID: {DealerId}", dealerId);
 
@@ -180,6 +183,11 @@ namespace GearUp.Application.Services.Cars
             if (!imagesResult.IsSuccess)
                 return Result<CarResponseDto>.Failure(imagesResult.ErrorMessage, imagesResult.Status);
 
+            if (imagesResult.Data.Count > 0)
+            {
+                _carRepository.RemoveCarImageByCarId(existingCar);
+            }
+
             existingCar!.UpdateDetails(
                 request.Title,
                 request.Description,
@@ -198,6 +206,12 @@ namespace GearUp.Application.Services.Cars
             );
 
             await _commonRepository.SaveChangesAsync();
+
+            if (imagesResult.Data.Count > 0)
+            {
+                await _carImageService.PublishImageProcessingMessagesAsync(imagesResult.Data, dealerId, carId);
+            }
+
             await InvalidateCarListCacheAsync();
             _logger.LogInformation("Car updated successfully for car ID: {CarId}", carId);
 
