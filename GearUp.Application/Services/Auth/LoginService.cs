@@ -231,13 +231,6 @@ namespace GearUp.Application.Services.Auth
         public async Task<Result<string>> ResetPassword(string token, PasswordResetReqDto req)
         {
             _logger.LogInformation("Attempting to reset password using token.");
-            var validationResult = await _passwordResetValidator.ValidateAsync(req);
-
-            if (validationResult.IsValid == false)
-            {
-                var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                return Result<string>.Failure(errors, 400);
-            }
 
             var decodedToken = token.Replace(" ", "+");
             var decodedTokenHash = _tokenGenerator.HashOpaqueToken(decodedToken);

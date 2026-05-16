@@ -203,7 +203,6 @@ namespace GearUp.UnitTests.Application.Auth
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
             var token = PasswordResetToken.CreatePasswordResetToken("hash-t", DateTime.UtcNow.AddMinutes(30), user.Id);
-            _resetValidator.Setup(v => v.ValidateAsync(It.IsAny<PasswordResetReqDto>(), default)).ReturnsAsync(Valid());
             _tokenRepo.Setup(r => r.GetPasswordResetTokenAsync("hash-t")).ReturnsAsync(token);
             _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, It.IsAny<string>()))
