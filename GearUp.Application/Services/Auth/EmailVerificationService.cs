@@ -1,11 +1,12 @@
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services.AuthServicesInterface;
-using GearUp.Application.Interfaces.Services.EmailServiceInterface;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
+using GearUp.Application.Messaging.Contracts;
 
 namespace GearUp.Application.Services.Auth
 {
@@ -14,15 +15,15 @@ namespace GearUp.Application.Services.Auth
         private readonly ITokenValidator _tokenValidator;
         private readonly ITokenGenerator _tokenGenerator;
         private readonly IUserRepository _userRepository;
-        private readonly IEmailSender _emailSender;
+        private readonly IMessagePublisher _messagePublisher;
         private readonly IOptions<Settings> _emailVerification_SecretKey;
         private readonly ILogger<EmailVerificationService> _logger;
-        public EmailVerificationService(ITokenValidator tokenValidator, ITokenGenerator tokenGenerator, IUserRepository userRepository, IEmailSender emailSender, IOptions<Settings> emailVerification_SecretKey, ILogger<EmailVerificationService> logger)
+        public EmailVerificationService(ITokenValidator tokenValidator, ITokenGenerator tokenGenerator, IUserRepository userRepository, IMessagePublisher messagePublisher, IOptions<Settings> emailVerification_SecretKey, ILogger<EmailVerificationService> logger)
         {
             _tokenValidator = tokenValidator;
             _tokenGenerator = tokenGenerator;
             _userRepository = userRepository;
-            _emailSender = emailSender;
+            _messagePublisher = messagePublisher;
             _emailVerification_SecretKey = emailVerification_SecretKey;
             _logger = logger;
         }
@@ -47,8 +48,20 @@ namespace GearUp.Application.Services.Auth
                    new Claim("purpose", "email_verification")
                 };
             var token = _tokenGenerator.GenerateEmailVerificationToken(claims);
-            await _emailSender.SendVerificationEmail(email, token);
-            _logger.LogInformation("Verification email sent to {Email}", email);
+
+            var emailMessage = new EmailRequestMessage
+            {
+                ToEmail = email,
+                TemplateName = "VerifyEmail",
+                Payload = new Dictionary<string, string>
+                {
+                    ["token"] = token
+                }
+            };
+
+            await _messagePublisher.PublishAsync(emailMessage, "gearup.email.queue");
+
+            _logger.LogInformation("Verification email queued for {Email}", email);
             return Result<string>.Success(default!, "Email sent successfully", 200);
         }
 

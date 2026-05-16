@@ -1,9 +1,10 @@
 using GearUp.Application.Common;
 using GearUp.Application.Common.Pagination;
-using GearUp.Application.Interfaces;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.PostServiceInterface;
+using GearUp.Application.Messaging.Contracts;
 using GearUp.Application.ServiceDtos.Post;
 using GearUp.Application.ServiceDtos.Socials;
 using GearUp.Domain.Entities.Posts;
@@ -21,7 +22,7 @@ namespace GearUp.Application.Services.Posts
         private readonly ICommonRepository _commonRepository;
         private readonly IPostRepository _postRepository;
         private readonly ICommentRepository _commentRepository;
-        private readonly IRealTimeNotifier _realTimeNotifier;
+        private readonly IMessagePublisher _messagePublisher;
         private readonly INotificationService _notificationService;
 
         public CommentService(
@@ -30,7 +31,7 @@ namespace GearUp.Application.Services.Posts
             IPostRepository postRepository,
             IUserRepository userRepository,
             ICommentRepository commentRepository,
-            IRealTimeNotifier realTimeNotifier,
+            IMessagePublisher messagePublisher,
             INotificationService notificationService)
         {
             _logger = logger;
@@ -38,7 +39,7 @@ namespace GearUp.Application.Services.Posts
             _postRepository = postRepository;
             _userRepository = userRepository;
             _commentRepository = commentRepository;
-            _realTimeNotifier = realTimeNotifier;
+            _messagePublisher = messagePublisher;
             _notificationService = notificationService;
         }
 
@@ -115,12 +116,22 @@ namespace GearUp.Application.Services.Posts
 
             try
             {
-                await _realTimeNotifier.BroadCastComments(comment.PostId, commentDto);
+                var message = new NotificationRequestMessage
+                {
+                    MethodName = "BroadCastComments",
+                    CorrelationId = comment.PostId.ToString(),
+                    Payload = new Dictionary<string, object>
+                    {
+                        ["postId"] = comment.PostId,
+                        ["comment"] = commentDto
+                    }
+                };
+                await _messagePublisher.PublishAsync(message, "gearup.notification.queue");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Failed to broadcast comment event. PostId: {PostId}, CommentId: {CommentId}",
+                    "Failed to queue broadcast comment event. PostId: {PostId}, CommentId: {CommentId}",
                     comment.PostId, postComment.Id);
             }
 

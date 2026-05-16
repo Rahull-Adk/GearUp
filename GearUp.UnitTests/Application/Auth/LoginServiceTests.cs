@@ -1,8 +1,9 @@
 using FluentValidation;
 using FluentValidation.Results;
+using GearUp.Application.Interfaces.Messaging;
 using GearUp.Application.Interfaces.Repositories;
-using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
+using GearUp.Application.Messaging.Contracts;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.Services.Auth;
 using GearUp.Domain.Entities.Tokens;
@@ -20,7 +21,7 @@ namespace GearUp.UnitTests.Application.Auth
         private readonly Mock<ITokenRepository> _tokenRepo = new();
         private readonly Mock<IPasswordHasher<User>> _passwordHasher = new();
         private readonly Mock<ITokenGenerator> _tokenGenerator = new();
-        private readonly Mock<IEmailSender> _emailSender = new();
+        private readonly Mock<IMessagePublisher> _messagePublisher = new();
         private readonly Mock<IValidator<LoginRequestDto>> _loginValidator = new();
         private readonly Mock<IValidator<AdminLoginRequestDto>> _adminValidator = new();
         private readonly Mock<IValidator<PasswordResetReqDto>> _resetValidator = new();
@@ -37,7 +38,7 @@ namespace GearUp.UnitTests.Application.Auth
             _tokenRepo.Object,
             _passwordHasher.Object,
             _tokenGenerator.Object,
-            _emailSender.Object,
+            _messagePublisher.Object,
             _loginValidator.Object,
             _adminValidator.Object,
             _resetValidator.Object,
@@ -187,7 +188,6 @@ namespace GearUp.UnitTests.Application.Auth
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
             var token = PasswordResetToken.CreatePasswordResetToken("hash-t", DateTime.UtcNow.AddMinutes(30), user.Id);
-            _resetValidator.Setup(v => v.ValidateAsync(It.IsAny<PasswordResetReqDto>(), default)).ReturnsAsync(Valid());
             _tokenRepo.Setup(r => r.GetPasswordResetTokenAsync("hash-t")).ReturnsAsync(token);
             _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, It.IsAny<string>()))

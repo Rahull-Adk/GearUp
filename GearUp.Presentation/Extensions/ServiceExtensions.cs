@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using CloudinaryDotNet;
 using FluentValidation;
+using GearUp.Application;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
@@ -36,16 +37,17 @@ using GearUp.Infrastructure.Persistence;
 using GearUp.Infrastructure.Repositories;
 using GearUp.Infrastructure.Seed;
 using GearUp.Infrastructure.SignalR;
+using GearUp.Presentation.Filters;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
-using OpenTelemetry.Exporter;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using System.Security.Claims;
+using GearUp.Application.Interfaces.Services.EmailServiceInterface;
+using GearUp.Infrastructure.Messaging;
 using StackExchange.Redis;
 
 namespace GearUp.Presentation.Extensions
@@ -130,6 +132,18 @@ namespace GearUp.Presentation.Extensions
 
         public static void AddServices(this IServiceCollection services, IConfiguration config)
         {
+            // Add Validation Filter and Auto Validation
+            services.AddControllers(options =>
+            {
+                options.Filters.Add<ValidationFilterAttribute>();
+            }).AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+            });
+
+            // Application Injection
+            services.AddApplication();
+
             // DbContext Injection
             var connectionString = ReadSetting(config, "ConnectionStrings:DefaultConnection", "ConnectionStrings__DefaultConnection");
             var audience = ReadSetting(config, "Jwt:Audience", "Jwt__Audience");
@@ -141,6 +155,7 @@ namespace GearUp.Presentation.Extensions
             var fromEmail = ReadSetting(config, "FromEmail");
             var clientUrl = ReadSetting(config, "ClientUrl");
             var cloudinarySecret = ReadSetting(config, "CLOUDINARY_URL");
+            var rabbitMqOptions = config.GetSection("RabbitMQ").Get<RabbitMqOptions>() ?? new RabbitMqOptions();
 
             // Backward-compatible fallback for environments that predate explicit pepper configuration.
             opaqueTokenPepper ??= accessTokenSecretKey;
@@ -178,7 +193,18 @@ namespace GearUp.Presentation.Extensions
 
             services.AddInfrastructure(requiredConnectionString, requiredAudience, requiredIssuer,
                 requiredAccessTokenSecretKey, requiredBrevoApiKey, requiredFromEmail,
-                requiredEmailVerificationTokenSecretKey, requiredClientUrl, requiredOpaqueTokenPepper, logger);
+                requiredEmailVerificationTokenSecretKey, requiredClientUrl, requiredOpaqueTokenPepper, logger, rabbitMqOptions);
+
+
+
+            // RabbitMq + Background worker registration
+            if (rabbitMqOptions.UseRabbitMQ)
+            {
+                services.AddHostedService<EmailConsumerWorker>();
+                services.AddHostedService<NotificationConsumerWorker>();
+                services.AddHostedService<ImageProcessingWorker>();
+                services.AddHostedService<ImageUploadWorker>();
+            }
 
 
             // Swagger Injection
@@ -206,7 +232,7 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IKycService, KycService>();
             services.AddScoped<IProfileUpdateService, ProfileUpdateService>();
             services.AddScoped<IDocumentProcessor, DocumentProcessor>();
-            services.AddScoped<IRealTimeNotifier, SignalRRealTimeNotifier>();
+            services.AddSingleton<IRealTimeNotifier, SignalRRealTimeNotifier>();
             services.AddScoped<IAppointmentService, AppointmentService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<IMessageService, MessageService>();
@@ -255,15 +281,6 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IMessageRepository, MessageRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
 
-            // Validator Injections
-            services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestDtoValidator>();
-            services.AddScoped<IValidator<LoginRequestDto>, LoginRequestDtoValidator>();
-            services.AddScoped<IValidator<PasswordResetReqDto>, PasswordResetValidator>();
-            services.AddScoped<IValidator<AdminLoginRequestDto>, AdminLoginRequestDtoValidator>();
-            services.AddScoped<IValidator<CreateCarRequestDto>, CarRequestDtoValidator>();
-            services.AddScoped<IValidator<UpdateCarDto>, UpdateCarDtoValidator>();
-            services.AddScoped<IValidator<CreatePostRequestDto>, PostValidators>();
-
             // Password Hasher Injection
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
             services.Configure<Settings>(option =>
@@ -282,7 +299,7 @@ namespace GearUp.Presentation.Extensions
                 options.AddPolicy("Fixed", httpContext =>
                     RateLimitPartition.GetFixedWindowLimiter(
                         partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                        factory: key => new FixedWindowRateLimiterOptions
+                        factory: _ => new FixedWindowRateLimiterOptions
                         {
                             PermitLimit = 100,
                             Window = TimeSpan.FromMinutes(1),

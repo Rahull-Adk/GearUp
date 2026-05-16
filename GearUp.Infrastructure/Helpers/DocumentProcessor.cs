@@ -57,14 +57,19 @@ namespace GearUp.Infrastructure.Helpers
             if (image == null || image.Length == 0)
                 return Result<MemoryStream>.Failure("Image file is empty.", 400);
 
-            var ext = Path.GetExtension(image.FileName)?.ToLower();
-            var validation = ValidateFileType(image, ext!);
+            using var originalStream = image.OpenReadStream();
+            return await ProcessImageFromStream(originalStream, image.FileName, targetWidth, targetHeight, forceSquare);
+        }
+
+        public async Task<Result<MemoryStream>> ProcessImageFromStream(Stream stream, string fileName, int targetWidth, int targetHeight, bool forceSquare = false)
+        {
+            var ext = Path.GetExtension(fileName)?.ToLower();
+            var validation = ValidateFileType(fileName, stream.Length, ext!);
 
             if (!validation.IsSuccess)
                 return Result<MemoryStream>.Failure(validation.ErrorMessage, validation.Status);
 
-            using var originalStream = image.OpenReadStream();
-            using var imageFile = await Image.LoadAsync(originalStream);
+            using var imageFile = await Image.LoadAsync(stream);
 
             (int cropWidth, int cropHeight) = GetCropDimensions(imageFile.Width, imageFile.Height, targetWidth, targetHeight, forceSquare);
             int cropX = (imageFile.Width - cropWidth) / 2;
@@ -89,9 +94,14 @@ namespace GearUp.Infrastructure.Helpers
 
         public Result<bool> ValidateFileType(IFormFile file, string ext)
         {
+            return ValidateFileType(file.FileName, file.Length, ext);
+        }
+
+        public Result<bool> ValidateFileType(string fileName, long length, string ext)
+        {
             if (ext == ".pdf")
             {
-                if (file.Length > MaxPdfSize)
+                if (length > MaxPdfSize)
                     return Result<bool>.Failure("PDF exceeds the 5MB limit.", 400);
 
                 return Result<bool>.Success(true, "Valid PDF file.", 200);
@@ -100,7 +110,7 @@ namespace GearUp.Infrastructure.Helpers
             if (string.IsNullOrEmpty(ext) || !AllowedImageExtensions.Contains(ext))
                 return Result<bool>.Failure("Invalid image format. Only .jpg, .jpeg, and .png are allowed.", 400);
 
-            if (file.Length > MaxImageSize)
+            if (length > MaxImageSize)
                 return Result<bool>.Failure("Image exceeds the 3MB limit.", 400);
 
             return Result<bool>.Success(true, "Valid image file.", 200);

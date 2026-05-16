@@ -9,9 +9,9 @@ namespace GearUp.Application.Interfaces.Repositories
     public interface IPostRepository
     {
         Task AddPostAsync(Post post);
-        Task<CursorPageResult<PostResponseDto>> GetLatestFeedAsync(Cursor? c, Guid currUserId, CancellationToken cancellationToken = default);
+        Task<CursorPageResult<PostListResponseDto>> GetLatestFeedAsync(Cursor? c, Guid currUserId, CancellationToken cancellationToken = default);
         Task<PostResponseDto?> GetPostByIdAsync(Guid postId, Guid currUserId, CancellationToken cancellationToken = default);
-        Task<CursorPageResult<PostResponseDto?>> GetAllUserPostByUserIdAsync(Cursor? c, Guid currUserId, CancellationToken cancellationToken = default);
+        Task<CursorPageResult<PostListResponseDto?>> GetAllUserPostByUserIdAsync(Cursor? c, Guid currUserId, CancellationToken cancellationToken = default);
         Task<PostCountsDto?> GetCountsForPostById(Guid postId, Guid userId);
         Task<int> GetPostViewCountAsync(Guid postId);
         Task<bool> PostExistAsync(Guid PostId);

@@ -41,31 +41,31 @@ namespace GearUp.Domain.Entities.Cars
 
         }
         public static Car CreateForSale(
-            Guid Id,
-    string title,
-    string description,
-    string model,
-    string make,
-    int year,
-    double price,
-    string color,
-    int mileage,
-    int seatingCapacity,
-    int engineCapacity,
-    ICollection<CarImage>? imageUrls,
-    FuelType fuelType,
-    CarCondition condition,
-    TransmissionType transmission,
-    Guid dealerId,
-    string vin,
-    string licensePlate,
-    CarValidationStatus validationStatus = CarValidationStatus.Pending,
-    CarStatus status = CarStatus.Available
+            Guid id,
+            string title,
+            string description,
+            string model,
+            string make,
+            int year,
+            double price,
+            string color,
+            int mileage,
+            int seatingCapacity,
+            int engineCapacity,
+            ICollection<CarImage>? imageUrls,
+            FuelType fuelType,
+            CarCondition condition,
+            TransmissionType transmission,
+            Guid dealerId,
+            string vin,
+            string licensePlate,
+            CarValidationStatus validationStatus = CarValidationStatus.Pending,
+            CarStatus status = CarStatus.Available
     )
         {
             return new Car
             {
-                Id = Guid.NewGuid(),
+                Id = id,
                 Title = title,
                 Description = description,
                 Model = model,
