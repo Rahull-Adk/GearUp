@@ -9,8 +9,6 @@ using GearUp.Domain.Entities.Cars;
 using GearUp.Domain.Enums;
 using GearUp.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 
 namespace GearUp.Application.Services.Cars
@@ -36,7 +34,7 @@ namespace GearUp.Application.Services.Cars
             ICarRepository carRepository,
             ICommonRepository commonRepository,
             ICarImageService carImageService,
-            IValidator<UpdateCarDto> updateCarDtoValiator,
+            IValidator<UpdateCarDto> updateCarValidator,
             IUserRepository userRepository,
             ICacheService cacheService)
         {
@@ -45,7 +43,7 @@ namespace GearUp.Application.Services.Cars
             _carRepository = carRepository;
             _commonRepository = commonRepository;
             _carImageService = carImageService;
-            _updateCarValidator = updateCarDtoValiator;
+            _updateCarValidator = updateCarValidator;
             _userRepository = userRepository;
             _cacheService = cacheService;
         }
@@ -151,7 +149,7 @@ namespace GearUp.Application.Services.Cars
             if (existingCar.DealerId != dealerId)
                 throw new ForbiddenException("Unauthorized to update this car");
 
-            _updateCarValidator.EnsureValid(request);
+            await _updateCarValidator.EnsureValidAsync(request);
 
             var imagesResult = await _carImageService.ProcessForUpdateAsync(existingCar, request.CarImages, dealerId);
             if (!imagesResult.IsSuccess)
@@ -223,19 +221,6 @@ namespace GearUp.Application.Services.Cars
             var cars = await _carRepository.GetDealerCarsAsync(dealerId, cursor, cancellationToken);
 
             return Result<CursorPageResult<CarListDto>>.Success(cars, "Cars fetched successfully");
-        }
-
-        private Result<CarResponseDto> ValidateCarUpdate(Car? existingCar, UpdateCarDto request, Guid dealerId)
-        {
-            if (existingCar == null)
-                throw new NotFoundException("Car", "unknown");
-
-            if (existingCar.DealerId != dealerId)
-                throw new ForbiddenException("Unauthorized to update this car");
-
-            _updateCarValidator.EnsureValid(request);
-
-            return Result<CarResponseDto>.Success(null!, "Validation passed", 200);
         }
 
         public async Task<Result<CursorPageResult<CarListDto>>> SearchCarsAsync(CarSearchDto? searchDto, string? cursorString, CancellationToken cancellationToken = default)
@@ -334,8 +319,11 @@ namespace GearUp.Application.Services.Cars
 
         private static string HashValue(string value)
         {
-            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
-            return Convert.ToHexString(bytes).ToLowerInvariant();
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                var bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(value));
+                return Convert.ToHexString(bytes).ToLowerInvariant();
+            }
         }
     }
 }

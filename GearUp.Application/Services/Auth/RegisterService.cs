@@ -9,7 +9,6 @@ using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using System.Data;
 using System.Security.Claims;
 
 namespace GearUp.Application.Services.Auth
@@ -22,7 +21,14 @@ namespace GearUp.Application.Services.Auth
         private readonly IEmailSender _emailSender;
         private readonly ITokenGenerator _tokenGenerator;
         private readonly ILogger<RegisterService> _logger;
-        public RegisterService(IValidator<RegisterRequestDto> validator, IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IEmailSender emailSender, ITokenGenerator tokenGenerator, ILogger<RegisterService> logger)
+
+        public RegisterService(
+            IValidator<RegisterRequestDto> validator, 
+            IUserRepository userRepo, 
+            IPasswordHasher<User> passwordHasher, 
+            IEmailSender emailSender, 
+            ITokenGenerator tokenGenerator, 
+            ILogger<RegisterService> logger)
         {
             _validator = validator;
             _userRepo = userRepo;
@@ -31,6 +37,7 @@ namespace GearUp.Application.Services.Auth
             _tokenGenerator = tokenGenerator;
             _logger = logger;
         }
+
         public async Task<Result<RegisterResponseDto>> RegisterUser(RegisterRequestDto data)
         {
             _logger.LogInformation("Starting user registration for email: {Email}", data.Email);
@@ -47,7 +54,6 @@ namespace GearUp.Application.Services.Auth
             {
                 throw new Domain.Exceptions.ValidationException("Account with this username already exists. Please choose another username");
             }
-
 
             var newUser = User.CreateLocalUser(data.Username, data.Email, data.FirstName + " " + data.LastName);
             var hashedPassword = _passwordHasher.HashPassword(newUser, data.Password);

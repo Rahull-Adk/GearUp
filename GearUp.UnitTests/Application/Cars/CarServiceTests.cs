@@ -55,13 +55,13 @@ namespace GearUp.UnitTests.Application.Cars
         {
             var service = CreateService();
             var req = new CreateCarRequestDto { Title = "t" };
-            _createValidator.Setup(v => v.Validate(It.IsAny<CreateCarRequestDto>()))
-                .Returns(Invalid("bad title"));
+            _createValidator.Setup(v => v.ValidateAsync(It.IsAny<CreateCarRequestDto>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Invalid("bad title"));
 
             await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => 
                 service.CreateCarAsync(req, Guid.NewGuid()));
             
-            _createValidator.Verify(v => v.Validate(It.IsAny<CreateCarRequestDto>()), Times.Once);
+            _createValidator.Verify(v => v.ValidateAsync(It.IsAny<CreateCarRequestDto>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -70,7 +70,7 @@ namespace GearUp.UnitTests.Application.Cars
             var service = CreateService();
             var req = new CreateCarRequestDto { Title = "t", CarImages = new List<IFormFile>() };
             _userRepository.Setup(u => u.UserExistAsync(It.IsAny<Guid>())).ReturnsAsync(true);
-            _createValidator.Setup(v => v.Validate(req)).Returns(Valid());
+            _createValidator.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(Valid());
 
             await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ValidationException>(() => 
                 service.CreateCarAsync(req, Guid.NewGuid()));

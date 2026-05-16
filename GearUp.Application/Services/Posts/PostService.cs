@@ -49,54 +49,35 @@ namespace GearUp.Application.Services.Posts
             Cursor? c = null;
             if (!string.IsNullOrEmpty(cursor) && !Cursor.TryDecode(cursor, out c))
             {
-                throw new Domain.Exceptions.ValidationException("Invalid cursor format.");
+                throw new Domain.Exceptions.ValidationException("Invalid cursor");
             }
 
-            var cacheKey = await BuildFeedCacheKeyAsync("latest", userId, cursor);
+            var cacheKey = await BuildFeedCacheKeyAsync("feed", userId, cursor);
             var cachedFeed = await _cacheService.GetAsync<CursorPageResult<PostResponseDto>>(cacheKey);
             if (cachedFeed != null)
             {
-                _logger.LogInformation("Returning cached latest posts feed for user: {UserId}", userId);
-                return Result<CursorPageResult<PostResponseDto>>.Success(cachedFeed, "Post fecthed successfully.");
+                return Result<CursorPageResult<PostResponseDto>>.Success(cachedFeed, "Feed fetched from cache");
             }
 
-            var postsPaged = await _postRepository.GetLatestFeedAsync(c, userId, cancellationToken);
-            await _cacheService.SetAsync(cacheKey, postsPaged, FeedCacheTtl);
+            var pageResult = await _postRepository.GetLatestFeedAsync(c, userId, cancellationToken);
+            await _cacheService.SetAsync(cacheKey, pageResult, FeedCacheTtl);
 
-            _logger.LogInformation("Posts fetched successfully from database");
-
-            return Result<CursorPageResult<PostResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
+            _logger.LogInformation("Successfully fetched {PostCount} posts for feed", pageResult.Items.Count());
+            return Result<CursorPageResult<PostResponseDto>>.Success(pageResult, "Feed fetched successfully", 200);
         }
 
-        public async Task<Result<CursorPageResult<PostResponseDto?>>> GetMyPosts(Guid userId, string? cursorString, CancellationToken cancellationToken = default)
+        public async Task<Result<CursorPageResult<PostResponseDto?>>> GetMyPosts(Guid userId, string? cursor, CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Fetching posts for user: {UserId}", userId);
-
-            Cursor? cursor = null;
-            if (!string.IsNullOrEmpty(cursorString))
+            _logger.LogInformation("Fetching posts of User: {UserId}", userId);
+            Cursor? c = null;
+            if (!string.IsNullOrEmpty(cursor) && !Cursor.TryDecode(cursor, out c))
             {
-                if (!Cursor.TryDecode(cursorString, out cursor))
-                {
-                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
-                }
+                throw new Domain.Exceptions.ValidationException("Invalid cursor");
             }
 
-            var cacheKey = await BuildFeedCacheKeyAsync("mine", userId, cursorString);
-            var cachedPosts = await _cacheService.GetAsync<CursorPageResult<PostResponseDto?>>(cacheKey);
-            if (cachedPosts != null)
-            {
-                _logger.LogInformation("Returning cached posts for user: {UserId}", userId);
-                return Result<CursorPageResult<PostResponseDto?>>.Success(cachedPosts, "Post fetched successfully.");
-            }
-
-            var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(cursor, userId, cancellationToken);
-            await _cacheService.SetAsync(cacheKey, postsPaged, FeedCacheTtl);
-
-            _logger.LogInformation("Posts fetched successfully from database");
-
-            return Result<CursorPageResult<PostResponseDto?>>.Success(postsPaged, "Post fetched successfully.");
+            var result = await _postRepository.GetAllUserPostByUserIdAsync(c, userId, cancellationToken);
+            return Result<CursorPageResult<PostResponseDto?>>.Success(result, "User posts fetched successfully", 200);
         }
-
 
         public async Task<Result<PostResponseDto>> GetPostByIdAsync(Guid id, Guid currUserId, CancellationToken cancellationToken = default)
         {
@@ -258,8 +239,11 @@ namespace GearUp.Application.Services.Posts
 
         private static string HashValue(string value)
         {
-            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
-            return Convert.ToHexString(bytes).ToLowerInvariant();
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                var bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(value));
+                return Convert.ToHexString(bytes).ToLowerInvariant();
+            }
         }
     }
 }
