@@ -43,7 +43,7 @@ namespace GearUp.Application.Services.Posts
             _cacheService = cacheService;
         }
 
-        public async Task<Result<CursorPageResult<PostResponseDto>>> GetLatestFeedAsync(Guid userId, string? cursor, CancellationToken cancellationToken = default)
+        public async Task<Result<CursorPageResult<PostListResponseDto>>> GetLatestFeedAsync(Guid userId, string cursor, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching page posts for user: {UserId}", userId);
             Cursor? c = null;
@@ -53,20 +53,20 @@ namespace GearUp.Application.Services.Posts
             }
 
             var cacheKey = await BuildFeedCacheKeyAsync("feed", userId, cursor);
-            var cachedFeed = await _cacheService.GetAsync<CursorPageResult<PostResponseDto>>(cacheKey);
+            var cachedFeed = await _cacheService.GetAsync<CursorPageResult<PostListResponseDto>>(cacheKey);
             if (cachedFeed != null)
             {
-                return Result<CursorPageResult<PostResponseDto>>.Success(cachedFeed, "Feed fetched from cache");
+                return Result<CursorPageResult<PostListResponseDto>>.Success(cachedFeed, "Feed fetched from cache");
             }
 
             var pageResult = await _postRepository.GetLatestFeedAsync(c, userId, cancellationToken);
             await _cacheService.SetAsync(cacheKey, pageResult, FeedCacheTtl);
 
             _logger.LogInformation("Successfully fetched {PostCount} posts for feed", pageResult.Items.Count());
-            return Result<CursorPageResult<PostResponseDto>>.Success(pageResult, "Feed fetched successfully", 200);
+            return Result<CursorPageResult<PostListResponseDto>>.Success(pageResult, "Feed fetched successfully", 200);
         }
 
-        public async Task<Result<CursorPageResult<PostResponseDto?>>> GetMyPosts(Guid userId, string? cursor, CancellationToken cancellationToken = default)
+        public async Task<Result<CursorPageResult<PostListResponseDto?>>> GetMyPosts(Guid userId, string? cursor, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching posts of User: {UserId}", userId);
             Cursor? c = null;
@@ -76,7 +76,7 @@ namespace GearUp.Application.Services.Posts
             }
 
             var result = await _postRepository.GetAllUserPostByUserIdAsync(c, userId, cancellationToken);
-            return Result<CursorPageResult<PostResponseDto?>>.Success(result, "User posts fetched successfully", 200);
+            return Result<CursorPageResult<PostListResponseDto?>>.Success(result, "User posts fetched successfully", 200);
         }
 
         public async Task<Result<PostResponseDto>> GetPostByIdAsync(Guid id, Guid currUserId, CancellationToken cancellationToken = default)
@@ -85,9 +85,9 @@ namespace GearUp.Application.Services.Posts
             var post = await _postRepository.GetPostByIdAsync(id, currUserId, cancellationToken)
                        ?? throw new NotFoundException("Post", id);
 
-            var car = post.CarDto;
+            var carId = post.CarId;
 
-            if (car == null)
+            if (carId == null)
             {
                 _logger.LogWarning("Car associated with Post Id: {PostId} not found", id);
                 throw new NotFoundException("Car associated with the post not found");

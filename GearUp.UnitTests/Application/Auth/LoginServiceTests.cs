@@ -188,6 +188,9 @@ namespace GearUp.UnitTests.Application.Auth
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
             var token = PasswordResetToken.CreatePasswordResetToken("hash-t", DateTime.UtcNow.AddMinutes(30), user.Id);
+            var req = new PasswordResetReqDto { NewPassword = "x", ConfirmedPassword = "x" };
+            _resetValidator.Setup(v => v.ValidateAsync(It.IsAny<PasswordResetReqDto>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Valid());
             _tokenRepo.Setup(r => r.GetPasswordResetTokenAsync("hash-t")).ReturnsAsync(token);
             _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, It.IsAny<string>()))
@@ -195,7 +198,7 @@ namespace GearUp.UnitTests.Application.Auth
             _passwordHasher.Setup(h => h.HashPassword(user, It.IsAny<string>())).Returns("hashed");
 
             var svc = CreateService();
-            var result = await svc.ResetPassword("t", new PasswordResetReqDto { NewPassword = "x", ConfirmedPassword = "x" });
+            var result = await svc.ResetPassword("t", req);
 
             Assert.True(result.IsSuccess);
             Assert.Equal(200, result.Status);
