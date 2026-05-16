@@ -2,6 +2,7 @@ using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.Services.Users;
 using GearUp.Domain.Enums;
+using GearUp.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -20,47 +21,39 @@ namespace GearUp.UnitTests.Application.Users
             _logger.Object);
 
         [Fact]
-        public async Task GetCurrentUserProfile_ShouldReturnError_WhenUserNotFound()
+        public async Task GetCurrentUserProfile_ShouldThrowNotFound_WhenUserNotFound()
         {
             var id = Guid.NewGuid();
             _userRepo.Setup(r => r.GetUserByIdAsync(id)).ReturnsAsync((RegisterResponseDto?)null);
             var svc = CreateService();
-            var res = await svc.GetCurrentUserProfileService(id.ToString());
-            Assert.False(res.IsSuccess);
-            Assert.Equal(404, res.Status);
+            
+            await Assert.ThrowsAsync<NotFoundException>(() => svc.GetCurrentUserProfileService(id.ToString()));
         }
 
         [Fact]
-        public async Task GetUserProfile_ShouldReturnError_WhenUserNotFound()
+        public async Task GetUserProfile_ShouldThrowNotFound_WhenUserNotFound()
         {
             var username = "missing";
             _userRepo.Setup(r => r.GetUserByUsernameAsync(username)).ReturnsAsync((RegisterResponseDto?)null);
             var svc = CreateService();
-            var res = await svc.GetUserProfile(username);
-            Assert.False(res.IsSuccess);
-            Assert.Equal(404, res.Status);
+            
+            await Assert.ThrowsAsync<NotFoundException>(() => svc.GetUserProfile(username));
         }
 
         [Fact]
-        public async Task GetCurrentUserProfile_ShouldReturn400_WhenUserIdIsEmpty()
+        public async Task GetCurrentUserProfile_ShouldThrowValidation_WhenUserIdIsEmpty()
         {
             var svc = CreateService();
 
-            var res = await svc.GetCurrentUserProfileService(string.Empty);
-
-            Assert.False(res.IsSuccess);
-            Assert.Equal(400, res.Status);
+            await Assert.ThrowsAsync<Domain.Exceptions.ValidationException>(() => svc.GetCurrentUserProfileService(string.Empty));
         }
 
         [Fact]
-        public async Task GetCurrentUserProfile_ShouldReturn400_WhenUserIdIsMalformed()
+        public async Task GetCurrentUserProfile_ShouldThrowValidation_WhenUserIdIsMalformed()
         {
             var svc = CreateService();
 
-            var res = await svc.GetCurrentUserProfileService("not-a-guid");
-
-            Assert.False(res.IsSuccess);
-            Assert.Equal(400, res.Status);
+            await Assert.ThrowsAsync<Domain.Exceptions.ValidationException>(() => svc.GetCurrentUserProfileService("not-a-guid"));
         }
 
         [Fact]
@@ -89,18 +82,15 @@ namespace GearUp.UnitTests.Application.Users
         }
 
         [Fact]
-        public async Task GetUserProfile_ShouldReturn400_WhenUsernameIsEmpty()
+        public async Task GetUserProfile_ShouldThrowValidation_WhenUsernameIsEmpty()
         {
             var svc = CreateService();
 
-            var res = await svc.GetUserProfile(string.Empty);
-
-            Assert.False(res.IsSuccess);
-            Assert.Equal(400, res.Status);
+            await Assert.ThrowsAsync<Domain.Exceptions.ValidationException>(() => svc.GetUserProfile(string.Empty));
         }
 
         [Fact]
-        public async Task GetUserProfile_ShouldReturn404_WhenUserIsAdmin()
+        public async Task GetUserProfile_ShouldThrowNotFound_WhenUserIsAdmin()
         {
             var username = "admin-user";
             var dto = new RegisterResponseDto(
@@ -116,10 +106,7 @@ namespace GearUp.UnitTests.Application.Users
             _userRepo.Setup(r => r.GetUserByUsernameAsync(username)).ReturnsAsync(dto);
             var svc = CreateService();
 
-            var res = await svc.GetUserProfile(username);
-
-            Assert.False(res.IsSuccess);
-            Assert.Equal(404, res.Status);
+            await Assert.ThrowsAsync<NotFoundException>(() => svc.GetUserProfile(username));
         }
 
         [Fact]

@@ -7,6 +7,7 @@ using GearUp.Application.Interfaces.Services.CarServiceInterface;
 using GearUp.Application.ServiceDtos.Car;
 using GearUp.Domain.Entities.Cars;
 using GearUp.Domain.Enums;
+using GearUp.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
@@ -54,28 +55,16 @@ namespace GearUp.Application.Services.Cars
             _logger.LogInformation("Car creation initiated for dealer ID: {DealerId}", dealerId);
 
             if (dealerId == Guid.Empty)
-                return Result<CarResponseDto>.Failure("Invalid dealer ID.", 400);
+                throw new Domain.Exceptions.ValidationException("Invalid dealer ID.");
 
-            var validationResult = _createCarValidator.Validate(request);
-            if (!validationResult.IsValid)
-            {
-                var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Car creation failed validation for dealer ID: {DealerId}. Errors: {Errors}", dealerId, errors);
-                return Result<CarResponseDto>.Failure(errors, 422);
-            }
+            await _createCarValidator.EnsureValidAsync(request);
 
             var dealerExist = await _userRepository.UserExistAsync(dealerId);
             if (!dealerExist)
-            {
-                _logger.LogWarning("Car creation failed: Dealer not found for ID: {DealerId}", dealerId);
-                return Result<CarResponseDto>.Failure("Dealer not found.", 404);
-            }
+                throw new NotFoundException("Dealer", dealerId);
 
             if (request.CarImages == null || request.CarImages.Count == 0)
-            {
-                _logger.LogWarning("Car creation failed: No images provided for dealer ID: {DealerId}", dealerId);
-                return Result<CarResponseDto>.Failure("At least one car image is required.", 422);
-            }
+                throw new Domain.Exceptions.ValidationException("At least one car image is required.");
 
             if (await _carRepository.IsUniqueVin(request.VIN))
             {
@@ -127,7 +116,7 @@ namespace GearUp.Application.Services.Cars
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
@@ -146,12 +135,9 @@ namespace GearUp.Application.Services.Cars
 
         public async Task<Result<CarResponseDto>> GetCarByIdAsync(Guid carId, CancellationToken cancellationToken = default)
         {
-            var car = await _carRepository.GetCarByIdAsync(carId, cancellationToken);
-            if (car == null)
-            {
-                _logger.LogWarning("Car ID: {CarId} not found.", carId);
-                return Result<CarResponseDto>.Failure("Car not found", 404);
-            }
+            var car = await _carRepository.GetCarByIdAsync(carId, cancellationToken)
+                      ?? throw new NotFoundException("Car", carId);
+
             return Result<CarResponseDto>.Success(car, "Car fetched successfully", 200);
         }
 
@@ -159,28 +145,19 @@ namespace GearUp.Application.Services.Cars
         {
             _logger.LogInformation("Car Update initiated for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
 
-            var existingCar = await _carRepository.GetCarEntityByIdAsync(carId);
-            if (existingCar is null)
-            {
-                _logger.LogWarning("No existing car found for car ID: {CarId}", carId);
-                return Result<CarResponseDto>.Failure("Car not found", 404);
-            }
+            var existingCar = await _carRepository.GetCarEntityByIdAsync(carId)
+                              ?? throw new NotFoundException("Car", carId);
 
             if (existingCar.DealerId != dealerId)
-            {
-                _logger.LogWarning("Unauthorized deletion attempt for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
-                return Result<CarResponseDto>.Failure("Unauthorized to delete this car", 403);
-            }
+                throw new ForbiddenException("Unauthorized to update this car");
 
-            var validation = ValidateCarUpdate(existingCar, request, dealerId);
-            if (!validation.IsSuccess)
-                return validation;
+            _updateCarValidator.EnsureValid(request);
 
-            var imagesResult = await _carImageService.ProcessForUpdateAsync(existingCar!, request.CarImages, dealerId);
+            var imagesResult = await _carImageService.ProcessForUpdateAsync(existingCar, request.CarImages, dealerId);
             if (!imagesResult.IsSuccess)
                 return Result<CarResponseDto>.Failure(imagesResult.ErrorMessage, imagesResult.Status);
 
-            existingCar!.UpdateDetails(
+            existingCar.UpdateDetails(
                 request.Title,
                 request.Description,
                 request.Model,
@@ -208,24 +185,14 @@ namespace GearUp.Application.Services.Cars
         {
             _logger.LogInformation("Car Deletion initiated for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
 
-            var existingCar = await _carRepository.GetCarEntityByIdAsync(carId);
-            if (existingCar is null)
-            {
-                _logger.LogWarning("No existing car found for car ID: {CarId}", carId);
-                return Result<string>.Failure("Car not found", 404);
-            }
+            var existingCar = await _carRepository.GetCarEntityByIdAsync(carId)
+                              ?? throw new NotFoundException("Car", carId);
 
-            var user = await _userRepository.GetUserByIdAsync(dealerId);
-            if (user == null) {
-                _logger.LogWarning("Car deletion failed: Dealer not found for ID: {DealerId}", dealerId);
-                return Result<string>.Failure("Dealer not found.", 404);
-            }
+            var user = await _userRepository.GetUserByIdAsync(dealerId)
+                       ?? throw new NotFoundException("Dealer", dealerId);
 
             if (existingCar.DealerId != dealerId)
-            {
-                _logger.LogWarning("Unauthorized deletion attempt for car ID: {CarId} by dealer ID: {DealerId}", carId, dealerId);
-                return Result<string>.Failure("Unauthorized to delete this car", 403);
-            }
+                throw new ForbiddenException("Unauthorized to delete this car");
 
             existingCar.DeleteCar();
             await _commonRepository.SaveChangesAsync();
@@ -233,56 +200,40 @@ namespace GearUp.Application.Services.Cars
 
             _logger.LogInformation("Car deleted successfully for car ID: {CarId}", carId);
             return Result<string>.Success(default!, "Car deleted successfully", 200);
-
         }
-
         public async Task<Result<CursorPageResult<CarListDto>>> GetDealerCarsAsync(Guid dealerId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting cars of {DealerId}", dealerId);
 
-            var dealer = await _userRepository.GetUserByIdAsync(dealerId);
-            if (dealer == null)
-            {
-                _logger.LogInformation("Dealer with id {DealerId} does not exist", dealerId);
-                return Result<CursorPageResult<CarListDto>>.Failure("Dealer not found", 404);
-            }
+            var dealer = await _userRepository.GetUserByIdAsync(dealerId)
+                         ?? throw new NotFoundException("Dealer", dealerId);
 
             if (dealer.Role != UserRole.Dealer)
-            {
-                return Result<CursorPageResult<CarListDto>>.Failure(
-                    "Cars are only available for dealer accounts.",
-                    403
-                );
-            }
+                throw new ForbiddenException("Cars are only available for dealer accounts.");
 
             Cursor? cursor = null;
             if (!string.IsNullOrEmpty(cursorString))
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
             var cars = await _carRepository.GetDealerCarsAsync(dealerId, cursor, cancellationToken);
 
-            return Result<CursorPageResult<CarListDto>>.Success(cars, $"Cars fetched successfully");
+            return Result<CursorPageResult<CarListDto>>.Success(cars, "Cars fetched successfully");
         }
 
         private Result<CarResponseDto> ValidateCarUpdate(Car? existingCar, UpdateCarDto request, Guid dealerId)
         {
             if (existingCar == null)
-                return Result<CarResponseDto>.Failure("Car not found", 404);
+                throw new NotFoundException("Car", "unknown");
 
             if (existingCar.DealerId != dealerId)
-                return Result<CarResponseDto>.Failure("Unauthorized to update this car", 403);
+                throw new ForbiddenException("Unauthorized to update this car");
 
-            var validationResult = _updateCarValidator.Validate(request);
-            if (!validationResult.IsValid)
-            {
-                var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                return Result<CarResponseDto>.Failure(errors, 422);
-            }
+            _updateCarValidator.EnsureValid(request);
 
             return Result<CarResponseDto>.Success(null!, "Validation passed", 200);
         }
@@ -290,26 +241,20 @@ namespace GearUp.Application.Services.Cars
         public async Task<Result<CursorPageResult<CarListDto>>> SearchCarsAsync(CarSearchDto? searchDto, string? cursorString, CancellationToken cancellationToken = default)
         {
             if (searchDto == null)
-            {
-                return Result<CursorPageResult<CarListDto>>.Failure("Search criteria cannot be null", 400);
-            }
+                throw new Domain.Exceptions.ValidationException("Search criteria cannot be null");
 
             if(searchDto.Query == null && searchDto.Color == null && searchDto.MinPrice == null && searchDto.MaxPrice == null)
-            {
-                return Result<CursorPageResult<CarListDto>>.Failure("At least one search criteria must be provided", 400);
-            }
+                throw new Domain.Exceptions.ValidationException("At least one search criteria must be provided");
 
             if(searchDto.MinPrice != null && searchDto.MaxPrice != null && searchDto.MinPrice > searchDto.MaxPrice)
-            {
-                return Result<CursorPageResult<CarListDto>>.Failure("MinPrice cannot be greater than MaxPrice", 400);
-            }
+                throw new Domain.Exceptions.ValidationException("MinPrice cannot be greater than MaxPrice");
 
             Cursor? cursor = null;
             if (!string.IsNullOrEmpty(cursorString))
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
@@ -329,18 +274,14 @@ namespace GearUp.Application.Services.Cars
         {
             _logger.LogInformation("Getting cars of {DealerId}", dealerId);
 
-            var dealerExists = await _userRepository.GetUserByIdAsync(dealerId);
-            if (dealerExists == null)
-            {
-                _logger.LogInformation("Dealer with id {DealerId} does not exist", dealerId);
-                return Result<CursorPageResult<CarListDto>>.Failure("Dealer not found", 404);
-            }
+            var dealerExists = await _userRepository.UserExistAsync(dealerId);
+            if (!dealerExists)
+                throw new NotFoundException("Dealer", dealerId);
 
             if (status != CarValidationStatus.Approved && status != CarValidationStatus.Pending &&
                 status != CarValidationStatus.Rejected)
             {
-                _logger.LogInformation("Invalid car status");
-                return Result<CursorPageResult<CarListDto>>.Failure("Invalid car status", 404);
+                throw new Domain.Exceptions.ValidationException("Invalid car status");
             }
 
             Cursor? cursor = null;
@@ -348,7 +289,7 @@ namespace GearUp.Application.Services.Cars
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<CarListDto>>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
@@ -363,7 +304,6 @@ namespace GearUp.Application.Services.Cars
             await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
 
             return Result<CursorPageResult<CarListDto>>.Success(cars, $"{status} cars fetched successfully");
-
         }
 
         private async Task InvalidateCarListCacheAsync()

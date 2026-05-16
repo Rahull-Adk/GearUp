@@ -6,6 +6,7 @@ using GearUp.Application.Interfaces.Services.EmailServiceInterface;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Domain.Entities.Users;
+using GearUp.Domain.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System.Data;
@@ -32,41 +33,35 @@ namespace GearUp.Application.Services.Auth
         }
         public async Task<Result<RegisterResponseDto>> RegisterUser(RegisterRequestDto data)
         {
-                _logger.LogInformation("Starting user registration for email: {Email}", data.Email);
-            var validationResult = await _validator.ValidateAsync(data);
+            _logger.LogInformation("Starting user registration for email: {Email}", data.Email);
+            await _validator.EnsureValidAsync(data);
 
-                if(!validationResult.IsValid)
-                {
-                    var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                    return Result<RegisterResponseDto>.Failure(errors, 400);
-                }
+            var isEmailExists = await _userRepo.GetUserEntityByEmailAsync(data.Email);
+            if(isEmailExists != null)
+            {
+                throw new Domain.Exceptions.ValidationException("Account with this email already exists. Please login");
+            }
 
-                var isEmailExists = await _userRepo.GetUserEntityByEmailAsync(data.Email);
-                if(isEmailExists != null)
-                {
-                    return Result<RegisterResponseDto>.Failure("Account with this email already exists. Please login", 400);
-                }
-
-                var isUsernameExists = await _userRepo.GetUserEntityByUsernameAsync(data.Username);
-                if(isUsernameExists != null)
-                {
-                    return Result<RegisterResponseDto>.Failure("Account with this username already exists. Please choose another username", 400);
-                }
+            var isUsernameExists = await _userRepo.GetUserEntityByUsernameAsync(data.Username);
+            if(isUsernameExists != null)
+            {
+                throw new Domain.Exceptions.ValidationException("Account with this username already exists. Please choose another username");
+            }
 
 
             var newUser = User.CreateLocalUser(data.Username, data.Email, data.FirstName + " " + data.LastName);
-                var hashedPassword = _passwordHasher.HashPassword(newUser, data.Password);
-                newUser.SetPassword(hashedPassword);
-                await _userRepo.AddUserAsync(newUser);
-                await _userRepo.SaveChangesAsync();
+            var hashedPassword = _passwordHasher.HashPassword(newUser, data.Password);
+            newUser.SetPassword(hashedPassword);
+            await _userRepo.AddUserAsync(newUser);
+            await _userRepo.SaveChangesAsync();
 
             var claims = new[]
-                {
-                   new Claim("id", newUser.Id.ToString()),
-                   new Claim("email", newUser.Email),
-                   new Claim("role", newUser.Role.ToString()),
-                   new Claim("purpose", "email_verification")
-                };
+            {
+                new Claim("id", newUser.Id.ToString()),
+                new Claim("email", newUser.Email),
+                new Claim("role", newUser.Role.ToString()),
+                new Claim("purpose", "email_verification")
+            };
 
             var emailVerificationToken = _tokenGenerator.GenerateEmailVerificationToken(claims);
 

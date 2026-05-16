@@ -7,6 +7,7 @@ using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.ServiceDtos.Post;
 using GearUp.Application.ServiceDtos.Socials;
 using GearUp.Domain.Entities.Posts;
+using GearUp.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
@@ -48,9 +49,7 @@ namespace GearUp.Application.Services.Posts
             Cursor? c = null;
             if (!string.IsNullOrEmpty(cursor) && !Cursor.TryDecode(cursor, out c))
             {
-                _logger.LogInformation("Invalid cursor {Cursor}", cursor);
-
-                return Result<CursorPageResult<PostResponseDto>>.Failure("Invalid cursor format.", 400);
+                throw new Domain.Exceptions.ValidationException("Invalid cursor format.");
             }
 
             var cacheKey = await BuildFeedCacheKeyAsync("latest", userId, cursor);
@@ -78,7 +77,7 @@ namespace GearUp.Application.Services.Posts
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<PostResponseDto?>>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
@@ -102,19 +101,15 @@ namespace GearUp.Application.Services.Posts
         public async Task<Result<PostResponseDto>> GetPostByIdAsync(Guid id, Guid currUserId, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching post with Id: {PostId}", id);
-            var post = await _postRepository.GetPostByIdAsync(id, currUserId, cancellationToken);
-            if (post == null)
-            {
-                _logger.LogWarning("Post with Id: {PostId} not found", id);
-                return Result<PostResponseDto>.Failure("Post not found", 404);
-            }
+            var post = await _postRepository.GetPostByIdAsync(id, currUserId, cancellationToken)
+                       ?? throw new NotFoundException("Post", id);
 
             var car = post.CarDto;
 
             if (car == null)
             {
                 _logger.LogWarning("Car associated with Post Id: {PostId} not found", id);
-                return Result<PostResponseDto>.Failure("Car associated with the post not found", 404);
+                throw new NotFoundException("Car associated with the post not found");
             }
 
             bool viewTimeElapsed = await _viewRepository.HasViewTimeElapsedAsync(id, currUserId);
@@ -146,31 +141,21 @@ namespace GearUp.Application.Services.Posts
         public async Task<Result<PostResponseDto>> CreatePostAsync(CreatePostRequestDto req, Guid dealerId)
         {
             if (dealerId == Guid.Empty)
-                return Result<PostResponseDto>.Failure("Invalid dealer Id", 400);
+                throw new Domain.Exceptions.ValidationException("Invalid dealer Id");
 
             _logger.LogInformation("Creating a new post for dealer with Id: {DealerId}", dealerId);
 
-            var validator = await _createPostValidator.ValidateAsync(req);
-
-            if (!validator.IsValid)
-            {
-                var errors = string.Join(", ", validator.Errors.Select(e => e.ErrorMessage));
-                return Result<PostResponseDto>.Failure($"Post creation failed due to validation errors: {errors}", 400);
-            }
+            await _createPostValidator.EnsureValidAsync(req);
 
             var refrencedCar = await _carRepository.GetCarByIdAsync(req.CarId);
 
             if (refrencedCar == null || refrencedCar.DealerId != dealerId)
             {
-                return Result<PostResponseDto>.Failure("Referenced car not found or does not belong to the dealer",
-                    404);
+                throw new NotFoundException("Referenced car not found or does not belong to the dealer");
             }
 
-            var user = await _userRepository.GetUserByIdAsync(dealerId);
-            if (user == null)
-            {
-                return Result<PostResponseDto>.Failure("Dealer not found", 404);
-            }
+            var user = await _userRepository.GetUserByIdAsync(dealerId)
+                       ?? throw new NotFoundException("Dealer", dealerId);
 
             var post = Post.CreatePost(req.Caption, req.Content, req.Visibility, dealerId, req.CarId);
             await _postRepository.AddPostAsync(post);
@@ -184,16 +169,15 @@ namespace GearUp.Application.Services.Posts
         public async Task<Result<CursorPageResult<UserEngagementDto>>> GetPostLikersAsync(Guid postId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting all users liked for Post with Id: {PostId}", postId);
-            var postEntity = await _postRepository.GetPostEntityByIdAsync(postId, cancellationToken);
-            if (postEntity == null)
-                return Result<CursorPageResult<UserEngagementDto>>.Failure("Post not found", 404);
+            var postEntity = await _postRepository.GetPostEntityByIdAsync(postId, cancellationToken)
+                             ?? throw new NotFoundException("Post", postId);
 
             Cursor? cursor = null;
             if (!string.IsNullOrEmpty(cursorString))
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<UserEngagementDto>>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
@@ -204,20 +188,15 @@ namespace GearUp.Application.Services.Posts
 
         public async Task<Result<bool>> DeletePostAsync(Guid id, Guid userId)
         {
-            var postEntity = await _postRepository.GetPostEntityByIdAsync(id);
-            if (postEntity == null)
-                return Result<bool>.Failure("Post not found", 404);
+            var postEntity = await _postRepository.GetPostEntityByIdAsync(id)
+                             ?? throw new NotFoundException("Post", id);
 
             bool userExists = await _userRepository.UserExistAsync(userId);
             if (!userExists)
-            {
-                return Result<bool>.Failure("User not found", 404);
-            }
+                throw new NotFoundException("User", userId);
 
             if (postEntity.UserId != userId)
-            {
-                return Result<bool>.Failure("Unauthorized", 403);
-            }
+                throw new ForbiddenException();
 
             postEntity.SoftDelete();
             await _commonRepository.SaveChangesAsync();
@@ -231,21 +210,17 @@ namespace GearUp.Application.Services.Posts
         {
             if (string.IsNullOrWhiteSpace(dto.Caption) && string.IsNullOrWhiteSpace(dto.Content) &&
                 dto.Visibility == PostVisibility.Default)
-                return Result<string>.Failure("Atleast 1 field is required to update.", 400);
+                throw new Domain.Exceptions.ValidationException("Atleast 1 field is required to update.");
 
-            var postEntity = await _postRepository.GetPostEntityByIdAsync(id);
-            if (postEntity == null)
-                return Result<string>.Failure("Post not found", 404);
+            var postEntity = await _postRepository.GetPostEntityByIdAsync(id)
+                             ?? throw new NotFoundException("Post", id);
+            
             bool userExists = await _userRepository.UserExistAsync(currUserId);
             if (!userExists)
-            {
-                return Result<string>.Failure("User not found", 404);
-            }
+                throw new NotFoundException("User", currUserId);
 
             if (postEntity.UserId != currUserId)
-            {
-                return Result<string>.Failure("Unauthorized", 403);
-            }
+                throw new ForbiddenException();
 
             postEntity.UpdateContent(dto.Caption, dto.Content, dto.Visibility);
             await _commonRepository.SaveChangesAsync();

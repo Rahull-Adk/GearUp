@@ -46,15 +46,11 @@ namespace GearUp.UnitTests.Application.Auth
             // Arrange
             var req = new RegisterRequestDto();
             var invalid = new ValidationResult(new[] { new ValidationFailure("Username", "Username is required") });
-            _validator.Setup(v => v.ValidateAsync(req, default)).ReturnsAsync(invalid);
+            _validator.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(invalid);
             var svc = CreateService();
 
-            // Act
-            var result = await svc.RegisterUser(req);
-
-            // Assert
-            Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.Status);
+            // Act & Assert
+            await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => svc.RegisterUser(req));
             _userRepo.Verify(r => r.AddUserAsync(It.IsAny<User>()), Times.Never);
         }
 
@@ -76,12 +72,8 @@ namespace GearUp.UnitTests.Application.Auth
 
             var svc = CreateService();
 
-            // Act
-            var result = await svc.RegisterUser(req);
-
-            // Assert
-            Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.Status);
+            // Act & Assert
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ValidationException>(() => svc.RegisterUser(req));
             _userRepo.Verify(r => r.GetUserByUsernameAsync(It.IsAny<string>()), Times.Never);
         }
 
@@ -104,12 +96,8 @@ namespace GearUp.UnitTests.Application.Auth
 
             var svc = CreateService();
 
-            // Act
-            var result = await svc.RegisterUser(req);
-
-            // Assert
-            Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.Status);
+            // Act & Assert
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ValidationException>(() => svc.RegisterUser(req));
             _userRepo.Verify(r => r.AddUserAsync(It.IsAny<User>()), Times.Never);
         }
     }

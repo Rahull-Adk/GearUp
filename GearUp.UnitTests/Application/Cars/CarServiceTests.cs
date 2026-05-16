@@ -45,10 +45,9 @@ namespace GearUp.UnitTests.Application.Cars
         {
             var service = CreateService();
             var req = new CreateCarRequestDto { Title = "t" };
-            var result = await service.CreateCarAsync(req, Guid.Empty);
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.Status);
+            
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ValidationException>(() => 
+                service.CreateCarAsync(req, Guid.Empty));
         }
 
         [Fact]
@@ -56,13 +55,13 @@ namespace GearUp.UnitTests.Application.Cars
         {
             var service = CreateService();
             var req = new CreateCarRequestDto { Title = "t" };
-            _createValidator.Setup(v => v.Validate(req)).Returns(Invalid("bad title"));
+            _createValidator.Setup(v => v.Validate(It.IsAny<CreateCarRequestDto>()))
+                .Returns(Invalid("bad title"));
 
-            var result = await service.CreateCarAsync(req, Guid.NewGuid());
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(422, result.Status);
-            _createValidator.Verify(v => v.Validate(req), Times.Once);
+            await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => 
+                service.CreateCarAsync(req, Guid.NewGuid()));
+            
+            _createValidator.Verify(v => v.Validate(It.IsAny<CreateCarRequestDto>()), Times.Once);
         }
 
         [Fact]
@@ -73,10 +72,8 @@ namespace GearUp.UnitTests.Application.Cars
             _userRepository.Setup(u => u.UserExistAsync(It.IsAny<Guid>())).ReturnsAsync(true);
             _createValidator.Setup(v => v.Validate(req)).Returns(Valid());
 
-            var result = await service.CreateCarAsync(req, Guid.NewGuid());
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(422, result.Status);
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ValidationException>(() => 
+                service.CreateCarAsync(req, Guid.NewGuid()));
         }
 
         [Fact]
@@ -105,10 +102,8 @@ namespace GearUp.UnitTests.Application.Cars
 
             _carRepo.Setup(r => r.GetCarByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((CarResponseDto?)null);
 
-            var result = await service.GetCarByIdAsync(id);
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(404, result.Status);
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.NotFoundException>(() => 
+                service.GetCarByIdAsync(id));
         }
 
         [Fact]
@@ -118,10 +113,8 @@ namespace GearUp.UnitTests.Application.Cars
             var carId = Guid.NewGuid();
             _carRepo.Setup(r => r.GetCarEntityByIdAsync(carId)).ReturnsAsync((Car?)null);
 
-            var result = await service.UpdateCarAsync(carId, new UpdateCarDto(), Guid.NewGuid());
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(404, result.Status);
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.NotFoundException>(() => 
+                service.UpdateCarAsync(carId, new UpdateCarDto(), Guid.NewGuid()));
         }
 
         [Fact]
@@ -133,10 +126,8 @@ namespace GearUp.UnitTests.Application.Cars
             var car = Car.CreateForSale(Guid.NewGuid(),"t","d","m","mk",2020,1000,"c",10,4,2000,new List<CarImage>(),FuelType.Petrol,CarCondition.New,TransmissionType.Automatic,otherDealer,"VIN","PLT");
             _carRepo.Setup(r => r.GetCarEntityByIdAsync(car.Id)).ReturnsAsync(car);
 
-            var result = await service.UpdateCarAsync(car.Id, new UpdateCarDto(), dealerId);
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(403, result.Status);
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ForbiddenException>(() => 
+                service.UpdateCarAsync(car.Id, new UpdateCarDto(), dealerId));
         }
     }
 }

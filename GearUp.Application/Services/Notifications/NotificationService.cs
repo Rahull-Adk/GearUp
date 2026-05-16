@@ -6,6 +6,7 @@ using GearUp.Application.Interfaces.Services;
 using GearUp.Application.ServiceDtos;
 using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
+using GearUp.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace GearUp.Application.Services.Notifications
@@ -105,7 +106,7 @@ namespace GearUp.Application.Services.Notifications
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<NotificationDto>>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
@@ -135,16 +136,12 @@ namespace GearUp.Application.Services.Notifications
         {
             _logger.LogInformation("Marking notification {NotificationId} as read for user {UserId}", notificationId, userId);
 
-            var notification = await _notificationRepository.GetNotificationByIdAsync(notificationId);
-
-            if (notification == null)
-            {
-                return Result<bool>.Failure("Notification not found", 404);
-            }
+            var notification = await _notificationRepository.GetNotificationByIdAsync(notificationId)
+                               ?? throw new NotFoundException("Notification", notificationId);
 
             if (notification.ReceiverUserId != userId)
             {
-                return Result<bool>.Failure("You cannot mark this notification as read", 403);
+                throw new ForbiddenException("You cannot mark this notification as read");
             }
 
             await _notificationRepository.MarkNotificationAsReadAsync(notificationId);
@@ -169,16 +166,12 @@ namespace GearUp.Application.Services.Notifications
         {
             _logger.LogInformation("Deleting notification {NotificationId} for user {UserId}", notificationId, userId);
 
-            var notification = await _notificationRepository.GetNotificationByIdAsync(notificationId);
-
-            if (notification == null)
-            {
-                return Result<bool>.Failure("Notification not found", 404);
-            }
+            var notification = await _notificationRepository.GetNotificationByIdAsync(notificationId)
+                               ?? throw new NotFoundException("Notification", notificationId);
 
             if (notification.ReceiverUserId != userId)
             {
-                return Result<bool>.Failure("You cannot delete this notification", 403);
+                throw new ForbiddenException("You cannot delete this notification");
             }
 
             await _notificationRepository.DeleteNotificationAsync(notificationId);
