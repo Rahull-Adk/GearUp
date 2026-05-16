@@ -72,7 +72,7 @@ namespace GearUp.UnitTests.Application.Auth
             // Arrange
             var req = new RegisterRequestDto();
             var invalid = new ValidationResult(new[] { new ValidationFailure("Username", "Username is required") });
-            _validator.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(invalid);
+            _validatorc.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(invalid);
             var svc = CreateService();
 
             // Act & Assert
