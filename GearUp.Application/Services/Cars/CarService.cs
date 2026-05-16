@@ -16,8 +16,6 @@ namespace GearUp.Application.Services.Cars
 {
     public class CarService : ICarService
     {
-        private readonly IValidator<CreateCarRequestDto> _createCarValidator;
-        private readonly IValidator<UpdateCarDto> _updateCarValidator;
         private readonly ILogger<CarService> _logger;
         private readonly ICarRepository _carRepository;
         private readonly ICommonRepository _commonRepository;
@@ -30,21 +28,17 @@ namespace GearUp.Application.Services.Cars
         private static readonly TimeSpan CarCountCacheTtl = TimeSpan.FromMinutes(10);
 
         public CarService(
-            IValidator<CreateCarRequestDto> createCarValidator,
             ILogger<CarService> logger,
             ICarRepository carRepository,
             ICommonRepository commonRepository,
             ICarImageService carImageService,
-            IValidator<UpdateCarDto> updateCarDtoValiator,
             IUserRepository userRepository,
             ICacheService cacheService)
         {
-            _createCarValidator = createCarValidator;
             _logger = logger;
             _carRepository = carRepository;
             _commonRepository = commonRepository;
             _carImageService = carImageService;
-            _updateCarValidator = updateCarDtoValiator;
             _userRepository = userRepository;
             _cacheService = cacheService;
         }
@@ -55,14 +49,6 @@ namespace GearUp.Application.Services.Cars
 
             if (dealerId == Guid.Empty)
                 return Result<CarResponseDto>.Failure("Invalid dealer ID.", 400);
-
-            var validationResult = _createCarValidator.Validate(request);
-            if (!validationResult.IsValid)
-            {
-                var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Car creation failed validation for dealer ID: {DealerId}. Errors: {Errors}", dealerId, errors);
-                return Result<CarResponseDto>.Failure(errors, 422);
-            }
 
             var dealerExist = await _userRepository.UserExistAsync(dealerId);
             if (!dealerExist)
@@ -290,13 +276,6 @@ namespace GearUp.Application.Services.Cars
 
             if (existingCar.DealerId != dealerId)
                 return Result<CarResponseDto>.Failure("Unauthorized to update this car", 403);
-
-            var validationResult = _updateCarValidator.Validate(request);
-            if (!validationResult.IsValid)
-            {
-                var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                return Result<CarResponseDto>.Failure(errors, 422);
-            }
 
             return Result<CarResponseDto>.Success(null!, "Validation passed", 200);
         }

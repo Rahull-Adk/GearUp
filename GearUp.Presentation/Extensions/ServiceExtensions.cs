@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using CloudinaryDotNet;
 using FluentValidation;
+using GearUp.Application;
 using GearUp.Application.Common;
 using GearUp.Application.Interfaces;
 using GearUp.Application.Interfaces.Repositories;
@@ -36,6 +37,7 @@ using GearUp.Infrastructure.Persistence;
 using GearUp.Infrastructure.Repositories;
 using GearUp.Infrastructure.Seed;
 using GearUp.Infrastructure.SignalR;
+using GearUp.Presentation.Filters;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
@@ -130,6 +132,18 @@ namespace GearUp.Presentation.Extensions
 
         public static void AddServices(this IServiceCollection services, IConfiguration config)
         {
+            // Add Validation Filter and Auto Validation
+            services.AddControllers(options =>
+            {
+                options.Filters.Add<ValidationFilterAttribute>();
+            }).AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+            });
+
+            // Application Injection
+            services.AddApplication();
+
             // DbContext Injection
             var connectionString = ReadSetting(config, "ConnectionStrings:DefaultConnection", "ConnectionStrings__DefaultConnection");
             var audience = ReadSetting(config, "Jwt:Audience", "Jwt__Audience");
@@ -266,15 +280,6 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IReviewRepository, ReviewRepository>();
             services.AddScoped<IMessageRepository, MessageRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
-
-            // Validator Injections
-            services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestDtoValidator>();
-            services.AddScoped<IValidator<LoginRequestDto>, LoginRequestDtoValidator>();
-            services.AddScoped<IValidator<PasswordResetReqDto>, PasswordResetValidator>();
-            services.AddScoped<IValidator<AdminLoginRequestDto>, AdminLoginRequestDtoValidator>();
-            services.AddScoped<IValidator<CreateCarRequestDto>, CarRequestDtoValidator>();
-            services.AddScoped<IValidator<UpdateCarDto>, UpdateCarDtoValidator>();
-            services.AddScoped<IValidator<CreatePostRequestDto>, PostValidators>();
 
             // Password Hasher Injection
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();

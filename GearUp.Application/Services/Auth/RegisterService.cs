@@ -16,15 +16,14 @@ namespace GearUp.Application.Services.Auth
 {
     public sealed class RegisterService : IRegisterService
     {
-        private readonly IValidator<RegisterRequestDto> _validator;
         private readonly IUserRepository _userRepo;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IMessagePublisher _messagePublisher;
         private readonly ITokenGenerator _tokenGenerator;
         private readonly ILogger<RegisterService> _logger;
-        public RegisterService(IValidator<RegisterRequestDto> validator, IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IMessagePublisher messagePublisher, ITokenGenerator tokenGenerator, ILogger<RegisterService> logger)
+        public RegisterService(IUserRepository userRepo, IPasswordHasher<User> passwordHasher, IMessagePublisher messagePublisher, ITokenGenerator tokenGenerator, ILogger<RegisterService> logger)
         {
-            _validator = validator; _userRepo = userRepo;
+            _userRepo = userRepo;
             _passwordHasher = passwordHasher;
             _messagePublisher = messagePublisher;
             _tokenGenerator = tokenGenerator;
@@ -33,13 +32,6 @@ namespace GearUp.Application.Services.Auth
         public async Task<Result<RegisterResponseDto>> RegisterUser(RegisterRequestDto data)
         {
                 _logger.LogInformation("Starting user registration for email: {Email}", data.Email);
-            var validationResult = await _validator.ValidateAsync(data);
-
-                if(!validationResult.IsValid)
-                {
-                    var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                    return Result<RegisterResponseDto>.Failure(errors, 400);
-                }
 
                 var isEmailExists = await _userRepo.GetUserEntityByEmailAsync(data.Email);
                 if(isEmailExists != null)

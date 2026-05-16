@@ -221,10 +221,6 @@ namespace GearUp.Application.Services.Posts
 
         public async Task<Result<string>> UpdatePostAsync(Guid id, Guid currUserId, UpdatePostDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.Caption) && string.IsNullOrWhiteSpace(dto.Content) &&
-                dto.Visibility == PostVisibility.Default)
-                return Result<string>.Failure("Atleast 1 field is required to update.", 400);
-
             var postEntity = await _postRepository.GetPostEntityByIdAsync(id);
             if (postEntity == null)
                 return Result<string>.Failure("Post not found", 404);
