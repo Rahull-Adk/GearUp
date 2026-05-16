@@ -56,7 +56,7 @@ namespace GearUp.Infrastructure.Messaging
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[IN-MEMORY QUEUE] Error processing message {MessageType}", typeof(TMessage).Name);
-                // Synchronous fallback - we may want to throw or just log. We will log to prevent crashing the caller.
+                throw;
             }
         }
 
@@ -108,36 +108,61 @@ namespace GearUp.Infrastructure.Messaging
                 return;
             }
 
-            carImage.SetStatus(ImageProcessingStatus.Processing);
-            await commonRepo.SaveChangesAsync();
-
-            Result<MemoryStream> processedResult;
-            using (var stream = new FileStream(carImage.LocalFilePath, FileMode.Open, FileAccess.Read))
+            if (!File.Exists(carImage.LocalFilePath))
             {
-                processedResult = await docProcessor.ProcessImageFromStream(stream, carImage.LocalFilePath, 800, 600, false);
-            }
-
-            if (!processedResult.IsSuccess)
-            {
-                carImage.SetError(processedResult.ErrorMessage);
+                _logger.LogError("Source file for CarImage {CarImageId} not found at {Path}", message.CarImageId, carImage.LocalFilePath);
+                carImage.SetError("Source file not found on disk.");
                 await commonRepo.SaveChangesAsync();
                 return;
             }
 
-            var processedDir = Path.Combine(Path.GetTempPath(), "gearup", "processed");
-            if (!Directory.Exists(processedDir)) Directory.CreateDirectory(processedDir);
+            carImage.SetStatus(ImageProcessingStatus.Processing);
+            await commonRepo.SaveChangesAsync();
 
-            var processedPath = Path.Combine(processedDir, Path.GetFileName(carImage.LocalFilePath));
-            using (var outputStream = new FileStream(processedPath, FileMode.Create))
+            string processedPath;
+            var oldPath = carImage.LocalFilePath;
+
+            try
             {
-                await processedResult.Data.CopyToAsync(outputStream);
-            }
+                Result<MemoryStream> processedResult;
+                using (var stream = new FileStream(carImage.LocalFilePath, FileMode.Open, FileAccess.Read))
+                {
+                    processedResult = await docProcessor.ProcessImageFromStream(stream, carImage.LocalFilePath, 800, 600, false);
+                }
 
-            if (File.Exists(carImage.LocalFilePath)) File.Delete(carImage.LocalFilePath);
+                if (!processedResult.IsSuccess)
+                {
+                    carImage.SetError(processedResult.ErrorMessage);
+                    await commonRepo.SaveChangesAsync();
+                    return;
+                }
+
+                var processedDir = Path.Combine(Path.GetTempPath(), "gearup", "processed");
+                if (!Directory.Exists(processedDir)) Directory.CreateDirectory(processedDir);
+
+                processedPath = Path.Combine(processedDir, Path.GetFileName(carImage.LocalFilePath));
+                using (var outputStream = new FileStream(processedPath, FileMode.Create))
+                {
+                    await processedResult.Data.CopyToAsync(outputStream);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to process image {CarImageId}", carImage.Id);
+                carImage.SetError($"I/O error during processing: {ex.Message}");
+                await commonRepo.SaveChangesAsync();
+                throw;
+            }
 
             carImage.SetLocalFilePath(processedPath);
             carImage.SetStatus(ImageProcessingStatus.Uploading);
             await commonRepo.SaveChangesAsync();
+
+            if (File.Exists(oldPath))
+            {
+                try { File.Delete(oldPath); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete old local file at {Path}", oldPath); }
+            }
 
             // Fire next step in pipeline synchronously
             await publisher.PublishAsync(new ImageUploadMessage
@@ -175,7 +200,9 @@ namespace GearUp.Infrastructure.Messaging
             await commonRepo.SaveChangesAsync();
 
             List<Uri> uris;
-            using (var stream = new FileStream(carImage.LocalFilePath, FileMode.Open, FileAccess.Read))
+            var tempPath = carImage.LocalFilePath;
+
+            using (var stream = new FileStream(tempPath, FileMode.Open, FileAccess.Read))
             {
                 var uploadPath = $"gearup/dealers/{message.DealerId}/cars";
                 uris = await uploader.UploadImageListAsync(new List<MemoryStream> { ConvertToMemoryStream(stream) }, uploadPath);
@@ -191,9 +218,10 @@ namespace GearUp.Infrastructure.Messaging
             carImage.SetLocalFilePath(null);
             await commonRepo.SaveChangesAsync();
 
-            if (carImage.LocalFilePath != null && File.Exists(carImage.LocalFilePath)) 
+            if (tempPath != null && File.Exists(tempPath)) 
             {
-                File.Delete(carImage.LocalFilePath);
+                try { File.Delete(tempPath); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete temporary processed file at {Path}", tempPath); }
             }
             
             _logger.LogInformation("Image {CarImageId} uploaded successfully to {Url}", carImage.Id, carImage.Url);
