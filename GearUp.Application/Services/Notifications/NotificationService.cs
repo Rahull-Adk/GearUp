@@ -51,7 +51,6 @@ namespace GearUp.Application.Services.Notifications
                 "Creating notification for user {ReceiverId} from {ActorId}, type: {Type}",
                 receiverUserId, actorUserId, notificationType);
 
-            // Create the notification entity
             var notification = Notification.CreateNotification(
                 title,
                 content,
@@ -65,12 +64,10 @@ namespace GearUp.Application.Services.Notifications
                 carId
             );
 
-            // Persist to database
             await _notificationRepository.AddNotificationAsync(notification);
             await _commonRepository.SaveChangesAsync();
             await InvalidateUnreadCountCacheAsync(receiverUserId);
 
-            // Create DTO for real-time push
             var notificationDto = new NotificationDto
             {
                 Id = notification.Id,
@@ -88,7 +85,6 @@ namespace GearUp.Application.Services.Notifications
                 SentAt = notification.CreatedAt
             };
 
-            // Push real-time notification
             var message = new NotificationRequestMessage
             {
                 MethodName = "PushNotification",

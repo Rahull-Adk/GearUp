@@ -73,11 +73,9 @@ namespace GearUp.Application.Services.Messages
                 await _messageRepository.AddConversationAsync(conversation);
             }
 
-            // Create message
             var message = Message.Create(conversation.Id, senderId, dto.Text, dto.ImageUrl);
             await _messageRepository.AddMessageAsync(message);
 
-            // Update conversation last message time
             conversation.TouchLastMessage(message.Id, message.SentAt);
 
             await _commonRepository.SaveChangesAsync();
@@ -96,7 +94,6 @@ namespace GearUp.Application.Services.Messages
                 IsMine = true
             };
 
-            // Send real-time notification to receiver
             var receiverDto = new MessageResponseDto
             {
                 Id = message.Id,
@@ -190,7 +187,6 @@ namespace GearUp.Application.Services.Messages
 
             var messagesResult = await _messageRepository.GetConversationMessagesAsync(conversationId, cursor, cancellationToken);
 
-            // Mark messages as read
             await _messageRepository.MarkMessagesAsReadAsync(conversationId, userId);
             await _commonRepository.SaveChangesAsync();
 
@@ -237,7 +233,6 @@ namespace GearUp.Application.Services.Messages
             var otherUser = await _userRepository.GetUserByIdAsync(otherUserId)
                             ?? throw new NotFoundException("Other user not found.");
 
-            // Check if conversation between customer and dealer is valid
             var isValidConversation =
                 (currentUser.Role == UserRole.Customer && otherUser.Role == UserRole.Dealer) ||
                 (currentUser.Role == UserRole.Dealer && otherUser.Role == UserRole.Customer);
@@ -257,7 +252,6 @@ namespace GearUp.Application.Services.Messages
                 await _messageRepository.AddConversationAsync(conversation);
                 await _commonRepository.SaveChangesAsync();
 
-                // Reload to get participants with user info
                 conversation = await _messageRepository.GetConversationByIdAsync(conversation.Id, cancellationToken);
             }
 

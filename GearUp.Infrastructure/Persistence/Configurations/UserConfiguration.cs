@@ -27,7 +27,6 @@ namespace GearUp.Infrastructure.Persistence.Configurations
             builder.HasIndex(u => u.Email).IsUnique();
             builder.HasIndex(u => u.Username).IsUnique();
 
-            //Tokens
 
             builder.HasMany<RefreshToken>()
                 .WithOne(r => r.User)
@@ -40,20 +39,17 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-            // Submitted KYCs
             builder.HasMany(u => u.KycSubmitted)
                 .WithOne(k => k.SubmittedBy)
                 .HasForeignKey(k => k.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Reviewed KYCs
             builder.HasMany(u => u.KycSubmissionsReviewed)
                 .WithOne(k => k.ReviewedBy)
                 .HasForeignKey(k => k.ReviewerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // Appointments
 
             builder.HasMany(u => u.ReceivedAppointments)
                 .WithOne(a => a.Agent)
@@ -65,7 +61,6 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                 .HasForeignKey(a => a.RequesterId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Messages and Conversations
 
             builder.HasMany(u => u.ConversationParticipants)
                .WithOne(cp => cp.User)
@@ -73,7 +68,6 @@ namespace GearUp.Infrastructure.Persistence.Configurations
                .OnDelete(DeleteBehavior.Cascade);
 
 
-            //  Notifications
             builder.HasMany(u => u.Notifications)
                 .WithOne(n => n.ReceiverUser)
                 .HasForeignKey(n => n.ReceiverUserId)

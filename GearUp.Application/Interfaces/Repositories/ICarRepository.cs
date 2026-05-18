@@ -20,7 +20,6 @@ namespace GearUp.Application.Interfaces.Repositories
         Task<CursorPageResult<CarListDto>> GetDealerCarsAsync(Guid dealerId, Cursor? cursor, CancellationToken cancellationToken = default);
         void RemoveCarImageByCarId(Car car);
 
-        // Admin methods
         Task<CursorPageResult<CarListDto>> GetAllCarsForAdminAsync(Cursor? cursor, CancellationToken cancellationToken = default);
         Task<CursorPageResult<CarListDto>> GetCarsByValidationStatusAsync(CarValidationStatus status, Cursor? cursor, CancellationToken cancellationToken = default);
         Task<CursorPageResult<CarListDto>> GetCarsByDealerIdForAdminAsync(Guid dealerId, Cursor? cursor, CancellationToken cancellationToken = default);

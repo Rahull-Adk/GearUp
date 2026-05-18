@@ -23,6 +23,7 @@ namespace GearUp.UnitTests.Application.Posts
         private readonly Mock<ICommentRepository> _commentRepository = new();
         private readonly Mock<IMessagePublisher> _messagePublisher = new();
         private readonly Mock<INotificationService> _notificationService = new();
+        private readonly Mock<ICacheService> _cacheService = new();
 
         private CommentService CreateService() => new(
             _logger.Object,
@@ -31,7 +32,8 @@ namespace GearUp.UnitTests.Application.Posts
             _userRepository.Object,
             _commentRepository.Object,
             _messagePublisher.Object,
-            _notificationService.Object);
+            _notificationService.Object,
+            _cacheService.Object);
 
         private static RegisterResponseDto BuildUserDto(Guid id, string username = "tester")
             => new(id, null, username, $"{username}@mail.com", "Test User", UserRole.Customer, new DateOnly(1990, 1, 1), null, "avatar");

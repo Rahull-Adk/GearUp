@@ -24,25 +24,10 @@ namespace GearUp.UnitTests.Application.Auth
     public class RegisterServiceTests
     {
         private readonly Mock<IValidator<RegisterRequestDto>> _validator = new();
-        /// <summary>
-        /// Mocked user repository used to simulate duplicate checks and persistence.
-        /// </summary>
         private readonly Mock<IUserRepository> _userRepo = new();
-        /// <summary>
-        /// Mocked password hasher used to verify that registration stores a hashed password.
-        /// </summary>
         private readonly Mock<IPasswordHasher<User>> _passwordHasher = new();
-        /// <summary>
-        /// Mocked message publisher used to validate the verification-email dispatch.
-        /// </summary>
         private readonly Mock<IMessagePublisher> _messagePublisher = new();
-        /// <summary>
-        /// Mocked token generator used to produce the email verification token.
-        /// </summary>
         private readonly Mock<ITokenGenerator> _tokenGenerator = new();
-        /// <summary>
-        /// Logger dependency passed into the service to keep the constructor fully populated.
-        /// </summary>
         private readonly Mock<ILogger<RegisterService>> _logger = new();
 
         /// <summary>
@@ -74,13 +59,11 @@ namespace GearUp.UnitTests.Application.Auth
         [Fact]
         public async Task Register_Fails_WhenValidationInvalid()
         {
-            // Arrange
             var req = new RegisterRequestDto();
             var invalid = new ValidationResult(new[] { new ValidationFailure("Username", "Username is required") });
             _validator.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(invalid);
             var svc = CreateService();
 
-            // Act & Assert
             await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => svc.RegisterUser(req));
             _userRepo.Verify(r => r.AddUserAsync(It.IsAny<User>()), Times.Never);
         }
@@ -91,7 +74,6 @@ namespace GearUp.UnitTests.Application.Auth
         [Fact]
         public async Task Register_Fails_WhenEmailExists()
         {
-            // Arrange
             var req = new RegisterRequestDto
             {
                 Username = "john",
@@ -106,9 +88,8 @@ namespace GearUp.UnitTests.Application.Auth
 
             var svc = CreateService();
 
-            // Act & Assert
             await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ValidationException>(() => svc.RegisterUser(req));
-            _userRepo.Verify(r => r.GetUserByUsernameAsync(It.IsAny<string>()), Times.Never);
+            _userRepo.Verify(r => r.GetUserEntityByUsernameAsync(It.IsAny<string>()), Times.Never);
         }
 
         /// <summary>
@@ -117,7 +98,6 @@ namespace GearUp.UnitTests.Application.Auth
         [Fact]
         public async Task Register_Fails_WhenUsernameExists()
         {
-            // Arrange
             var req = new RegisterRequestDto
             {
                 Username = "john",
@@ -133,7 +113,6 @@ namespace GearUp.UnitTests.Application.Auth
 
             var svc = CreateService();
 
-            // Act & Assert
             await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ValidationException>(() => svc.RegisterUser(req));
             _userRepo.Verify(r => r.AddUserAsync(It.IsAny<User>()), Times.Never);
         }
@@ -145,7 +124,6 @@ namespace GearUp.UnitTests.Application.Auth
         [Fact]
         public async Task Register_PublishesVerificationEmail_WhenRegistrationSucceeds()
         {
-            // Arrange
             var req = new RegisterRequestDto
             {
                 Username = "john",
@@ -168,10 +146,8 @@ namespace GearUp.UnitTests.Application.Auth
 
             var svc = CreateService();
 
-            // Act
             var result = await svc.RegisterUser(req);
 
-            // Assert
             Assert.True(result.IsSuccess);
             _userRepo.Verify(r => r.AddUserAsync(It.IsAny<User>()), Times.Once);
             _messagePublisher.Verify(p => p.PublishAsync(It.IsAny<EmailRequestMessage>(), "gearup.email.queue", It.IsAny<CancellationToken>()), Times.Once);

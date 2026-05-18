@@ -24,6 +24,7 @@ namespace GearUp.Application.Services.Posts
         private readonly ICommentRepository _commentRepository;
         private readonly IMessagePublisher _messagePublisher;
         private readonly INotificationService _notificationService;
+        private readonly ICacheService _cacheService;
 
         public CommentService(
             ILogger<ICommentService> logger,
@@ -32,7 +33,8 @@ namespace GearUp.Application.Services.Posts
             IUserRepository userRepository,
             ICommentRepository commentRepository,
             IMessagePublisher messagePublisher,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            ICacheService cacheService)
         {
             _logger = logger;
             _commonRepository = commonRepository;
@@ -41,6 +43,7 @@ namespace GearUp.Application.Services.Posts
             _commentRepository = commentRepository;
             _messagePublisher = messagePublisher;
             _notificationService = notificationService;
+            _cacheService = cacheService;
         }
 
         public async Task<Result<CommentDto>> PostCommentAsync(CreateCommentDto comment, Guid userId)
@@ -99,6 +102,9 @@ namespace GearUp.Application.Services.Posts
             var receiverUserId = parentComment?.CommentedUserId ?? post.UserId;
 
             await _commonRepository.SaveChangesAsync();
+
+            // Update cache
+            await _cacheService.UpdateHashFieldAsync($"posts:details:{post.Id}", "CommentCount", post.CommentCount);
 
             var commentDto = new CommentDto
             {
@@ -202,6 +208,8 @@ namespace GearUp.Application.Services.Posts
             if (post != null)
             {
                 post.DecrementCommentCount();
+                // Update cache
+                await _cacheService.UpdateHashFieldAsync($"posts:details:{post.Id}", "CommentCount", post.CommentCount);
             }
 
             if (commentEntity.ParentCommentId.HasValue)

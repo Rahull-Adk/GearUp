@@ -57,8 +57,8 @@ namespace GearUp.Application.Services.Cars
 
             await _createCarValidator.EnsureValidAsync(request);
 
-            var dealerExist = await _userRepository.UserExistAsync(dealerId);
-            if (!dealerExist)
+            var dealer = await _userRepository.GetUserByIdAsync(dealerId);
+            if (dealer == null || dealer.Role != UserRole.Dealer)
                 throw new NotFoundException("Dealer", dealerId);
 
             if (request.CarImages == null || request.CarImages.Count == 0)
@@ -119,14 +119,53 @@ namespace GearUp.Application.Services.Cars
             }
 
             var cacheKey = await BuildCarCacheKeyAsync("all", Guid.Empty, cursorString);
-            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarListDto>>(cacheKey);
-            if (cachedCars != null)
+            var cachedPage = await _cacheService.GetAsync<CursorPageResult<Guid>>(cacheKey);
+            
+            if (cachedPage != null)
             {
-                return Result<CursorPageResult<CarListDto>>.Success(cachedCars, "Cars fetched successfully", 200);
+                var carsList = new List<CarListDto>();
+                bool allFound = true;
+                foreach (var id in cachedPage.Items)
+                {
+                    var car = await _cacheService.GetHashAsync<CarListDto>($"cars:details:{id}");
+                    if (car != null)
+                    {
+                        carsList.Add(car);
+                    }
+                    else
+                    {
+                        allFound = false;
+                        break;
+                    }
+                }
+
+                if (allFound)
+                {
+                    return Result<CursorPageResult<CarListDto>>.Success(new CursorPageResult<CarListDto>
+                    {
+                        Items = carsList,
+                        NextCursor = cachedPage.NextCursor,
+                        HasMore = cachedPage.HasMore
+                    }, "Cars fetched successfully from cache", 200);
+                }
             }
 
             var cars = await _carRepository.GetAllCarsAsync(cursor, cancellationToken);
-            await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
+            
+            // Cache details
+            foreach (var car in cars.Items)
+            {
+                await _cacheService.SetHashAsync($"cars:details:{car.Id}", car, CarListCacheTtl);
+            }
+
+            // Cache IDs
+            var idPage = new CursorPageResult<Guid>
+            {
+                Items = cars.Items.Select(c => c.Id).ToList(),
+                NextCursor = cars.NextCursor,
+                HasMore = cars.HasMore
+            };
+            await _cacheService.SetAsync(cacheKey, idPage, CarListCacheTtl);
 
             return Result<CursorPageResult<CarListDto>>.Success(cars, "Cars fetched successfully", 200);
         }
@@ -173,7 +212,25 @@ namespace GearUp.Application.Services.Cars
             );
 
             await _commonRepository.SaveChangesAsync();
-            await InvalidateCarListCacheAsync();
+            
+            // Update individual hash entry
+            var updatedDto = new CarListDto
+            {
+                Id = existingCar.Id,
+                Title = existingCar.Title,
+                Make = existingCar.Make,
+                Model = existingCar.Model,
+                Price = existingCar.Price,
+                Color = existingCar.Color,
+                Mileage = existingCar.Mileage,
+                SeatingCapacity = existingCar.SeatingCapacity,
+                TransmissionType = existingCar.Transmission,
+                CarValidationStatus = existingCar.ValidationStatus,
+                CreatedAt = existingCar.CreatedAt,
+                ThumbnailUrl = existingCar.Images.OrderBy(i => i.Id).Select(i => i.Url).FirstOrDefault() ?? string.Empty
+            };
+            await _cacheService.SetHashAsync($"cars:details:{carId}", updatedDto, CarListCacheTtl);
+
             _logger.LogInformation("Car updated successfully for car ID: {CarId}", carId);
 
             return Result<CarResponseDto>.Success(null!, "Car updated successfully", 200);
@@ -194,6 +251,8 @@ namespace GearUp.Application.Services.Cars
 
             existingCar.DeleteCar();
             await _commonRepository.SaveChangesAsync();
+            
+            await _cacheService.RemoveHashAsync($"cars:details:{carId}");
             await InvalidateCarListCacheAsync();
 
             _logger.LogInformation("Car deleted successfully for car ID: {CarId}", carId);
@@ -244,14 +303,54 @@ namespace GearUp.Application.Services.Cars
             }
 
             var cacheKey = await BuildCarCacheKeyAsync("search", Guid.Empty, cursorString, searchDto);
-            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarListDto>>(cacheKey);
-            if (cachedCars != null)
+            var cachedPage = await _cacheService.GetAsync<CursorPageResult<Guid>>(cacheKey);
+            
+            if (cachedPage != null)
             {
-                return Result<CursorPageResult<CarListDto>>.Success(cachedCars, "Cars fetched successfully", 200);
+                var carsList = new List<CarListDto>();
+                bool allFound = true;
+                foreach (var id in cachedPage.Items)
+                {
+                    var car = await _cacheService.GetHashAsync<CarListDto>($"cars:details:{id}");
+                    if (car != null)
+                    {
+                        carsList.Add(car);
+                    }
+                    else
+                    {
+                        allFound = false;
+                        break;
+                    }
+                }
+
+                if (allFound)
+                {
+                    return Result<CursorPageResult<CarListDto>>.Success(new CursorPageResult<CarListDto>
+                    {
+                        Items = carsList,
+                        NextCursor = cachedPage.NextCursor,
+                        HasMore = cachedPage.HasMore
+                    }, "Cars fetched successfully from cache", 200);
+                }
             }
 
             var cars = await _carRepository.SearchCarsAsync(searchDto, cursor, cancellationToken);
-            await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
+            
+            // Cache details
+            foreach (var car in cars.Items)
+            {
+                await _cacheService.SetHashAsync($"cars:details:{car.Id}", car, CarListCacheTtl);
+            }
+
+            // Cache IDs
+            var idPage = new CursorPageResult<Guid>
+            {
+                Items = cars.Items.Select(c => c.Id).ToList(),
+                NextCursor = cars.NextCursor,
+                HasMore = cars.HasMore
+            };
+            await _cacheService.SetAsync(cacheKey, idPage, CarListCacheTtl);
+            
             return Result<CursorPageResult<CarListDto>>.Success(cars, "Cars fetched successfully", 200);
         }
 
@@ -279,14 +378,53 @@ namespace GearUp.Application.Services.Cars
             }
 
             var cacheKey = await BuildCarCacheKeyAsync("my", dealerId, cursorString, status.ToString());
-            var cachedCars = await _cacheService.GetAsync<CursorPageResult<CarListDto>>(cacheKey);
-            if (cachedCars != null)
+            var cachedPage = await _cacheService.GetAsync<CursorPageResult<Guid>>(cacheKey);
+            
+            if (cachedPage != null)
             {
-                return Result<CursorPageResult<CarListDto>>.Success(cachedCars, $"{status} cars fetched successfully");
+                var carsList = new List<CarListDto>();
+                bool allFound = true;
+                foreach (var id in cachedPage.Items)
+                {
+                    var car = await _cacheService.GetHashAsync<CarListDto>($"cars:details:{id}");
+                    if (car != null)
+                    {
+                        carsList.Add(car);
+                    }
+                    else
+                    {
+                        allFound = false;
+                        break;
+                    }
+                }
+
+                if (allFound)
+                {
+                    return Result<CursorPageResult<CarListDto>>.Success(new CursorPageResult<CarListDto>
+                    {
+                        Items = carsList,
+                        NextCursor = cachedPage.NextCursor,
+                        HasMore = cachedPage.HasMore
+                    }, $"{status} cars fetched successfully from cache", 200);
+                }
             }
 
             var cars = await _carRepository.GetMyCarsAsync(dealerId, status, cursor, cancellationToken);
-            await _cacheService.SetAsync(cacheKey, cars, CarListCacheTtl);
+            
+            // Cache details
+            foreach (var car in cars.Items)
+            {
+                await _cacheService.SetHashAsync($"cars:details:{car.Id}", car, CarListCacheTtl);
+            }
+
+            // Cache IDs
+            var idPage = new CursorPageResult<Guid>
+            {
+                Items = cars.Items.Select(c => c.Id).ToList(),
+                NextCursor = cars.NextCursor,
+                HasMore = cars.HasMore
+            };
+            await _cacheService.SetAsync(cacheKey, idPage, CarListCacheTtl);
 
             return Result<CursorPageResult<CarListDto>>.Success(cars, $"{status} cars fetched successfully");
         }

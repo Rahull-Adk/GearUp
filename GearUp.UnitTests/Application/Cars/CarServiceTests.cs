@@ -5,6 +5,7 @@ using GearUp.Application.Interfaces.Repositories;
 using GearUp.Application.Interfaces.Services;
 using GearUp.Application.Interfaces.Services.CarServiceInterface;
 using GearUp.Application.ServiceDtos.Car;
+using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.Services.Cars;
 using GearUp.Domain.Entities.Cars;
 using GearUp.Domain.Enums;
@@ -68,12 +69,14 @@ namespace GearUp.UnitTests.Application.Cars
         public async Task CreateCar_NoImages_Returns422()
         {
             var service = CreateService();
+            var dealerId = Guid.NewGuid();
             var req = new CreateCarRequestDto { Title = "t", CarImages = new List<IFormFile>() };
-            _userRepository.Setup(u => u.UserExistAsync(It.IsAny<Guid>())).ReturnsAsync(true);
+            _userRepository.Setup(u => u.GetUserByIdAsync(dealerId))
+                .ReturnsAsync(new RegisterResponseDto(dealerId, null, "dealer", "d@e.com", "Dealer", UserRole.Dealer, DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-30)), null, ""));
             _createValidator.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(Valid());
 
             await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ValidationException>(() => 
-                service.CreateCarAsync(req, Guid.NewGuid()));
+                service.CreateCarAsync(req, dealerId));
         }
 
         [Fact]

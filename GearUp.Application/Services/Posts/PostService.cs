@@ -53,14 +53,55 @@ namespace GearUp.Application.Services.Posts
             }
 
             var cacheKey = await BuildFeedCacheKeyAsync("feed", userId, cursor);
-            var cachedFeed = await _cacheService.GetAsync<CursorPageResult<PostListResponseDto>>(cacheKey);
-            if (cachedFeed != null)
+            var cachedPage = await _cacheService.GetAsync<CursorPageResult<Guid>>(cacheKey);
+            
+            if (cachedPage != null)
             {
-                return Result<CursorPageResult<PostListResponseDto>>.Success(cachedFeed, "Feed fetched from cache");
+                var posts = new List<PostListResponseDto>();
+                bool allFound = true;
+
+                foreach (var id in cachedPage.Items)
+                {
+                    var post = await _cacheService.GetHashAsync<PostListResponseDto>($"posts:details:{id}");
+                    if (post != null)
+                    {
+                        posts.Add(post);
+                    }
+                    else
+                    {
+                        allFound = false;
+                        break;
+                    }
+                }
+
+                if (allFound)
+                {
+                    _logger.LogInformation("Feed IDs and details fetched from cache");
+                    return Result<CursorPageResult<PostListResponseDto>>.Success(new CursorPageResult<PostListResponseDto>
+                    {
+                        Items = posts,
+                        NextCursor = cachedPage.NextCursor,
+                        HasMore = cachedPage.HasMore
+                    }, "Feed fetched from cache");
+                }
             }
 
             var pageResult = await _postRepository.GetLatestFeedAsync(c, userId, cancellationToken);
-            await _cacheService.SetAsync(cacheKey, pageResult, FeedCacheTtl);
+            
+            // Cache individual posts
+            foreach (var post in pageResult.Items)
+            {
+                await _cacheService.SetHashAsync($"posts:details:{post.Id}", post, FeedCacheTtl);
+            }
+
+            // Cache the list of IDs
+            var idPage = new CursorPageResult<Guid>
+            {
+                Items = pageResult.Items.Select(p => p.Id).ToList(),
+                NextCursor = pageResult.NextCursor,
+                HasMore = pageResult.HasMore
+            };
+            await _cacheService.SetAsync(cacheKey, idPage, FeedCacheTtl);
 
             _logger.LogInformation("Successfully fetched {PostCount} posts for feed", pageResult.Items.Count());
             return Result<CursorPageResult<PostListResponseDto>>.Success(pageResult, "Feed fetched successfully", 200);
@@ -108,6 +149,8 @@ namespace GearUp.Application.Services.Posts
                 {
                     postEntity.IncrementViewCount();
                     hasChanges = true;
+                    // Update cache field
+                    await _cacheService.UpdateHashFieldAsync($"posts:details:{id}", "ViewCount", postEntity.ViewCount);
                 }
             }
 
@@ -130,9 +173,14 @@ namespace GearUp.Application.Services.Posts
 
             var refrencedCar = await _carRepository.GetCarByIdAsync(req.CarId);
 
-            if (refrencedCar == null || refrencedCar.DealerId != dealerId)
+            if (refrencedCar == null)
             {
-                throw new NotFoundException("Referenced car not found or does not belong to the dealer");
+                throw new NotFoundException("Car", req.CarId);
+            }
+
+            if (refrencedCar.DealerId != dealerId)
+            {
+                throw new ForbiddenException("This car does not belong to you.");
             }
 
             var user = await _userRepository.GetUserByIdAsync(dealerId)
@@ -181,6 +229,8 @@ namespace GearUp.Application.Services.Posts
 
             postEntity.SoftDelete();
             await _commonRepository.SaveChangesAsync();
+            
+            await _cacheService.RemoveHashAsync($"posts:details:{id}");
             await InvalidateFeedCachesAsync();
 
             _logger.LogInformation("Post with Id: {PostId} deleted", id);
@@ -205,9 +255,17 @@ namespace GearUp.Application.Services.Posts
 
             postEntity.UpdateContent(dto.Caption, dto.Content, dto.Visibility);
             await _commonRepository.SaveChangesAsync();
-            await InvalidateFeedCachesAsync();
 
-            _logger.LogInformation("Post with Id: {PostId} updated", id);
+            // Update individual fields in cache
+            var cacheKey = $"posts:details:{id}";
+            if (!string.IsNullOrWhiteSpace(dto.Caption))
+                await _cacheService.UpdateHashFieldAsync(cacheKey, nameof(PostListResponseDto.Caption), dto.Caption);
+            if (!string.IsNullOrWhiteSpace(dto.Content))
+                await _cacheService.UpdateHashFieldAsync(cacheKey, nameof(PostListResponseDto.Content), dto.Content);
+            if (dto.Visibility != PostVisibility.Default)
+                await _cacheService.UpdateHashFieldAsync(cacheKey, nameof(PostListResponseDto.Visibility), dto.Visibility);
+
+            _logger.LogInformation("Post with Id: {PostId} updated in DB and cache", id);
             return Result<string>.Success(null!, "Post updated successfully", 200);
         }
 

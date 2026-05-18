@@ -19,6 +19,7 @@ namespace GearUp.Application.Services.Posts
         private readonly IPostRepository _postRepository;
         private readonly IMessagePublisher _messagePublisher;
         private readonly INotificationService _notificationService;
+        private readonly ICacheService _cacheService;
 
         public LikeService(
             ILogger<IPostService> logger,
@@ -27,7 +28,8 @@ namespace GearUp.Application.Services.Posts
             ILikeRepository likeRepository,
             ICommentRepository commentRepository,
             IMessagePublisher messagePublisher,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            ICacheService cacheService)
         {
             _logger = logger;
             _messagePublisher = messagePublisher;
@@ -36,6 +38,7 @@ namespace GearUp.Application.Services.Posts
             _likeRepository = likeRepository;
             _commentRepository = commentRepository;
             _notificationService = notificationService;
+            _cacheService = cacheService;
         }
 
 
@@ -92,6 +95,9 @@ namespace GearUp.Application.Services.Posts
                 return Result<int>.Failure("Post not found", 404);
             }
 
+            // Update cache
+            await _cacheService.UpdateHashFieldAsync($"posts:details:{postId}", "LikeCount", counts.LikeCount);
+
             await _messagePublisher.PublishAsync(new NotificationRequestMessage
             {
                 MethodName = "BroadCastPostLikes",
@@ -140,6 +146,9 @@ namespace GearUp.Application.Services.Posts
                 _logger.LogWarning("Unable to load like counts for post {PostId}", postId);
                 return Result<int>.Failure("Post not found", 404);
             }
+
+            // Update cache
+            await _cacheService.UpdateHashFieldAsync($"posts:details:{postId}", "LikeCount", counts.LikeCount);
 
             await _messagePublisher.PublishAsync(new NotificationRequestMessage
             {
