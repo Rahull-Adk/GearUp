@@ -79,14 +79,11 @@ namespace GearUp.UnitTests.Application.Auth
         public async Task LoginUser_Fails_WhenValidatorInvalid()
         {
             var req = new LoginRequestDto();
-            _loginValidator.Setup(v => v.ValidateAsync(req, default))
-            .ReturnsAsync(new ValidationResult(new[] { new ValidationFailure("UsernameOrEmail", "Required") }));
+            _loginValidator.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ValidationResult(new[] { new ValidationFailure("UsernameOrEmail", "Required") }));
 
             var svc = CreateService();
-            var result = await svc.LoginUser(req);
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.Status);
+            await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => svc.LoginUser(req));
         }
 
         [Fact]
@@ -99,10 +96,7 @@ namespace GearUp.UnitTests.Application.Auth
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, "secret"))
          .Returns(PasswordVerificationResult.Success);
             var svc = CreateService();
-            var result = await svc.LoginUser(req);
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(403, result.Status);
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ForbiddenException>(() => svc.LoginUser(req));
         }
 
         [Fact]
@@ -116,11 +110,7 @@ namespace GearUp.UnitTests.Application.Auth
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, "wrong"))
                 .Returns(PasswordVerificationResult.Failed);
             var svc = CreateService();
-            var result = await svc.LoginUser(req);
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(401, result.Status);
-
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.UnauthorizedException>(() => svc.LoginUser(req));
         }
 
         [Fact]
@@ -132,10 +122,7 @@ namespace GearUp.UnitTests.Application.Auth
             _userRepo.Setup(r => r.GetUserEntityByEmailAsync(req.Email)).ReturnsAsync(user);
 
             var svc = CreateService();
-            var result = await svc.LoginAdmin(req);
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(404, result.Status);
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.NotFoundException>(() => svc.LoginAdmin(req));
         }
 
         [Fact]
@@ -170,9 +157,7 @@ namespace GearUp.UnitTests.Application.Auth
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, req.Password))
                 .Returns(PasswordVerificationResult.Failed);
             var svc = CreateService();
-            var result = await svc.LoginAdmin(req);
-            Assert.False(result.IsSuccess);
-            Assert.Equal(401, result.Status);
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.UnauthorizedException>(() => svc.LoginAdmin(req));
         }
 
         [Fact]
@@ -203,6 +188,9 @@ namespace GearUp.UnitTests.Application.Auth
         {
             var user = User.CreateLocalUser("john", "john@example.com", "John Doe");
             var token = PasswordResetToken.CreatePasswordResetToken("hash-t", DateTime.UtcNow.AddMinutes(30), user.Id);
+            var req = new PasswordResetReqDto { NewPassword = "x", ConfirmedPassword = "x" };
+            _resetValidator.Setup(v => v.ValidateAsync(It.IsAny<PasswordResetReqDto>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Valid());
             _tokenRepo.Setup(r => r.GetPasswordResetTokenAsync("hash-t")).ReturnsAsync(token);
             _userRepo.Setup(r => r.GetUserEntityByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
             _passwordHasher.Setup(h => h.VerifyHashedPassword(user, user.PasswordHash, It.IsAny<string>()))
@@ -210,7 +198,7 @@ namespace GearUp.UnitTests.Application.Auth
             _passwordHasher.Setup(h => h.HashPassword(user, It.IsAny<string>())).Returns("hashed");
 
             var svc = CreateService();
-            var result = await svc.ResetPassword("t", new PasswordResetReqDto { NewPassword = "x", ConfirmedPassword = "x" });
+            var result = await svc.ResetPassword("t", req);
 
             Assert.True(result.IsSuccess);
             Assert.Equal(200, result.Status);

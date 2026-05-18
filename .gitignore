@@ -167,7 +167,8 @@ publish/
 # but database connection strings (with potential passwords) will be unencrypted
 *.pubxml
 *.publishproj
-
+GEMINI.md
+skills-lock.json
 # Microsoft Azure Web App publish settings. Comment the next line if you want to
 # checkin your Azure Web App publish settings, but sensitive information contained
 # in these scripts will be unencrypted
@@ -201,6 +202,7 @@ _pkginfo.txt
 # Visual Studio cache files
 # files ending in .cache can be ignored
 *.[Cc]ache
+build_log.txt
 # but keep track of directories ending in .cache
 !*.[Cc]ache/
 

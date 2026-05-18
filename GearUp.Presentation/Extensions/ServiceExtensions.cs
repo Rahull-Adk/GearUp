@@ -132,7 +132,6 @@ namespace GearUp.Presentation.Extensions
 
         public static void AddServices(this IServiceCollection services, IConfiguration config)
         {
-            // Add Validation Filter and Auto Validation
             services.AddControllers(options =>
             {
                 options.Filters.Add<ValidationFilterAttribute>();
@@ -141,10 +140,8 @@ namespace GearUp.Presentation.Extensions
                 options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
             });
 
-            // Application Injection
             services.AddApplication();
 
-            // DbContext Injection
             var connectionString = ReadSetting(config, "ConnectionStrings:DefaultConnection", "ConnectionStrings__DefaultConnection");
             var audience = ReadSetting(config, "Jwt:Audience", "Jwt__Audience");
             var issuer = ReadSetting(config, "Jwt:Issuer", "Jwt__Issuer");
@@ -197,7 +194,6 @@ namespace GearUp.Presentation.Extensions
 
 
 
-            // RabbitMq + Background worker registration
             if (rabbitMqOptions.UseRabbitMQ)
             {
                 services.AddHostedService<EmailConsumerWorker>();
@@ -207,7 +203,6 @@ namespace GearUp.Presentation.Extensions
             }
 
 
-            // Swagger Injection
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
 
@@ -215,7 +210,6 @@ namespace GearUp.Presentation.Extensions
             services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();
             services.AddSignalR();
 
-            // Service Injection
             services.AddScoped<DbSeeder>();
             services.AddScoped<IRegisterService, RegisterService>();
             services.AddScoped<ILoginService, LoginService>();
@@ -239,9 +233,11 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<INotificationService, NotificationService>();
 
 
-            // Redis Cache Injection
 
             var redisConnection = ResolveRedisConnectionString(config);
+
+            var multiplexer = ConnectionMultiplexer.Connect(redisConnection);
+            services.AddSingleton<IConnectionMultiplexer>(multiplexer);
 
             services.AddStackExchangeRedisCache(options =>
             {
@@ -252,7 +248,6 @@ namespace GearUp.Presentation.Extensions
 
             services.AddScoped<ICacheService, CacheService>();
 
-            // API Versioning
             services.AddApiVersioning(options =>
             {
                 options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
@@ -260,13 +255,11 @@ namespace GearUp.Presentation.Extensions
                 options.ReportApiVersions = true;
             });
 
-            // Health Checks
             services.AddHealthChecks()
                 .AddDbContextCheck<GearUpDbContext>("database")
                 .AddRedis(redisConnection, name: "redis");
 
 
-            // Repository Injections
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IAdminRepository, AdminRepository>();
             services.AddScoped<ICarRepository, CarRepository>();
@@ -281,18 +274,15 @@ namespace GearUp.Presentation.Extensions
             services.AddScoped<IMessageRepository, MessageRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
 
-            // Password Hasher Injection
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
             services.Configure<Settings>(option =>
             {
                 option.EmailVerificationToken_SecretKey = requiredEmailVerificationTokenSecretKey;
             });
 
-            // Cloudinary Injection
             Cloudinary cloudinary = new(requiredCloudinarySecret) { Api = { Secure = true } };
             services.AddSingleton(cloudinary);
 
-            //Rate Limiting
             services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -308,13 +298,11 @@ namespace GearUp.Presentation.Extensions
                         }));
             });
 
-            //Role Base Policies
             services.AddAuthorizationBuilder()
                 .AddPolicy("CustomerOnly", policy => policy.RequireRole(nameof(UserRole.Customer)))
                 .AddPolicy("AdminOnly", policy => policy.RequireRole(nameof(UserRole.Admin)))
                 .AddPolicy("DealerOnly", policy => policy.RequireRole(nameof(UserRole.Dealer)));
 
-            // OpenTelemetry
             services.AddOpenTelemetry()
                 .ConfigureResource(r => r.AddService("GearUp"))
                 .WithTracing(t => t
@@ -329,7 +317,6 @@ namespace GearUp.Presentation.Extensions
                     .AddRuntimeInstrumentation()
                     .AddOtlpExporter());
 
-            // CORS Policy
             var allowedOrigins = BuildAllowedOrigins(config, requiredClientUrl);
             services.AddCors(opt =>
             {
@@ -340,7 +327,6 @@ namespace GearUp.Presentation.Extensions
             });
 
 
-            // JWT Authentication Injection
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(ops =>
             {
                 ops.Events = new JwtBearerEvents

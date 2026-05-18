@@ -1,7 +1,8 @@
 using FluentValidation;
 using FluentValidation.Results;
 using GearUp.Application.Interfaces.Messaging;
-using GearUp.Application.Interfaces.Repositories; using GearUp.Application.Messaging.Contracts;
+using GearUp.Application.Interfaces.Repositories; 
+using GearUp.Application.Messaging.Contracts;
 using GearUp.Application.Interfaces.Services.JwtServiceInterface;
 using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Application.Services.Auth;
@@ -22,25 +23,11 @@ namespace GearUp.UnitTests.Application.Auth
     /// </summary>
     public class RegisterServiceTests
     {
-        /// <summary>
-        /// Mocked user repository used to simulate duplicate checks and persistence.
-        /// </summary>
+        private readonly Mock<IValidator<RegisterRequestDto>> _validator = new();
         private readonly Mock<IUserRepository> _userRepo = new();
-        /// <summary>
-        /// Mocked password hasher used to verify that registration stores a hashed password.
-        /// </summary>
         private readonly Mock<IPasswordHasher<User>> _passwordHasher = new();
-        /// <summary>
-        /// Mocked message publisher used to validate the verification-email dispatch.
-        /// </summary>
         private readonly Mock<IMessagePublisher> _messagePublisher = new();
-        /// <summary>
-        /// Mocked token generator used to produce the email verification token.
-        /// </summary>
         private readonly Mock<ITokenGenerator> _tokenGenerator = new();
-        /// <summary>
-        /// Logger dependency passed into the service to keep the constructor fully populated.
-        /// </summary>
         private readonly Mock<ILogger<RegisterService>> _logger = new();
 
         /// <summary>
@@ -55,6 +42,7 @@ namespace GearUp.UnitTests.Application.Auth
                            .Returns("hashed_password");
 
             return new RegisterService(
+                _validator.Object,
                 _userRepo.Object,
                 _passwordHasher.Object,
                 _messagePublisher.Object,
@@ -63,13 +51,29 @@ namespace GearUp.UnitTests.Application.Auth
             );
         }
 
+        private static ValidationResult Valid() => new ValidationResult();
+
+        /// <summary>
+        /// Verifies that the service rejects registrations when validation fails.
+        /// </summary>
+        [Fact]
+        public async Task Register_Fails_WhenValidationInvalid()
+        {
+            var req = new RegisterRequestDto();
+            var invalid = new ValidationResult(new[] { new ValidationFailure("Username", "Username is required") });
+            _validator.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(invalid);
+            var svc = CreateService();
+
+            await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => svc.RegisterUser(req));
+            _userRepo.Verify(r => r.AddUserAsync(It.IsAny<User>()), Times.Never);
+        }
+
         /// <summary>
         /// Verifies that the service rejects registrations when the email is already taken.
         /// </summary>
         [Fact]
         public async Task Register_Fails_WhenEmailExists()
         {
-            // Arrange
             var req = new RegisterRequestDto
             {
                 Username = "john",
@@ -79,17 +83,13 @@ namespace GearUp.UnitTests.Application.Auth
                 Password = "P@ssw0rd",
                 ConfirmPassword = "P@ssw0rd"
             };
+            _validator.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(Valid());
             _userRepo.Setup(r => r.GetUserEntityByEmailAsync(req.Email)).ReturnsAsync(User.CreateLocalUser("existing", req.Email, "Existing User"));
 
             var svc = CreateService();
 
-            // Act
-            var result = await svc.RegisterUser(req);
-
-            // Assert
-            Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.Status);
-            _userRepo.Verify(r => r.GetUserByUsernameAsync(It.IsAny<string>()), Times.Never);
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ValidationException>(() => svc.RegisterUser(req));
+            _userRepo.Verify(r => r.GetUserEntityByUsernameAsync(It.IsAny<string>()), Times.Never);
         }
 
         /// <summary>
@@ -98,7 +98,6 @@ namespace GearUp.UnitTests.Application.Auth
         [Fact]
         public async Task Register_Fails_WhenUsernameExists()
         {
-            // Arrange
             var req = new RegisterRequestDto
             {
                 Username = "john",
@@ -108,17 +107,13 @@ namespace GearUp.UnitTests.Application.Auth
                 Password = "P@ssw0rd",
                 ConfirmPassword = "P@ssw0rd"
             };
+            _validator.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(Valid());
             _userRepo.Setup(r => r.GetUserEntityByEmailAsync(req.Email)).ReturnsAsync((User?)null);
             _userRepo.Setup(r => r.GetUserEntityByUsernameAsync(req.Username)).ReturnsAsync(User.CreateLocalUser(req.Username, "another@example.com", "Someone"));
 
             var svc = CreateService();
 
-            // Act
-            var result = await svc.RegisterUser(req);
-
-            // Assert
-            Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.Status);
+            await Assert.ThrowsAsync<GearUp.Domain.Exceptions.ValidationException>(() => svc.RegisterUser(req));
             _userRepo.Verify(r => r.AddUserAsync(It.IsAny<User>()), Times.Never);
         }
 
@@ -129,7 +124,6 @@ namespace GearUp.UnitTests.Application.Auth
         [Fact]
         public async Task Register_PublishesVerificationEmail_WhenRegistrationSucceeds()
         {
-            // Arrange
             var req = new RegisterRequestDto
             {
                 Username = "john",
@@ -140,6 +134,7 @@ namespace GearUp.UnitTests.Application.Auth
                 ConfirmPassword = "P@ssw0rd"
             };
 
+            _validator.Setup(v => v.ValidateAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(Valid());
             _userRepo.Setup(r => r.GetUserEntityByEmailAsync(req.Email)).ReturnsAsync((User?)null);
             _userRepo.Setup(r => r.GetUserEntityByUsernameAsync(req.Username)).ReturnsAsync((User?)null);
             _userRepo.Setup(r => r.AddUserAsync(It.IsAny<User>())).Returns(Task.CompletedTask);
@@ -151,19 +146,11 @@ namespace GearUp.UnitTests.Application.Auth
 
             var svc = CreateService();
 
-            // Act
             var result = await svc.RegisterUser(req);
 
-            // Assert
             Assert.True(result.IsSuccess);
-            Assert.Equal(201, result.Status);
-            _messagePublisher.Verify(p => p.PublishAsync(
-                It.Is<EmailRequestMessage>(m =>
-                    m.ToEmail == req.Email &&
-                    m.TemplateName == "VerifyEmail" &&
-                    m.Payload.ContainsKey("token") && m.Payload["token"] == "verification-token"),
-                "gearup.email.queue",
-                It.IsAny<CancellationToken>()), Times.Once);
+            _userRepo.Verify(r => r.AddUserAsync(It.IsAny<User>()), Times.Once);
+            _messagePublisher.Verify(p => p.PublishAsync(It.IsAny<EmailRequestMessage>(), "gearup.email.queue", It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }

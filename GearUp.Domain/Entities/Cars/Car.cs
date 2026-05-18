@@ -127,23 +127,6 @@ namespace GearUp.Domain.Entities.Cars
             UpdatedAt = DateTime.UtcNow;
         }
 
-        //public void Deactivate()
-        //{
-        //    if (Status == CarStatus.Deleted)
-        //        throw new InvalidOperationException("Car is already deleted.");
-
-        //    Status = CarStatus.Deleted;
-        //    UpdatedAt = DateTime.UtcNow;
-        //}
-
-        //public void Reactivate()
-        //{
-        //    if (Status != CarStatus.Deleted)
-        //        throw new InvalidOperationException("Only deleted cars can be reactivated.");
-
-        //    Status = CarStatus.Available;
-        //    UpdatedAt = DateTime.UtcNow;
-        //}
 
         public void DeleteCar()
         {

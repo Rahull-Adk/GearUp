@@ -139,12 +139,9 @@ public class DbSeeder
             var email = $"{username}@example.com";
             var name = faker.Name.FullName();
 
-            // Use your DDD factory
             var user = User.CreateLocalUser(username, email, name, true, role);
 
-            // Hash password using IPasswordHasher<User>
             var hashed = _passwordHasher.HashPassword(user, "Password123!");
-            // Use your domain method to set the password; you previously used SetPassword
             user.SetPassword(hashed);
 
             newUsers.Add(user);
@@ -386,7 +383,6 @@ public class DbSeeder
 
         if (userIds.Count == 0 || postIds.Count == 0) return;
 
-        // Load existing pairs from DB
         var existingPairs = await _context.PostLikes
             .Select(pl => new { pl.PostId, pl.LikedUserId })
             .ToListAsync();
@@ -397,7 +393,6 @@ public class DbSeeder
 
         var newLikes = new List<PostLike>(toCreate);
 
-        // Safety: you cannot create more unique pairs than posts * users
         int maxPossible = postIds.Count * userIds.Count;
         int remainingPossible = maxPossible - used.Count;
         if (remainingPossible <= 0) return;
@@ -486,19 +481,16 @@ public class DbSeeder
         int toCreate = targetCount - existing;
         var faker = new Faker("en");
 
-        // Get existing reviewer-dealer pairs that already have reviews
         var existingReviewPairs = await _context.UserReviews
             .Select(r => new { r.ReviewerId, r.RevieweeId })
             .ToListAsync();
 
-        // Get unique customer-dealer pairs from completed appointments that don't have reviews yet
         var availablePairs = await _context.Appointments
             .Where(a => a.Status == AppointmentStatus.Completed)
             .Select(a => new { CustomerId = a.RequesterId, DealerId = a.AgentId })
             .Distinct()
             .ToListAsync();
 
-        // Filter out pairs that already have reviews
         var pairsToReview = availablePairs
             .Where(p => !existingReviewPairs.Any(e => e.ReviewerId == p.CustomerId && e.RevieweeId == p.DealerId))
             .ToList();
@@ -506,7 +498,6 @@ public class DbSeeder
         if (pairsToReview.Count == 0)
             return;
 
-        // Limit toCreate to available pairs (one review per dealer per customer)
         toCreate = Math.Min(toCreate, pairsToReview.Count);
 
         var reviews = new List<UserReview>(toCreate);

@@ -7,6 +7,7 @@ using GearUp.Application.Messaging.Contracts;
 using GearUp.Application.ServiceDtos.Message;
 using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
+using GearUp.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace GearUp.Application.Services.Messages
@@ -39,25 +40,19 @@ namespace GearUp.Application.Services.Messages
 
             if (string.IsNullOrWhiteSpace(dto.Text) && string.IsNullOrWhiteSpace(dto.ImageUrl))
             {
-                return Result<MessageResponseDto>.Failure("Message must contain text or image.", 400);
+                throw new Domain.Exceptions.ValidationException("Message must contain text or image.");
             }
 
             if (senderId == dto.ReceiverId)
             {
-                return Result<MessageResponseDto>.Failure("You cannot send messages to yourself.", 400);
+                throw new Domain.Exceptions.ValidationException("You cannot send messages to yourself.");
             }
 
-            var sender = await _userRepository.GetUserByIdAsync(senderId);
-            if (sender == null)
-            {
-                return Result<MessageResponseDto>.Failure("Sender not found.", 404);
-            }
+            var sender = await _userRepository.GetUserByIdAsync(senderId)
+                         ?? throw new NotFoundException("Sender", senderId);
 
-            var receiver = await _userRepository.GetUserByIdAsync(dto.ReceiverId);
-            if (receiver == null)
-            {
-                return Result<MessageResponseDto>.Failure("Receiver not found.", 404);
-            }
+            var receiver = await _userRepository.GetUserByIdAsync(dto.ReceiverId)
+                           ?? throw new NotFoundException("Receiver", dto.ReceiverId);
 
             var isValidConversation =
                 (sender.Role == UserRole.Customer && receiver.Role == UserRole.Dealer) ||
@@ -65,7 +60,7 @@ namespace GearUp.Application.Services.Messages
 
             if (!isValidConversation)
             {
-                return Result<MessageResponseDto>.Failure("Messages can only be sent between customers and dealers.", 400);
+                throw new Domain.Exceptions.ValidationException("Messages can only be sent between customers and dealers.");
             }
 
             var conversation = await _messageRepository.GetConversationByParticipantsAsync(senderId, dto.ReceiverId);
@@ -78,11 +73,9 @@ namespace GearUp.Application.Services.Messages
                 await _messageRepository.AddConversationAsync(conversation);
             }
 
-            // Create message
             var message = Message.Create(conversation.Id, senderId, dto.Text, dto.ImageUrl);
             await _messageRepository.AddMessageAsync(message);
 
-            // Update conversation last message time
             conversation.TouchLastMessage(message.Id, message.SentAt);
 
             await _commonRepository.SaveChangesAsync();
@@ -101,7 +94,6 @@ namespace GearUp.Application.Services.Messages
                 IsMine = true
             };
 
-            // Send real-time notification to receiver
             var receiverDto = new MessageResponseDto
             {
                 Id = message.Id,
@@ -157,7 +149,7 @@ namespace GearUp.Application.Services.Messages
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<ConversationResponseDto>>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
@@ -170,21 +162,18 @@ namespace GearUp.Application.Services.Messages
         {
             _logger.LogInformation("Getting conversation {ConversationId} for user {UserId}", conversationId, userId);
 
-            var conversation = await _messageRepository.GetConversationByIdAsync(conversationId, cancellationToken);
-            if (conversation == null)
-            {
-                return Result<ConversationDetailResponseDto>.Failure("Conversation not found.", 404);
-            }
+            var conversation = await _messageRepository.GetConversationByIdAsync(conversationId, cancellationToken)
+                               ?? throw new NotFoundException("Conversation", conversationId);
 
             if (!await _messageRepository.IsParticipantInConversationAsync(conversationId, userId, cancellationToken))
             {
-                return Result<ConversationDetailResponseDto>.Failure("You are not a participant in this conversation.", 403);
+                throw new ForbiddenException("You are not a participant in this conversation.");
             }
 
             var otherParticipant = conversation.Participants.FirstOrDefault(p => p.UserId != userId);
             if (otherParticipant?.User == null)
             {
-                return Result<ConversationDetailResponseDto>.Failure("Other participant not found.", 404);
+                throw new NotFoundException("Other participant not found.");
             }
 
             Cursor? cursor = null;
@@ -192,13 +181,12 @@ namespace GearUp.Application.Services.Messages
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<ConversationDetailResponseDto>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
             var messagesResult = await _messageRepository.GetConversationMessagesAsync(conversationId, cursor, cancellationToken);
 
-            // Mark messages as read
             await _messageRepository.MarkMessagesAsReadAsync(conversationId, userId);
             await _commonRepository.SaveChangesAsync();
 
@@ -236,29 +224,22 @@ namespace GearUp.Application.Services.Messages
 
             if (currentUserId == otherUserId)
             {
-                return Result<ConversationDetailResponseDto>.Failure("Cannot create conversation with yourself.", 400);
+                throw new Domain.Exceptions.ValidationException("Cannot create conversation with yourself.");
             }
 
-            var currentUser = await _userRepository.GetUserByIdAsync(currentUserId);
-            if (currentUser == null)
-            {
-                return Result<ConversationDetailResponseDto>.Failure("Current user not found.", 404);
-            }
+            var currentUser = await _userRepository.GetUserByIdAsync(currentUserId)
+                              ?? throw new NotFoundException("Current user not found.");
 
-            var otherUser = await _userRepository.GetUserByIdAsync(otherUserId);
-            if (otherUser == null)
-            {
-                return Result<ConversationDetailResponseDto>.Failure("Other user not found.", 404);
-            }
+            var otherUser = await _userRepository.GetUserByIdAsync(otherUserId)
+                            ?? throw new NotFoundException("Other user not found.");
 
-            // Check if conversation between customer and dealer is valid
             var isValidConversation =
                 (currentUser.Role == UserRole.Customer && otherUser.Role == UserRole.Dealer) ||
                 (currentUser.Role == UserRole.Dealer && otherUser.Role == UserRole.Customer);
 
             if (!isValidConversation)
             {
-                return Result<ConversationDetailResponseDto>.Failure("Conversations can only be between customers and dealers.", 400);
+                throw new Domain.Exceptions.ValidationException("Conversations can only be between customers and dealers.");
             }
 
             var conversation = await _messageRepository.GetConversationByParticipantsAsync(currentUserId, otherUserId, cancellationToken);
@@ -271,7 +252,6 @@ namespace GearUp.Application.Services.Messages
                 await _messageRepository.AddConversationAsync(conversation);
                 await _commonRepository.SaveChangesAsync();
 
-                // Reload to get participants with user info
                 conversation = await _messageRepository.GetConversationByIdAsync(conversation.Id, cancellationToken);
             }
 
@@ -293,7 +273,7 @@ namespace GearUp.Application.Services.Messages
 
             if (!await _messageRepository.IsParticipantInConversationAsync(conversationId, userId))
             {
-                return Result<bool>.Failure("You are not a participant in this conversation.", 403);
+                throw new ForbiddenException("You are not a participant in this conversation.");
             }
 
             await _messageRepository.MarkMessagesAsReadAsync(conversationId, userId);

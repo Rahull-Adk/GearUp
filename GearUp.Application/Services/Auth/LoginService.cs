@@ -8,6 +8,7 @@ using GearUp.Application.ServiceDtos.Auth;
 using GearUp.Domain.Entities.Tokens;
 using GearUp.Domain.Entities.Users;
 using GearUp.Domain.Enums;
+using GearUp.Domain.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
@@ -54,36 +55,28 @@ namespace GearUp.Application.Services.Auth
             _logger.LogInformation("Attempting to log in user with identifier: {Identifier}", req.UsernameOrEmail);
             using (_activitySource.StartActivity("Validations"))
             {
-                var validationResult = await _loginValidator.ValidateAsync(req);
-                if (!validationResult.IsValid)
-                {
-                    var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                    return Result<LoginResponseDto>.Failure(errors, 400);
-                }
+                await _loginValidator.EnsureValidAsync(req);
             }
 
             Regex emailRegex = MyRegex();
             var user = emailRegex.IsMatch(req.UsernameOrEmail)
                 ? await _userRepository.GetUserEntityByEmailAsync(req.UsernameOrEmail)
                 : await _userRepository.GetUserEntityByUsernameAsync(req.UsernameOrEmail);
-            if (user is not null && user.Role == UserRole.Admin)
-                return Result<LoginResponseDto>.Failure("User not Found", 404);
-            return await HandleLogin(user!, req.Password);
+            
+            if (user is null || user.Role == UserRole.Admin)
+                throw new NotFoundException("User not Found");
+
+            return await HandleLogin(user, req.Password);
         }
 
         public async Task<Result<LoginResponseDto>> LoginAdmin(AdminLoginRequestDto req)
         {
             _logger.LogInformation("Attempting to log in admin with email: {Email}", req.Email);
-            var validationResult = await _adminLoginValidator.ValidateAsync(req);
-            if (!validationResult.IsValid)
-            {
-                var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-                return Result<LoginResponseDto>.Failure(errors, 400);
-            }
+            await _adminLoginValidator.EnsureValidAsync(req);
 
             var user = await _userRepository.GetUserEntityByEmailAsync(req.Email);
             if (user?.Role != UserRole.Admin)
-                return Result<LoginResponseDto>.Failure("Admin not found.", 404);
+                throw new NotFoundException("Admin not found.");
 
             return await HandleLogin(user, req.Password);
         }
@@ -92,7 +85,7 @@ namespace GearUp.Application.Services.Auth
         private async Task<Result<LoginResponseDto>> HandleLogin(User? user, string password)
         {
             if (user == null)
-                return Result<LoginResponseDto>.Failure("User not found", 404);
+                throw new NotFoundException("User not found");
 
             using (_activitySource.StartActivity("VerifyHashedPassword"))
             {
@@ -100,11 +93,11 @@ namespace GearUp.Application.Services.Auth
 
 
                 if (passwordVerification == PasswordVerificationResult.Failed)
-                    return Result<LoginResponseDto>.Failure("Invalid Credentials", 401);
+                    throw new UnauthorizedException("Invalid Credentials");
             }
 
             if (user.Role != UserRole.Admin && !user.IsEmailVerified)
-                return Result<LoginResponseDto>.Failure("Email not verified. Please verify your email to login.", 403);
+                throw new ForbiddenException("Email not verified. Please verify your email to login.");
 
             var accessToken = string.Empty;
             var refreshToken = string.Empty;
@@ -143,7 +136,7 @@ namespace GearUp.Application.Services.Auth
             if (string.IsNullOrEmpty(refreshToken))
             {
                 _logger.LogWarning("Refresh token is missing.");
-                return Result<LoginResponseDto>.Failure("Refresh token is missing", 401);
+                throw new UnauthorizedException("Refresh token is missing");
             }
 
             var refreshTokenHash = _tokenGenerator.HashOpaqueToken(refreshToken);
@@ -159,15 +152,12 @@ namespace GearUp.Application.Services.Auth
             }
             if (storedToken == null || storedToken.IsRevoked || storedToken.ExpiresAt < DateTime.UtcNow)
             {
-                return Result<LoginResponseDto>.Failure("Invalid or expired refresh token", 401);
+                throw new UnauthorizedException("Invalid or expired refresh token");
             }
 
             // Use GetUserEntityByIdAsync to retrieve the actual User entity (test and implementation provide this)
-            var user = await _userRepository.GetUserEntityByIdAsync(storedToken.UserId);
-            if (user == null)
-            {
-                return Result<LoginResponseDto>.Failure("User not found", 404);
-            }
+            var user = await _userRepository.GetUserEntityByIdAsync(storedToken.UserId)
+                       ?? throw new NotFoundException("User not found");
 
             var accessClaims = new[]
             {
@@ -194,14 +184,11 @@ namespace GearUp.Application.Services.Auth
             Regex emailRegex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
             if (emailRegex.IsMatch(email) == false)
             {
-                return Result<string>.Failure("Invalid email format", 400);
+                throw new Domain.Exceptions.ValidationException("Invalid email format");
             }
 
-            var user = await _userRepository.GetUserEntityByEmailAsync(email);
-            if (user == null)
-            {
-                return Result<string>.Failure("User not found", 404);
-            }
+            var user = await _userRepository.GetUserEntityByEmailAsync(email)
+                       ?? throw new NotFoundException("User not found");
 
             var token = _tokenGenerator.GeneratePasswordResetToken();
             var tokenHash = _tokenGenerator.HashOpaqueToken(token);
@@ -231,6 +218,7 @@ namespace GearUp.Application.Services.Auth
         public async Task<Result<string>> ResetPassword(string token, PasswordResetReqDto req)
         {
             _logger.LogInformation("Attempting to reset password using token.");
+            await _passwordResetValidator.EnsureValidAsync(req);
 
             var decodedToken = token.Replace(" ", "+");
             var decodedTokenHash = _tokenGenerator.HashOpaqueToken(decodedToken);
@@ -247,20 +235,16 @@ namespace GearUp.Application.Services.Auth
             if (storedToken == null || storedToken.IsUsed || storedToken.ExpiresAt < DateTime.UtcNow)
             {
                 _logger.LogWarning("Invalid or expired password reset token.");
-                return Result<string>.Failure("Invalid or expired password reset token", 401);
+                throw new UnauthorizedException("Invalid or expired password reset token");
             }
 
-            var user = await _userRepository.GetUserEntityByIdAsync(storedToken.UserId);
-
-            if (user == null)
-            {
-                return Result<string>.Failure("User not found", 404);
-            }
+            var user = await _userRepository.GetUserEntityByIdAsync(storedToken.UserId)
+                       ?? throw new NotFoundException("User not found");
 
             var samePassword = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, req.NewPassword);
             if (samePassword == PasswordVerificationResult.Success)
             {
-                return Result<string>.Failure("New password cannot be the same as the old password", 400);
+                throw new Domain.Exceptions.ValidationException("New password cannot be the same as the old password");
             }
 
             var hashedPassword = _passwordHasher.HashPassword(user, req.NewPassword);

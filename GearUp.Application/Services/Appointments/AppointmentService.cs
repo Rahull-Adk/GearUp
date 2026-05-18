@@ -55,7 +55,6 @@ namespace GearUp.Application.Services.Appointments
         {
             _logger.LogInformation("Creating appointment for requester {RequesterId} with dealer {DealerId}", requesterId, dto.AgentId);
 
-            // Validate dealer exists
             var dealer = await _userRepository.GetUserByIdAsync(dto.AgentId);
             if (dealer == null)
             {
@@ -63,7 +62,6 @@ namespace GearUp.Application.Services.Appointments
                 return Result<AppointmentResponseDto>.Failure("Dealer not found.", 404);
             }
 
-            // Validate requester exists
             var requester = await _userRepository.GetUserByIdAsync(requesterId);
             if (requester == null)
             {
@@ -71,7 +69,6 @@ namespace GearUp.Application.Services.Appointments
                 return Result<AppointmentResponseDto>.Failure("Requester not found.", 404);
             }
 
-            // Validate car if provided
             string? carTitle = null;
             if (dto.CarId.HasValue)
             {
@@ -86,7 +83,6 @@ namespace GearUp.Application.Services.Appointments
 
             var scheduleUtc = NormalizeToUtc(dto.Schedule);
 
-            // Validate schedule is in the future
             if (scheduleUtc <= DateTime.UtcNow)
             {
                 return Result<AppointmentResponseDto>.Failure("Appointment schedule must be in the future.", 400);
@@ -105,7 +101,6 @@ namespace GearUp.Application.Services.Appointments
             await _appointmentRepository.AddAsync(appointment);
             await _commonRepository.SaveChangesAsync();
 
-            // Create and push notification to dealer
             await _notificationService.CreateAndPushNotificationAsync(
                 "New Request",
                 $"{requester.Name} has requested an appointment with you. Check your appointments for details.",
@@ -145,7 +140,6 @@ namespace GearUp.Application.Services.Appointments
                 return Result<AppointmentResponseDto>.Failure("Appointment not found.", 404);
             }
 
-            // Only allow dealer or requester to view
             if (appointment.AgentId != userId && appointment.RequesterId != userId)
             {
                 return Result<AppointmentResponseDto>.Failure("You don't have permission to view this appointment.", 403);
@@ -241,7 +235,6 @@ namespace GearUp.Application.Services.Appointments
 
             await _commonRepository.SaveChangesAsync();
 
-            // Create and push notification to requester
             await _notificationService.CreateAndPushNotificationAsync(
                 "Appointment Update",
                 $"Your appointment request has been accepted by {dealer?.Name ?? "the dealer"}. Check your appointments for scheduling details.",
@@ -309,7 +302,6 @@ namespace GearUp.Application.Services.Appointments
 
             await _commonRepository.SaveChangesAsync();
 
-            // Create and push notification to requester
             await _notificationService.CreateAndPushNotificationAsync(
                 "Appointment Update",
                 $"Your appointment request has been declined by {dealer?.Name ?? "the dealer"}. You may try scheduling a new appointment.",
@@ -359,7 +351,6 @@ namespace GearUp.Application.Services.Appointments
                 return Result<AppointmentResponseDto>.Failure("Appointment not found.", 404);
             }
 
-            // Only requester can cancel their own appointment
             if (appointment.RequesterId != userId)
             {
                 return Result<AppointmentResponseDto>.Failure("You don't have permission to cancel this appointment.", 403);

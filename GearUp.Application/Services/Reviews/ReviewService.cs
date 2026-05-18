@@ -51,14 +51,12 @@ namespace GearUp.Application.Services.Reviews
                 return Result<ReviewResponseDto>.Failure("You can only review dealers.", 400);
             }
 
-            // Check if user has at least one completed appointment with this dealer
             var hasCompletedAppointment = await _appointmentRepository.HasCompletedAppointmentWithDealerAsync(reviewerId, dto.DealerId);
             if (!hasCompletedAppointment)
             {
                 return Result<ReviewResponseDto>.Failure("You can only review dealers you have completed an appointment with.", 403);
             }
 
-            // Check if user has already reviewed this dealer
             if (await _reviewRepository.HasReviewedDealerAsync(reviewerId, dto.DealerId))
             {
                 return Result<ReviewResponseDto>.Failure("You have already reviewed this dealer.", 409);

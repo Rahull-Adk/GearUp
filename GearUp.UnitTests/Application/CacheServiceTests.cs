@@ -3,6 +3,7 @@ using System.Text.Json;
 using GearUp.Application.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Moq;
+using StackExchange.Redis;
 
 
 namespace GearUp.UnitTests.Application
@@ -10,6 +11,13 @@ namespace GearUp.UnitTests.Application
     public class CacheServiceTests
     {
         private readonly Mock<IDistributedCache> _dist = new();
+        private readonly Mock<IConnectionMultiplexer> _redis = new();
+        private readonly Mock<IDatabase> _db = new();
+
+        public CacheServiceTests()
+        {
+            _redis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(_db.Object);
+        }
 
         private class TestObj { public int Value { get; set; } }
 
@@ -19,18 +27,18 @@ namespace GearUp.UnitTests.Application
             var obj = new TestObj { Value = 5 };
             _dist.Setup(c => c.GetAsync("k", It.IsAny<CancellationToken>()))
    .ReturnsAsync(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new TestObj { Value = 5 })));
-            var svc = new CacheService(_dist.Object);
+            var svc = new CacheService(_dist.Object, _redis.Object);
             var res = await svc.GetAsync<TestObj>("k");
             Assert.NotNull(res);
             Assert.Equal(5, res!.Value);
-          
+
 
         }
 
         [Fact]
         public async Task SetAsync_SerializesValue()
         {
-            var svc = new CacheService(_dist.Object);
+            var svc = new CacheService(_dist.Object, _redis.Object);
             await svc.SetAsync("k", new TestObj { Value = 7 });
             _dist.Verify(c => c.SetAsync("k", It.Is<byte[]>(b => Encoding.UTF8.GetString(b).Contains('7')), It.IsAny<DistributedCacheEntryOptions>(), default), Times.Once);
         }
@@ -38,7 +46,7 @@ namespace GearUp.UnitTests.Application
         [Fact]
         public async Task RemoveAsync_RemovesKey()
         {
-            var svc = new CacheService(_dist.Object);
+            var svc = new CacheService(_dist.Object, _redis.Object);
             await svc.RemoveAsync("k");
             _dist.Verify(c => c.RemoveAsync("k", default), Times.Once);
         }

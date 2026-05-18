@@ -7,6 +7,7 @@ using GearUp.Application.Messaging.Contracts;
 using GearUp.Application.ServiceDtos;
 using GearUp.Domain.Entities.RealTime;
 using GearUp.Domain.Enums;
+using GearUp.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace GearUp.Application.Services.Notifications
@@ -50,7 +51,6 @@ namespace GearUp.Application.Services.Notifications
                 "Creating notification for user {ReceiverId} from {ActorId}, type: {Type}",
                 receiverUserId, actorUserId, notificationType);
 
-            // Create the notification entity
             var notification = Notification.CreateNotification(
                 title,
                 content,
@@ -64,12 +64,10 @@ namespace GearUp.Application.Services.Notifications
                 carId
             );
 
-            // Persist to database
             await _notificationRepository.AddNotificationAsync(notification);
             await _commonRepository.SaveChangesAsync();
             await InvalidateUnreadCountCacheAsync(receiverUserId);
 
-            // Create DTO for real-time push
             var notificationDto = new NotificationDto
             {
                 Id = notification.Id,
@@ -87,7 +85,6 @@ namespace GearUp.Application.Services.Notifications
                 SentAt = notification.CreatedAt
             };
 
-            // Push real-time notification
             var message = new NotificationRequestMessage
             {
                 MethodName = "PushNotification",
@@ -116,7 +113,7 @@ namespace GearUp.Application.Services.Notifications
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<NotificationDto>>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
@@ -146,16 +143,12 @@ namespace GearUp.Application.Services.Notifications
         {
             _logger.LogInformation("Marking notification {NotificationId} as read for user {UserId}", notificationId, userId);
 
-            var notification = await _notificationRepository.GetNotificationByIdAsync(notificationId);
-
-            if (notification == null)
-            {
-                return Result<bool>.Failure("Notification not found", 404);
-            }
+            var notification = await _notificationRepository.GetNotificationByIdAsync(notificationId)
+                               ?? throw new NotFoundException("Notification", notificationId);
 
             if (notification.ReceiverUserId != userId)
             {
-                return Result<bool>.Failure("You cannot mark this notification as read", 403);
+                throw new ForbiddenException("You cannot mark this notification as read");
             }
 
             await _notificationRepository.MarkNotificationAsReadAsync(notificationId);
@@ -180,16 +173,12 @@ namespace GearUp.Application.Services.Notifications
         {
             _logger.LogInformation("Deleting notification {NotificationId} for user {UserId}", notificationId, userId);
 
-            var notification = await _notificationRepository.GetNotificationByIdAsync(notificationId);
-
-            if (notification == null)
-            {
-                return Result<bool>.Failure("Notification not found", 404);
-            }
+            var notification = await _notificationRepository.GetNotificationByIdAsync(notificationId)
+                               ?? throw new NotFoundException("Notification", notificationId);
 
             if (notification.ReceiverUserId != userId)
             {
-                return Result<bool>.Failure("You cannot delete this notification", 403);
+                throw new ForbiddenException("You cannot delete this notification");
             }
 
             await _notificationRepository.DeleteNotificationAsync(notificationId);

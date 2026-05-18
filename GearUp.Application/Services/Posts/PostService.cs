@@ -7,6 +7,7 @@ using GearUp.Application.Interfaces.Services.PostServiceInterface;
 using GearUp.Application.ServiceDtos.Post;
 using GearUp.Application.ServiceDtos.Socials;
 using GearUp.Domain.Entities.Posts;
+using GearUp.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
@@ -42,71 +43,95 @@ namespace GearUp.Application.Services.Posts
             _cacheService = cacheService;
         }
 
-        public async Task<Result<CursorPageResult<PostListResponseDto>>> GetLatestFeedAsync(Guid userId, string? cursor, CancellationToken cancellationToken = default)
+        public async Task<Result<CursorPageResult<PostListResponseDto>>> GetLatestFeedAsync(Guid userId, string cursor, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching page posts for user: {UserId}", userId);
             Cursor? c = null;
             if (!string.IsNullOrEmpty(cursor) && !Cursor.TryDecode(cursor, out c))
             {
-                _logger.LogInformation("Invalid cursor {Cursor}", cursor);
-
-                return Result<CursorPageResult<PostListResponseDto>>.Failure("Invalid cursor format.", 400);
+                throw new Domain.Exceptions.ValidationException("Invalid cursor");
             }
 
-            var cacheKey = await BuildFeedCacheKeyAsync("latest", userId, cursor);
-            var cachedFeed = await _cacheService.GetAsync<CursorPageResult<PostListResponseDto>>(cacheKey);
-            if (cachedFeed != null)
+            var cacheKey = await BuildFeedCacheKeyAsync("feed", userId, cursor);
+            var cachedPage = await _cacheService.GetAsync<CursorPageResult<Guid>>(cacheKey);
+            
+            if (cachedPage != null)
             {
-                _logger.LogInformation("Returning cached latest posts feed for user: {UserId}", userId);
-                return Result<CursorPageResult<PostListResponseDto>>.Success(cachedFeed, "Post fecthed successfully.");
-            }
+                var posts = new List<PostListResponseDto>();
+                bool allFound = true;
 
-            var postsPaged = await _postRepository.GetLatestFeedAsync(c, userId, cancellationToken);
-            await _cacheService.SetAsync(cacheKey, postsPaged, FeedCacheTtl);
-
-            _logger.LogInformation("Posts fetched successfully from database");
-
-            return Result<CursorPageResult<PostListResponseDto>>.Success(postsPaged, "Post fecthed successfully.");
-        }
-
-        public async Task<Result<CursorPageResult<PostListResponseDto?>>> GetMyPosts(Guid userId, string? cursorString, CancellationToken cancellationToken = default)
-        {
-            _logger.LogInformation("Fetching posts for user: {UserId}", userId);
-
-            Cursor? cursor = null;
-            if (!string.IsNullOrEmpty(cursorString))
-            {
-                if (!Cursor.TryDecode(cursorString, out cursor))
+                foreach (var id in cachedPage.Items)
                 {
-                    return Result<CursorPageResult<PostListResponseDto?>>.Failure("Invalid cursor", 400);
+                    var post = await _cacheService.GetHashAsync<PostListResponseDto>($"posts:details:{id}");
+                    if (post != null)
+                    {
+                        posts.Add(post);
+                    }
+                    else
+                    {
+                        allFound = false;
+                        break;
+                    }
+                }
+
+                if (allFound)
+                {
+                    _logger.LogInformation("Feed IDs and details fetched from cache");
+                    return Result<CursorPageResult<PostListResponseDto>>.Success(new CursorPageResult<PostListResponseDto>
+                    {
+                        Items = posts,
+                        NextCursor = cachedPage.NextCursor,
+                        HasMore = cachedPage.HasMore
+                    }, "Feed fetched from cache");
                 }
             }
 
-            var cacheKey = await BuildFeedCacheKeyAsync("mine", userId, cursorString);
-            var cachedPosts = await _cacheService.GetAsync<CursorPageResult<PostListResponseDto?>>(cacheKey);
-            if (cachedPosts != null)
+            var pageResult = await _postRepository.GetLatestFeedAsync(c, userId, cancellationToken);
+            
+            // Cache individual posts
+            foreach (var post in pageResult.Items)
             {
-                _logger.LogInformation("Returning cached posts for user: {UserId}", userId);
-                return Result<CursorPageResult<PostListResponseDto?>>.Success(cachedPosts, "Post fetched successfully.");
+                await _cacheService.SetHashAsync($"posts:details:{post.Id}", post, FeedCacheTtl);
             }
 
-            var postsPaged = await _postRepository.GetAllUserPostByUserIdAsync(cursor, userId, cancellationToken);
-            await _cacheService.SetAsync(cacheKey, postsPaged, FeedCacheTtl);
+            // Cache the list of IDs
+            var idPage = new CursorPageResult<Guid>
+            {
+                Items = pageResult.Items.Select(p => p.Id).ToList(),
+                NextCursor = pageResult.NextCursor,
+                HasMore = pageResult.HasMore
+            };
+            await _cacheService.SetAsync(cacheKey, idPage, FeedCacheTtl);
 
-            _logger.LogInformation("Posts fetched successfully from database");
-
-            return Result<CursorPageResult<PostListResponseDto?>>.Success(postsPaged, "Post fetched successfully.");
+            _logger.LogInformation("Successfully fetched {PostCount} posts for feed", pageResult.Items.Count());
+            return Result<CursorPageResult<PostListResponseDto>>.Success(pageResult, "Feed fetched successfully", 200);
         }
 
+        public async Task<Result<CursorPageResult<PostListResponseDto?>>> GetMyPosts(Guid userId, string? cursor, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Fetching posts of User: {UserId}", userId);
+            Cursor? c = null;
+            if (!string.IsNullOrEmpty(cursor) && !Cursor.TryDecode(cursor, out c))
+            {
+                throw new Domain.Exceptions.ValidationException("Invalid cursor");
+            }
+
+            var result = await _postRepository.GetAllUserPostByUserIdAsync(c, userId, cancellationToken);
+            return Result<CursorPageResult<PostListResponseDto?>>.Success(result, "User posts fetched successfully", 200);
+        }
 
         public async Task<Result<PostResponseDto>> GetPostByIdAsync(Guid id, Guid currUserId, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Fetching post with Id: {PostId}", id);
-            var post = await _postRepository.GetPostByIdAsync(id, currUserId, cancellationToken);
-            if (post == null)
+            var post = await _postRepository.GetPostByIdAsync(id, currUserId, cancellationToken)
+                       ?? throw new NotFoundException("Post", id);
+
+            var carId = post.CarId;
+
+            if (carId == null)
             {
-                _logger.LogWarning("Post with Id: {PostId} not found", id);
-                return Result<PostResponseDto>.Failure("Post not found", 404);
+                _logger.LogWarning("Car associated with Post Id: {PostId} not found", id);
+                throw new NotFoundException("Car associated with the post not found");
             }
 
             bool viewTimeElapsed = await _viewRepository.HasViewTimeElapsedAsync(id, currUserId);
@@ -124,6 +149,8 @@ namespace GearUp.Application.Services.Posts
                 {
                     postEntity.IncrementViewCount();
                     hasChanges = true;
+                    // Update cache field
+                    await _cacheService.UpdateHashFieldAsync($"posts:details:{id}", "ViewCount", postEntity.ViewCount);
                 }
             }
 
@@ -138,31 +165,26 @@ namespace GearUp.Application.Services.Posts
         public async Task<Result<PostResponseDto>> CreatePostAsync(CreatePostRequestDto req, Guid dealerId)
         {
             if (dealerId == Guid.Empty)
-                return Result<PostResponseDto>.Failure("Invalid dealer Id", 400);
+                throw new Domain.Exceptions.ValidationException("Invalid dealer Id");
 
             _logger.LogInformation("Creating a new post for dealer with Id: {DealerId}", dealerId);
 
-            var validator = await _createPostValidator.ValidateAsync(req);
-
-            if (!validator.IsValid)
-            {
-                var errors = string.Join(", ", validator.Errors.Select(e => e.ErrorMessage));
-                return Result<PostResponseDto>.Failure($"Post creation failed due to validation errors: {errors}", 400);
-            }
+            await _createPostValidator.EnsureValidAsync(req);
 
             var refrencedCar = await _carRepository.GetCarByIdAsync(req.CarId);
 
-            if (refrencedCar == null || refrencedCar.DealerId != dealerId)
+            if (refrencedCar == null)
             {
-                return Result<PostResponseDto>.Failure("Referenced car not found or does not belong to the dealer",
-                    404);
+                throw new NotFoundException("Car", req.CarId);
             }
 
-            var user = await _userRepository.GetUserByIdAsync(dealerId);
-            if (user == null)
+            if (refrencedCar.DealerId != dealerId)
             {
-                return Result<PostResponseDto>.Failure("Dealer not found", 404);
+                throw new ForbiddenException("This car does not belong to you.");
             }
+
+            var user = await _userRepository.GetUserByIdAsync(dealerId)
+                       ?? throw new NotFoundException("Dealer", dealerId);
 
             var post = Post.CreatePost(req.Caption, req.Content, req.Visibility, dealerId, req.CarId);
             await _postRepository.AddPostAsync(post);
@@ -176,16 +198,15 @@ namespace GearUp.Application.Services.Posts
         public async Task<Result<CursorPageResult<UserEngagementDto>>> GetPostLikersAsync(Guid postId, string? cursorString, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting all users liked for Post with Id: {PostId}", postId);
-            var postEntity = await _postRepository.GetPostEntityByIdAsync(postId, cancellationToken);
-            if (postEntity == null)
-                return Result<CursorPageResult<UserEngagementDto>>.Failure("Post not found", 404);
+            var postEntity = await _postRepository.GetPostEntityByIdAsync(postId, cancellationToken)
+                             ?? throw new NotFoundException("Post", postId);
 
             Cursor? cursor = null;
             if (!string.IsNullOrEmpty(cursorString))
             {
                 if (!Cursor.TryDecode(cursorString, out cursor))
                 {
-                    return Result<CursorPageResult<UserEngagementDto>>.Failure("Invalid cursor", 400);
+                    throw new Domain.Exceptions.ValidationException("Invalid cursor");
                 }
             }
 
@@ -196,23 +217,20 @@ namespace GearUp.Application.Services.Posts
 
         public async Task<Result<bool>> DeletePostAsync(Guid id, Guid userId)
         {
-            var postEntity = await _postRepository.GetPostEntityByIdAsync(id);
-            if (postEntity == null)
-                return Result<bool>.Failure("Post not found", 404);
+            var postEntity = await _postRepository.GetPostEntityByIdAsync(id)
+                             ?? throw new NotFoundException("Post", id);
 
             bool userExists = await _userRepository.UserExistAsync(userId);
             if (!userExists)
-            {
-                return Result<bool>.Failure("User not found", 404);
-            }
+                throw new NotFoundException("User", userId);
 
             if (postEntity.UserId != userId)
-            {
-                return Result<bool>.Failure("Unauthorized", 403);
-            }
+                throw new ForbiddenException();
 
             postEntity.SoftDelete();
             await _commonRepository.SaveChangesAsync();
+            
+            await _cacheService.RemoveHashAsync($"posts:details:{id}");
             await InvalidateFeedCachesAsync();
 
             _logger.LogInformation("Post with Id: {PostId} deleted", id);
@@ -221,25 +239,33 @@ namespace GearUp.Application.Services.Posts
 
         public async Task<Result<string>> UpdatePostAsync(Guid id, Guid currUserId, UpdatePostDto dto)
         {
-            var postEntity = await _postRepository.GetPostEntityByIdAsync(id);
-            if (postEntity == null)
-                return Result<string>.Failure("Post not found", 404);
+            if (string.IsNullOrWhiteSpace(dto.Caption) && string.IsNullOrWhiteSpace(dto.Content) &&
+                dto.Visibility == PostVisibility.Default)
+                throw new Domain.Exceptions.ValidationException("Atleast 1 field is required to update.");
+
+            var postEntity = await _postRepository.GetPostEntityByIdAsync(id)
+                             ?? throw new NotFoundException("Post", id);
+            
             bool userExists = await _userRepository.UserExistAsync(currUserId);
             if (!userExists)
-            {
-                return Result<string>.Failure("User not found", 404);
-            }
+                throw new NotFoundException("User", currUserId);
 
             if (postEntity.UserId != currUserId)
-            {
-                return Result<string>.Failure("Unauthorized", 403);
-            }
+                throw new ForbiddenException();
 
             postEntity.UpdateContent(dto.Caption, dto.Content, dto.Visibility);
             await _commonRepository.SaveChangesAsync();
-            await InvalidateFeedCachesAsync();
 
-            _logger.LogInformation("Post with Id: {PostId} updated", id);
+            // Update individual fields in cache
+            var cacheKey = $"posts:details:{id}";
+            if (!string.IsNullOrWhiteSpace(dto.Caption))
+                await _cacheService.UpdateHashFieldAsync(cacheKey, nameof(PostListResponseDto.Caption), dto.Caption);
+            if (!string.IsNullOrWhiteSpace(dto.Content))
+                await _cacheService.UpdateHashFieldAsync(cacheKey, nameof(PostListResponseDto.Content), dto.Content);
+            if (dto.Visibility != PostVisibility.Default)
+                await _cacheService.UpdateHashFieldAsync(cacheKey, nameof(PostListResponseDto.Visibility), dto.Visibility);
+
+            _logger.LogInformation("Post with Id: {PostId} updated in DB and cache", id);
             return Result<string>.Success(null!, "Post updated successfully", 200);
         }
 
@@ -271,8 +297,11 @@ namespace GearUp.Application.Services.Posts
 
         private static string HashValue(string value)
         {
-            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
-            return Convert.ToHexString(bytes).ToLowerInvariant();
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                var bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(value));
+                return Convert.ToHexString(bytes).ToLowerInvariant();
+            }
         }
     }
 }
